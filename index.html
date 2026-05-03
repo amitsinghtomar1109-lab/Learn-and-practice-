@@ -6,10 +6,7 @@
 <meta name="theme-color" content="#1565c0">
 <title>Test Series — Exam Prep</title>
 
-<!-- Firebase SDK (compat) -->
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
@@ -212,6 +209,10 @@ textarea.inp{resize:vertical; min-height:64px;}
 .login-card h2{margin:0 0 6px; color:var(--accent); font-size:1.4rem;}
 .login-card p{color:var(--text2); font-size:0.85rem; margin-bottom:18px;}
 </style>
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -424,12 +425,13 @@ textarea.inp{resize:vertical; min-height:64px;}
    5. Paste below 👇
 */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBy0fvh4NVH5BUSrYVC5NyQqCs7gpHT-wk",
+  authDomain: "learn-and-practice-47598.firebaseapp.com",
+  projectId: "learn-and-practice-47598",
+  storageBucket: "learn-and-practice-47598.firebasestorage.app",
+  messagingSenderId: "1046292749242",
+  appId: "1:1046292749242:web:0cbf1c334fd4adff535b83",
+  measurementId: "G-9Q8D9YP33X"
 };
 
 let _db = null, _auth = null, _user = null, _uid = null;
@@ -445,12 +447,17 @@ function initFirebase() {
     return;
   }
   try{
-    firebase.initializeApp(firebaseConfig);
+    // Agar already initialized hai to reuse karo
+    if(firebase.apps && firebase.apps.length > 0){
+      firebase.app(); // existing app use karo
+    } else {
+      firebase.initializeApp(firebaseConfig);
+    }
     _db = firebase.firestore();
     _auth = firebase.auth();
     _auth.onAuthStateChanged(onAuth);
   }catch(e){
-    console.error(e);
+    console.error('Firebase init error:', e);
     toast('Firebase init failed: ' + e.message, 'error');
     showPage('login');
   }
@@ -862,7 +869,14 @@ function reattempt(){
 
 /* ---------- Boot ---------- */
 showPage('loading');
-initFirebase();
+window.addEventListener('load', function() {
+  if (typeof firebase !== 'undefined') {
+    initFirebase();
+  } else {
+    toast('Firebase load nahi hua. Internet check karo.', 'error');
+    showPage('login');
+  }
+});
 </script>
 
 </body>
