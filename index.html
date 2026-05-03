@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1565c0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Test Series">
+<meta name="application-name" content="Test Series">
+<meta name="description" content="Quiz banao, practice karo, progress track karo — sab cloud me live sync.">
+<link rel="manifest" id="pwaManifest" href="">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231565c0'/><text y='.9em' font-size='75' x='12'>📝</text></svg>">
 <title>Test Series — Exam Prep</title>
 
 <style>
@@ -44,7 +52,30 @@ body{
 .user-chip:hover{background:rgba(255,255,255,0.25);}
 
 /* Container */
-.container{max-width:840px; margin:0 auto; padding:18px 14px 80px;}
+.container{max-width:840px; margin:0 auto; padding:18px 14px 90px;}
+
+/* Floating Back Button */
+#floatingBack{
+  position:fixed; bottom:22px; left:16px; z-index:300;
+  width:48px; height:48px; border-radius:50%;
+  background:linear-gradient(135deg,#1565c0,#1976d2);
+  color:#fff; border:none; cursor:pointer;
+  display:none; align-items:center; justify-content:center;
+  font-size:1.2rem; font-weight:900;
+  box-shadow:0 4px 18px rgba(21,101,192,0.40);
+  transition:transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+  -webkit-tap-highlight-color:transparent;
+}
+#floatingBack.visible{display:flex;}
+#floatingBack:active{transform:scale(0.92);}
+#floatingBack:hover{transform:translateY(-2px); box-shadow:0 6px 22px rgba(21,101,192,0.50);}
+/* Label tooltip under button */
+#floatingBack::after{
+  content:attr(data-label);
+  position:absolute; bottom:-18px; left:50%; transform:translateX(-50%);
+  font-size:0.58rem; font-weight:700; color:var(--text2);
+  white-space:nowrap; pointer-events:none;
+}
 
 /* Card */
 .card{
@@ -143,6 +174,19 @@ textarea.inp{resize:vertical; min-height:64px;}
 <!-- Firebase SDK loaded at body end -->
 </head>
 <body>
+
+<!-- PWA Install Banner -->
+<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;padding:12px 16px;box-shadow:0 -4px 16px rgba(21,101,192,0.3);">
+  <div style="display:flex;align-items:center;gap:10px;max-width:840px;margin:0 auto;">
+    <div style="font-size:1.8rem;flex-shrink:0;">📝</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:800;font-size:0.88rem;">App Install Karo!</div>
+      <div style="font-size:0.72rem;opacity:0.85;margin-top:1px;">Home screen par add karo — Android app ki tarah kaam karega</div>
+    </div>
+    <button onclick="pwaInstall()" style="background:#fff;color:#1565c0;border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;flex-shrink:0;">📲 Install</button>
+    <button onclick="pwaDismiss()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:8px;padding:8px 10px;font-weight:700;font-size:0.8rem;cursor:pointer;flex-shrink:0;">✕</button>
+  </div>
+</div>
 
 <!-- Top bar -->
 <header class="topbar">
@@ -269,10 +313,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">🏗️ Create Test Series</div>
         <div class="page-subtitle">Naya quiz banao ya existing manage karo</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-primary btn-sm" onclick="openNewQuizForm()">➕ New Quiz</button>
-        <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
-      </div>
+      <button class="btn btn-primary btn-sm" onclick="openNewQuizForm()">➕ New Quiz</button>
     </div>
 
     <!-- New Quiz Form -->
@@ -323,10 +364,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">❓ Quiz Questions</div>
         <div class="page-subtitle" id="qqSubtitle">Add/Manage Questions</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-outline btn-sm" onclick="shuffleAllQ()" title="Shuffle">🔀</button>
-        <button class="btn btn-outline btn-sm" onclick="showSection('create')">← Back</button>
-      </div>
+      <button class="btn btn-outline btn-sm" onclick="shuffleAllQ()" title="Shuffle">🔀 Shuffle</button>
     </div>
 
     <!-- Quiz Info Bar -->
@@ -387,8 +425,28 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">🎯 Practice Test Series</div>
         <div class="page-subtitle">Quiz dhundo aur attempt karo</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
     </div>
+    <!-- Practice Filter Bar -->
+    <div class="card" style="margin-bottom:10px;padding:10px 12px;" id="practiceFilterCard">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <span style="font-size:0.72rem;font-weight:700;color:var(--text2);flex-shrink:0;">🔍 Filter:</span>
+        <select class="inp" id="practiceSubjectFilter" onchange="onPracticeFilterChange()" style="flex:1;min-width:100px;padding:5px 8px;font-size:0.78rem;">
+          <option value="all">📚 Saare Subjects</option>
+        </select>
+        <select class="inp" id="practiceTopicFilter" onchange="onPracticeFilterChange()" style="flex:1;min-width:100px;padding:5px 8px;font-size:0.78rem;">
+          <option value="all">📖 Saare Topics</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.72rem;font-weight:700;color:var(--text2);flex-shrink:0;">Sort:</span>
+        <button class="btn btn-xs" id="psort_newest" onclick="setPracticeSort('newest')" style="border:1.5px solid var(--accent);color:var(--accent);background:rgba(21,101,192,0.08);">🆕 Newest</button>
+        <button class="btn btn-xs" id="psort_name" onclick="setPracticeSort('name')" style="border:1.5px solid var(--border);color:var(--text2);">🔤 A–Z</button>
+        <button class="btn btn-xs" id="psort_best" onclick="setPracticeSort('best')" style="border:1.5px solid var(--border);color:var(--text2);">🏆 Best Score</button>
+        <button class="btn btn-xs" id="psort_attempts" onclick="setPracticeSort('attempts')" style="border:1.5px solid var(--border);color:var(--text2);">📋 Most Attempted</button>
+        <button class="btn btn-xs btn-outline" onclick="resetPracticeFilters()" style="margin-left:auto;">🔄 Reset</button>
+      </div>
+    </div>
+    <div id="practiceFilterCount" style="font-size:0.72rem;color:var(--text2);margin-bottom:8px;padding:0 2px;display:none;"></div>
     <div id="practiceList"></div>
   </div>
 
@@ -399,7 +457,6 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">📜 Attempt History</div>
         <div class="page-subtitle">Saare attempts ka complete record</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
     </div>
     <!-- Filter bar -->
     <div class="card" style="margin-bottom:10px;padding:10px 12px;">
@@ -422,7 +479,6 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">🗄️ Quiz Vault</div>
         <div class="page-subtitle">Questions by status — filter aur review karo</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
     </div>
     <!-- Filter bar -->
     <div class="card" style="margin-bottom:10px;padding:10px 12px;">
@@ -450,10 +506,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">📊 Attempt Detail</div>
         <div class="page-subtitle" id="adSubtitle">Detail</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-outline btn-sm" id="adToggleBtn" onclick="toggleDetailAnswers()" style="color:#6a1b9a;border-color:rgba(106,27,154,0.3);">👁 Chhupao</button>
-        <button class="btn btn-outline btn-sm" onclick="showSection('history')">← History</button>
-      </div>
+      <button class="btn btn-outline btn-sm" id="adToggleBtn" onclick="toggleDetailAnswers()" style="color:#6a1b9a;border-color:rgba(106,27,154,0.3);">👁 Chhupao</button>
     </div>
     <div id="adContent"></div>
   </div>
@@ -539,7 +592,6 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">📊 Result & Analysis</div>
         <div class="page-subtitle" id="rsSubtitle">Attempt Analysis</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="showSection('practice')">← Back</button>
     </div>
 
     <!-- Score Card -->
@@ -576,6 +628,8 @@ textarea.inp{resize:vertical; min-height:64px;}
 </div>
 
 <div id="toast"></div>
+<!-- Floating Back Button — bottom left -->
+<button id="floatingBack" onclick="appGoBack()" data-label="Back" aria-label="Go back">←</button>
 <div id="offlineBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c62828;color:#fff;text-align:center;font-size:0.78rem;font-weight:700;padding:7px;animation:fadeIn 0.3s;">📵 Aap offline hain — Cached data se kaam kar raha hai</div>
 
 <script>
@@ -666,39 +720,206 @@ function getActivePage(){
 }
 
 // ================================================================
-// PAGE NAV
+// PAGE NAV — History Stack System
 // ================================================================
-function showPage(name){
+// Stack stores {page, section, meta} entries
+var _navStack = [];
+var _navLocked = false; // prevent double-push on popstate
+
+// Pages that should NEVER show back button (root pages)
+var _rootPages = ['home', 'login', 'loading'];
+
+function _updateFloatingBack(){
+  var btn = document.getElementById('floatingBack');
+  if(!btn) return;
+  var cur = getActivePage();
+  if(!cur || _rootPages.indexOf(cur) !== -1 || _navStack.length === 0){
+    btn.classList.remove('visible');
+  } else {
+    btn.classList.add('visible');
+    // Attempt page pe special label
+    if(cur === 'attempt'){
+      btn.setAttribute('data-label', 'Quiz');
+    } else {
+      btn.setAttribute('data-label', 'Back');
+    }
+  }
+}
+
+// Low-level page switcher — does NOT push to stack, does NOT push browser history
+function _rawShowPage(name){
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   var el = document.getElementById('page-'+name);
   if(el) el.classList.add('active');
-  window.scrollTo({top:0,behavior:'instant'});
+  window.scrollTo({top:0, behavior:'instant'});
 }
-function goHome(){
-  showPage('home');
-  renderHome();
-  document.getElementById('topbarTitle').textContent = '📝 Test Series';
+
+// Main nav function — call this for every page transition
+// pushBrowser=true => push a browser history entry (for hardware back button)
+function navTo(page, opts, pushBrowser){
+  opts = opts || {};
+  if(typeof pushBrowser === 'undefined') pushBrowser = true;
+
+  // Push current state to our internal stack
+  var cur = getActivePage();
+  if(cur && cur !== 'loading'){
+    _navStack.push({ page: cur });
+  }
+
+  _rawShowPage(page);
+
+  // Run any render callbacks
+  var title = opts.title || '📝 Test Series';
+  document.getElementById('topbarTitle').textContent = title;
+  if(opts.render) opts.render();
+
+  _updateFloatingBack();
+
+  // Push to browser history so hardware back button works
+  if(pushBrowser && !_navLocked){
+    history.pushState({ appPage: page }, '', '');
+  }
 }
-function showSection(sec){
-  if(sec==='create'){
-    showPage('create');
+
+// App-level back — pops our internal stack
+function appGoBack(){
+  if(_navStack.length === 0) return;
+  var prev = _navStack.pop();
+  _navLocked = true;
+
+  // Navigate to previous page with full render
+  _doNavigateTo(prev.page, false);
+
+  // Sync browser history
+  history.back();
+
+  setTimeout(function(){ _navLocked = false; }, 300);
+  _updateFloatingBack();
+}
+
+// Called both by appGoBack and popstate (hardware back)
+function _doNavigateTo(pageName, pushBrowser){
+  _rawShowPage(pageName);
+  _updateFloatingBack();
+
+  // Trigger appropriate renders
+  if(pageName === 'home'){
+    document.getElementById('topbarTitle').textContent = '📝 Test Series';
+    renderHome();
+  } else if(pageName === 'create'){
     document.getElementById('topbarTitle').textContent = '🏗️ Create Test Series';
     renderCreateList();
-  } else if(sec==='practice'){
-    showPage('practice');
+  } else if(pageName === 'practice'){
     document.getElementById('topbarTitle').textContent = '🎯 Practice Test Series';
+    initPracticeFilters();
     renderPracticeList();
-  } else if(sec==='history'){
-    showPage('history');
+  } else if(pageName === 'history'){
     document.getElementById('topbarTitle').textContent = '📜 Attempt History';
     initHistoryFilters();
     renderHistory();
-  } else if(sec==='vault'){
-    showPage('vault');
+  } else if(pageName === 'vault'){
     document.getElementById('topbarTitle').textContent = '🗄️ Quiz Vault';
     initVaultFilters();
     renderVaultPage();
+  } else if(pageName === 'questions'){
+    document.getElementById('topbarTitle').textContent = '❓ Quiz Questions';
+    renderQuestionsPage();
+  } else if(pageName === 'result'){
+    document.getElementById('topbarTitle').textContent = '📊 Result';
+  } else if(pageName === 'history'){
+    document.getElementById('topbarTitle').textContent = '📜 Attempt History';
+    initHistoryFilters();
+    renderHistory();
+  } else if(pageName === 'attemptdetail'){
+    document.getElementById('topbarTitle').textContent = '📊 Attempt Detail';
   }
+}
+
+// Hardware back button / browser back
+window.addEventListener('popstate', function(e){
+  if(_navLocked) return;
+  if(_navStack.length > 0){
+    var prev = _navStack.pop();
+    _navLocked = true;
+    _doNavigateTo(prev.page, false);
+    setTimeout(function(){ _navLocked = false; }, 300);
+  } else {
+    // Stack empty — go home or do nothing (let browser handle)
+    _rawShowPage('home');
+    document.getElementById('topbarTitle').textContent = '📝 Test Series';
+    renderHome();
+    _updateFloatingBack();
+  }
+});
+
+// Intercept attempt page hardware back — confirm before leaving quiz
+function _handleAttemptBack(){
+  if(getActivePage() === 'attempt'){
+    if(!_att.submitted){
+      if(!confirm('Quiz chhod dena chahte ho? Progress kho jayegi!')){ 
+        // Re-push state so back button still works next time
+        history.pushState({appPage:'attempt'}, '', '');
+        return false; 
+      }
+    }
+    if(_att.timer) clearInterval(_att.timer);
+    if(_att.perQTimer) clearInterval(_att.perQTimer);
+  }
+  return true;
+}
+
+// ---- Compatibility wrappers (existing code calls these) ----
+
+function showPage(name){
+  // Used internally during boot/auth — does raw switch, no stack push
+  _rawShowPage(name);
+  _updateFloatingBack();
+}
+
+function goHome(){
+  _navStack = []; // Clear stack when going home explicitly
+  _rawShowPage('home');
+  renderHome();
+  document.getElementById('topbarTitle').textContent = '📝 Test Series';
+  _updateFloatingBack();
+  history.pushState({appPage:'home'}, '', '');
+}
+
+function showSection(sec){
+  if(sec==='create'){
+    navTo('create', {title:'🏗️ Create Test Series', render: renderCreateList});
+  } else if(sec==='practice'){
+    navTo('practice', {title:'🎯 Practice Test Series', render: function(){ initPracticeFilters(); renderPracticeList(); }});
+  } else if(sec==='history'){
+    navTo('history', {title:'📜 Attempt History', render: function(){ initHistoryFilters(); renderHistory(); }});
+  } else if(sec==='vault'){
+    navTo('vault', {title:'🗄️ Quiz Vault', render: function(){ initVaultFilters(); renderVaultPage(); }});
+  }
+}
+
+// Override openQuizQuestions to use navTo
+var _origOpenQuizQuestions;
+function openQuizQuestions(id){
+  _currentQuizId = id;
+  cancelEditQ();
+  navTo('questions', {title:'❓ Quiz Questions', render: renderQuestionsPage});
+}
+
+// Override showResult to push nav
+var _origShowResult;
+function _navToResult(){
+  navTo('result', {title:'📊 Result'});
+}
+
+// Patch startAttempt to push nav
+var _origStartAttempt;
+function _navToAttempt(quizName){
+  navTo('attempt', {title:'📝 '+quizName});
+}
+
+// Patch attemptdetail
+function _navToAttemptDetail(){
+  navTo('attemptdetail', {title:'📊 Attempt Detail'});
 }
 
 // ================================================================
@@ -975,9 +1196,8 @@ var _currentQuizId = null;
 function openQuizQuestions(id){
   _currentQuizId = id;
   cancelEditQ();
-  showPage('questions');
+  navTo('questions', {title:'❓ Quiz Questions', render: renderQuestionsPage}, true);
   document.getElementById('topbarTitle').textContent = '❓ Quiz Questions';
-  renderQuestionsPage();
 }
 function getCurrentQuiz(){
   return STATE.quizzes.find(function(q){ return String(q.id)===String(_currentQuizId); });
@@ -1143,13 +1363,136 @@ window.tsAddQuestions = function(quizId, qArray){
 };
 
 // ================================================================
+// PRACTICE FILTERS
+// ================================================================
+var _practiceSort = 'newest';
+
+function initPracticeFilters(){
+  var subSel = document.getElementById('practiceSubjectFilter');
+  var topSel = document.getElementById('practiceTopicFilter');
+  if(!subSel || !topSel) return;
+
+  // Collect unique subjects and topics
+  var subjects = [], topics = [];
+  STATE.quizzes.forEach(function(q){
+    if(q.subjectName && subjects.indexOf(q.subjectName) === -1) subjects.push(q.subjectName);
+    if(q.topicName && topics.indexOf(q.topicName) === -1) topics.push(q.topicName);
+  });
+  subjects.sort(); topics.sort();
+
+  var curSub = subSel.value;
+  var curTop = topSel.value;
+
+  subSel.innerHTML = '<option value="all">📚 Saare Subjects</option>' +
+    subjects.map(function(s){ return '<option value="'+escHtml(s)+'"'+(s===curSub?' selected':'')+'>'+escHtml(s)+'</option>'; }).join('');
+  topSel.innerHTML = '<option value="all">📖 Saare Topics</option>' +
+    topics.map(function(t){ return '<option value="'+escHtml(t)+'"'+(t===curTop?' selected':'')+'>'+escHtml(t)+'</option>'; }).join('');
+
+  // Show/hide filter card only if there's something to filter
+  var fc = document.getElementById('practiceFilterCard');
+  if(fc) fc.style.display = (subjects.length > 0 || topics.length > 0) ? 'block' : 'none';
+}
+
+function onPracticeFilterChange(){
+  // When subject changes, update topic list to only show relevant topics
+  var subSel = document.getElementById('practiceSubjectFilter');
+  var topSel = document.getElementById('practiceTopicFilter');
+  if(!subSel || !topSel) return;
+  var selSub = subSel.value;
+  var curTop = topSel.value;
+
+  // Filter topics by selected subject
+  var topics = [];
+  STATE.quizzes.forEach(function(q){
+    if((selSub === 'all' || q.subjectName === selSub) && q.topicName && topics.indexOf(q.topicName) === -1)
+      topics.push(q.topicName);
+  });
+  topics.sort();
+  topSel.innerHTML = '<option value="all">📖 Saare Topics</option>' +
+    topics.map(function(t){ return '<option value="'+escHtml(t)+'"'+(t===curTop?' selected':'')+'>'+escHtml(t)+'</option>'; }).join('');
+
+  renderPracticeList();
+}
+
+function setPracticeSort(s){
+  _practiceSort = s;
+  ['newest','name','best','attempts'].forEach(function(k){
+    var b = document.getElementById('psort_'+k);
+    if(b){
+      if(k===s){
+        b.style.border='1.5px solid var(--accent)';
+        b.style.color='var(--accent)';
+        b.style.background='rgba(21,101,192,0.08)';
+      } else {
+        b.style.border='1.5px solid var(--border)';
+        b.style.color='var(--text2)';
+        b.style.background='';
+      }
+    }
+  });
+  renderPracticeList();
+}
+
+function resetPracticeFilters(){
+  var subSel = document.getElementById('practiceSubjectFilter');
+  var topSel = document.getElementById('practiceTopicFilter');
+  if(subSel) subSel.value='all';
+  if(topSel) topSel.value='all';
+  setPracticeSort('newest');
+}
+
+// ================================================================
 // PRACTICE LIST
 // ================================================================
 function renderPracticeList(){
   var container=document.getElementById('practiceList'); if(!container) return;
-  var quizzes=STATE.quizzes;
-  if(!quizzes.length){
+  var quizzes=STATE.quizzes.slice();
+
+  // Apply subject/topic filters
+  var selSub = (document.getElementById('practiceSubjectFilter')||{}).value || 'all';
+  var selTop = (document.getElementById('practiceTopicFilter')||{}).value || 'all';
+  if(selSub !== 'all') quizzes = quizzes.filter(function(q){ return q.subjectName === selSub; });
+  if(selTop !== 'all') quizzes = quizzes.filter(function(q){ return q.topicName === selTop; });
+
+  // Apply sort
+  if(_practiceSort === 'name'){
+    quizzes.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+  } else if(_practiceSort === 'best'){
+    quizzes.sort(function(a,b){
+      var ba=STATE.attempts.filter(function(x){ return x.quizId===a.id; });
+      var bb=STATE.attempts.filter(function(x){ return x.quizId===b.id; });
+      var pa=ba.length?Math.max.apply(null,ba.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      var pb=bb.length?Math.max.apply(null,bb.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      return pb-pa;
+    });
+  } else if(_practiceSort === 'attempts'){
+    quizzes.sort(function(a,b){
+      var ca=STATE.attempts.filter(function(x){ return x.quizId===a.id; }).length;
+      var cb=STATE.attempts.filter(function(x){ return x.quizId===b.id; }).length;
+      return cb-ca;
+    });
+  } else { // newest
+    quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+  }
+
+  // Show filter count
+  var fc = document.getElementById('practiceFilterCount');
+  if(fc){
+    var isFiltered = selSub!=='all' || selTop!=='all';
+    if(isFiltered){
+      fc.style.display='block';
+      fc.innerHTML='<span style="background:rgba(21,101,192,0.1);border-radius:20px;padding:2px 10px;color:var(--accent);font-weight:700;">'+quizzes.length+' quiz'+( quizzes.length===1?'':'zes')+' mil'+( quizzes.length===1?'a':'e')+'</span>';
+    } else {
+      fc.style.display='none';
+    }
+  }
+
+  if(!STATE.quizzes.length){
     container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><div>Koi quiz nahi. Pehle Create karo.</div></div>';
+    return;
+  }
+  if(!quizzes.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">🔍</div><div>Is filter ke liye koi quiz nahi.<br><span style="font-size:0.78rem;">Filter reset karo ya alag subject/topic chunein.</span></div><div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="resetPracticeFilters()">🔄 Filter Reset Karo</button></div></div>';
     return;
   }
   container.innerHTML = quizzes.map(function(q){
@@ -1161,7 +1504,10 @@ function renderPracticeList(){
       '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">'+
         '<div style="flex:1;min-width:0;">'+
           '<div style="font-weight:800;font-size:0.92rem;">'+escHtml(q.name)+'</div>'+
-          (tags?'<div style="font-size:0.7rem;color:var(--accent);margin-top:2px;">'+escHtml(tags)+'</div>':'')+
+          (tags?'<div style="font-size:0.7rem;color:var(--accent);margin-top:2px;display:flex;gap:4px;flex-wrap:wrap;">'+
+            (q.subjectName?'<span style="background:rgba(21,101,192,0.1);border-radius:20px;padding:1px 8px;">📚 '+escHtml(q.subjectName)+'</span>':'')+
+            (q.topicName?'<span style="background:rgba(46,125,50,0.1);border-radius:20px;padding:1px 8px;color:var(--green);">📖 '+escHtml(q.topicName)+'</span>':'')+
+          '</div>':'')+
           '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">'+
             '<span>❓ '+(q.questions||[]).length+' Qs</span>'+
             (q.timer&&q.timer.type!=='none'?'<span>⏱ '+(q.timer.type==='full'?q.timer.value+' min':q.timer.value+'s/Q')+'</span>':'<span>No Timer</span>')+
@@ -1220,7 +1566,7 @@ function startAttempt(quizId, shuffleQs){
     startTime:Date.now(), submitted:false, answerRevealed:false
   };
 
-  showPage('attempt');
+  navTo('attempt', {title:'📝 '+quiz.name}, true);
   document.getElementById('topbarTitle').textContent = '📝 '+quiz.name;
 
   // Setup full timer
@@ -1577,7 +1923,7 @@ function viewAttemptDetail(attemptId){
   _lastAttempt=at;
   if(quiz) _lastQuiz=JSON.parse(JSON.stringify(quiz));
   _detailAnswersHidden=false;
-  showPage('attemptdetail');
+  navTo('attemptdetail', {title:'📊 Detail'}, true);
   document.getElementById('topbarTitle').textContent='📊 Detail';
   document.getElementById('adSubtitle').textContent=escHtml(at.quizName);
   var btn=document.getElementById('adToggleBtn'); if(btn) btn.textContent='👁 Chhupao';
@@ -1773,7 +2119,7 @@ function renderVaultPage(){
 }
 
 function showResult(attempt, quiz){
-  showPage('result');
+  navTo('result', {title:'📊 Result'}, true);
   document.getElementById('topbarTitle').textContent='📊 Result';
   document.getElementById('rsSubtitle').textContent=escHtml(quiz.name);
 
@@ -1868,10 +2214,154 @@ function viewLastResult(quizId){
 }
 
 // ================================================================
+// PWA — Progressive Web App
+// ================================================================
+(function(){
+  // 1. Inline manifest via Blob URL (no separate file needed)
+  var manifest = {
+    name: "Test Series — Exam Prep",
+    short_name: "Test Series",
+    description: "Quiz banao, practice karo, progress track karo",
+    start_url: "./",
+    display: "standalone",
+    orientation: "portrait-primary",
+    background_color: "#eaf4fb",
+    theme_color: "#1565c0",
+    icons: [
+      {
+        src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%231565c0'/><text y='.85em' font-size='140' x='20'>📝</text></svg>",
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      },
+      {
+        src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%231565c0'/><text y='.85em' font-size='380' x='50'>📝</text></svg>",
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      }
+    ],
+    categories: ["education", "productivity"],
+    lang: "hi"
+  };
+  try {
+    var blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var link = document.getElementById('pwaManifest');
+    if(link) link.href = url;
+  } catch(e){ dbg('PWA manifest error: '+e.message,'warn'); }
+
+  // 2. Service Worker for offline caching
+  if('serviceWorker' in navigator){
+    // Inline SW via blob
+    var swCode = `
+const CACHE = 'test-series-v1';
+const URLS = [
+  self.location.href.replace('/sw.js','/')
+];
+self.addEventListener('install', function(e){
+  e.waitUntil(
+    caches.open(CACHE).then(function(c){ return c.addAll(URLS).catch(function(){}); })
+  );
+  self.skipWaiting();
+});
+self.addEventListener('activate', function(e){
+  e.waitUntil(
+    caches.keys().then(function(keys){
+      return Promise.all(keys.filter(function(k){ return k!==CACHE; }).map(function(k){ return caches.delete(k); }));
+    })
+  );
+  self.clients.claim();
+});
+self.addEventListener('fetch', function(e){
+  if(e.request.method !== 'GET') return;
+  e.respondWith(
+    fetch(e.request).then(function(r){
+      var rc = r.clone();
+      caches.open(CACHE).then(function(c){ c.put(e.request, rc); });
+      return r;
+    }).catch(function(){
+      return caches.match(e.request);
+    })
+  );
+});
+`;
+    try {
+      var swBlob = new Blob([swCode], {type:'application/javascript'});
+      var swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl, {scope: './'})
+        .then(function(reg){ dbg('SW registered ✓','success'); })
+        .catch(function(e){ dbg('SW registration failed: '+e.message,'warn'); });
+    } catch(e){ dbg('SW error: '+e.message,'warn'); }
+  }
+
+  // 3. Install prompt
+  var _deferredPrompt = null;
+  var _dismissed = localStorage.getItem('pwaInstallDismissed');
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    _deferredPrompt = e;
+    if(!_dismissed){
+      setTimeout(function(){
+        var banner = document.getElementById('pwaInstallBanner');
+        if(banner) banner.style.display = 'block';
+      }, 3000);
+    }
+  });
+
+  window.pwaInstall = function(){
+    var banner = document.getElementById('pwaInstallBanner');
+    if(_deferredPrompt){
+      _deferredPrompt.prompt();
+      _deferredPrompt.userChoice.then(function(r){
+        if(r.outcome==='accepted'){
+          showToast('✅ App install ho raha hai!','success');
+          if(banner) banner.style.display='none';
+        }
+        _deferredPrompt = null;
+      });
+    } else {
+      // iOS / manual instruction
+      showToast('📱 Browser menu → "Add to Home Screen" karein!','info');
+      if(banner) banner.style.display='none';
+    }
+  };
+
+  window.pwaDismiss = function(){
+    var banner = document.getElementById('pwaInstallBanner');
+    if(banner) banner.style.display='none';
+    localStorage.setItem('pwaInstallDismissed','1');
+  };
+
+  window.addEventListener('appinstalled', function(){
+    showToast('🎉 App install ho gaya!','success');
+    var banner = document.getElementById('pwaInstallBanner');
+    if(banner) banner.style.display='none';
+  });
+})();
+
+// ================================================================
 // BOOT
 // ================================================================
 showPage('loading');
+// Push initial state so popstate fires on first back press
+history.replaceState({appPage:'loading'}, '', '');
 dbg('App script ready — Firebase SDK load ho raha hai...','info');
+
+// Override popstate to intercept attempt page confirm
+window.addEventListener('popstate', function(e){
+  // If on attempt page and not submitted, confirm first
+  if(getActivePage() === 'attempt' && _att && !_att.submitted){
+    if(!confirm('Quiz chhod dena chahte ho? Progress kho jayegi!')){
+      // Put the state back
+      history.pushState({appPage:'attempt'}, '', '');
+      return;
+    }
+    if(_att.timer) clearInterval(_att.timer);
+    if(_att.perQTimer) clearInterval(_att.perQTimer);
+  }
+}, true); // capture phase — runs before our other popstate listener
 
 </script>
 
