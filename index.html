@@ -6,14 +6,13 @@
 <meta name="theme-color" content="#1565c0">
 <title>Test Series — Exam Prep</title>
 
-
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root{
   --bg:#eaf4fb; --bg2:#d4eaf7; --surface:#fff; --surface2:#f4f9fe;
   --accent:#1565c0; --accent2:#e65100; --green:#2e7d32; --red:#c62828;
+  --orange:#e65100; --purple:#6a1b9a;
   --text:#0d1b2a; --text2:#37526d; --border:#bdd5ea;
   --shadow:0 2px 12px rgba(21,101,192,0.10);
   --radius:14px;
@@ -34,16 +33,16 @@ body{
   display:flex; align-items:center; gap:12px;
   box-shadow:0 4px 16px rgba(21,101,192,0.25);
 }
-.topbar h1{margin:0; font-size:1.05rem; font-weight:800; flex:1;}
+.topbar h1{margin:0; font-size:1.05rem; font-weight:800; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .user-chip{
   display:flex; align-items:center; gap:6px;
   background:rgba(255,255,255,0.15); padding:5px 10px; border-radius:20px;
-  font-size:0.72rem; font-weight:700; cursor:pointer;
+  font-size:0.72rem; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0;
 }
 .user-chip:hover{background:rgba(255,255,255,0.25);}
 
 /* Container */
-.container{max-width:840px; margin:0 auto; padding:18px 14px 60px;}
+.container{max-width:840px; margin:0 auto; padding:18px 14px 80px;}
 
 /* Card */
 .card{
@@ -98,64 +97,9 @@ textarea.inp{resize:vertical; min-height:64px;}
 .btn-xs{padding:4px 8px; font-size:0.7rem; border-radius:7px;}
 .btn-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
 
-/* Stats grid */
-.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px;}
-.stat{
-  background:var(--surface); border:1px solid var(--border); border-radius:12px;
-  padding:14px 10px; text-align:center; box-shadow:var(--shadow);
-}
-.stat-num{font-size:1.6rem; font-weight:800; color:var(--accent);}
-.stat-lbl{font-size:0.7rem; color:var(--text2); font-weight:600; margin-top:2px;}
-
-/* Quiz row */
-.quiz-row{
-  background:var(--surface); border:1px solid var(--border); border-radius:12px;
-  padding:12px; margin-bottom:10px;
-  display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
-  box-shadow:var(--shadow);
-}
-.quiz-row .info{flex:1; min-width:0;}
-.quiz-row .name{font-weight:800; font-size:0.92rem; color:var(--text);}
-.quiz-row .meta{font-size:0.72rem; color:var(--text2); margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;}
-.quiz-row .actions{display:flex; flex-direction:column; gap:5px; flex-shrink:0;}
-.badge-best{font-weight:800; font-size:0.78rem; padding:3px 9px; border-radius:20px; text-align:center;}
-
 /* Empty state */
 .empty{text-align:center; color:var(--text2); padding:34px 14px;}
 .empty .ico{font-size:2.4rem; margin-bottom:8px;}
-
-/* Question card */
-.q-item{
-  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
-  padding:10px 12px; margin-bottom:8px;
-}
-.q-item .qt{font-weight:700; font-size:0.85rem; margin-bottom:6px; color:var(--text);}
-.q-item .opt{font-size:0.78rem; color:var(--text2); padding:2px 0;}
-.q-item .opt.correct{color:var(--green); font-weight:700;}
-.q-item .actions{display:flex; gap:6px; margin-top:6px;}
-
-/* Attempt page */
-.attempt-bar{
-  position:sticky; top:0; z-index:40; background:var(--surface);
-  border-bottom:1.5px solid var(--border); padding:10px 14px;
-  display:flex; align-items:center; gap:8px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.06);
-}
-.timer-pill{
-  background:linear-gradient(135deg,#e65100,#ff8f00); color:#fff;
-  padding:5px 12px; border-radius:20px;
-  font-weight:800; font-size:0.82rem; font-family:'JetBrains Mono',monospace;
-}
-.progress-bar{height:5px; background:var(--bg2); border-radius:5px; overflow:hidden; margin-bottom:14px;}
-.progress-bar > div{height:100%; background:linear-gradient(90deg,#1565c0,#42a5f5); border-radius:5px; transition:width 0.3s;}
-.opt-btn{
-  display:block; width:100%; text-align:left; padding:12px 14px; margin-bottom:8px;
-  background:var(--surface); border:1.5px solid var(--border); border-radius:10px;
-  font-family:inherit; font-size:0.88rem; font-weight:600; color:var(--text);
-  cursor:pointer; transition:all 0.15s;
-}
-.opt-btn:hover{border-color:var(--accent); background:var(--surface2);}
-.opt-btn.selected{border-color:var(--accent); background:rgba(21,101,192,0.08); color:var(--accent); font-weight:800;}
 
 /* Toast */
 #toast{
@@ -168,15 +112,7 @@ textarea.inp{resize:vertical; min-height:64px;}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
 #toast.success{background:var(--green);}
 #toast.error{background:var(--red);}
-
-/* Result */
-.score-card{
-  background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(46,125,50,0.06));
-  border:1.5px solid rgba(21,101,192,0.2); border-radius:14px;
-  padding:24px; text-align:center; margin-bottom:14px;
-}
-.score-num{font-size:2.2rem; font-weight:800; color:var(--accent);}
-.score-pct{font-size:1.2rem; font-weight:800; color:var(--green); margin-top:4px;}
+#toast.info{background:var(--accent);}
 
 /* Loader */
 .loader{
@@ -186,14 +122,6 @@ textarea.inp{resize:vertical; min-height:64px;}
 }
 @keyframes spin{to{transform:rotate(360deg);}}
 .center-loader{text-align:center; padding:50px 14px;}
-
-/* Setup banner (when firebase not configured) */
-.setup-banner{
-  background:#fff8e1; border:2px solid #ffc107; border-radius:12px;
-  padding:14px; margin-bottom:14px; font-size:0.82rem; color:#5d4037;
-}
-.setup-banner h3{margin:0 0 6px; color:#e65100;}
-.setup-banner code{background:#fff; padding:1px 6px; border-radius:4px; font-size:0.78rem;}
 
 /* Login screen */
 .login-screen{
@@ -209,7 +137,8 @@ textarea.inp{resize:vertical; min-height:64px;}
 .login-card h2{margin:0 0 6px; color:var(--accent); font-size:1.4rem;}
 .login-card p{color:var(--text2); font-size:0.85rem; margin-bottom:18px;}
 </style>
-<!-- Firebase SDK (compat) -->
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -218,21 +147,15 @@ textarea.inp{resize:vertical; min-height:64px;}
 
 <!-- Top bar -->
 <header class="topbar">
-  <h1>📝 Test Series</h1>
-  <div class="user-chip" id="userChip" onclick="signOut()" style="display:none;">
+  <h1 id="topbarTitle">📝 Test Series</h1>
+  <div class="user-chip" id="userChip" onclick="doSignOut()" style="display:none;">
     <span id="userName">Guest</span> · 🚪
   </div>
 </header>
 
 <div class="container">
 
-  <!-- Setup banner shown only when Firebase config not set -->
-  <div class="setup-banner" id="setupBanner" style="display:none;">
-    <h3>⚙️ Firebase Setup Required</h3>
-    Open <code>index.html</code>, find the <code>firebaseConfig</code> object near the bottom, and paste your own Firebase project's config. Then enable <b>Anonymous Auth</b> and <b>Cloud Firestore</b> in your Firebase console.
-  </div>
-
-  <!-- LOGIN PAGE -->
+  <!-- ===== LOGIN PAGE ===== -->
   <div id="page-login" class="page">
     <div class="login-screen">
       <div class="login-card">
@@ -240,44 +163,94 @@ textarea.inp{resize:vertical; min-height:64px;}
         <h2>Test Series</h2>
         <p>Quiz banao, practice karo, progress track karo — sab cloud me live sync.</p>
         <button class="btn btn-primary" style="width:100%;" onclick="signInAnon()">🚀 Continue as Guest</button>
-        <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="signInGoogle()">🔐 Sign in with Google</button>
-        <div style="font-size:0.7rem; color:var(--text2); margin-top:14px;">Aapka data sirf aapke account me save hota hai.</div>
+        <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="signInGoogle()">🔐 Sign in with Google</button>
+        <div style="font-size:0.7rem;color:var(--text2);margin-top:14px;">Aapka data sirf aapke account me save hota hai.</div>
       </div>
     </div>
   </div>
 
-  <!-- HOME PAGE -->
+  <!-- ===== HOME PAGE ===== -->
   <div id="page-home" class="page">
     <div class="page-header">
       <div>
-        <div class="page-title">📚 Mere Quizzes</div>
-        <div class="page-subtitle">Saare test series — live cloud sync</div>
+        <div class="page-title">📝 Test Series</div>
+        <div class="page-subtitle">Quiz banao, practice karo, analyze karo</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openNewQuiz()">➕ New Quiz</button>
     </div>
 
-    <div class="stats">
-      <div class="stat"><div class="stat-num" id="statQuizzes">0</div><div class="stat-lbl">Quizzes</div></div>
-      <div class="stat"><div class="stat-num" id="statQuestions">0</div><div class="stat-lbl">Questions</div></div>
-      <div class="stat"><div class="stat-num" id="statAttempts">0</div><div class="stat-lbl">Attempts</div></div>
+    <!-- Two Action Cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+      <div class="card" style="cursor:pointer;background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(21,101,192,0.03));border:1.5px solid rgba(21,101,192,0.2);" onclick="showSection('create')">
+        <div style="font-size:2rem;margin-bottom:8px;">🏗️</div>
+        <div style="font-weight:800;font-size:0.95rem;color:var(--accent);margin-bottom:4px;">Create Test Series</div>
+        <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Quiz banao, questions daalo, timer set karo</div>
+        <div style="margin-top:10px;"><span class="btn btn-primary btn-xs">➕ Create</span></div>
+      </div>
+      <div class="card" style="cursor:pointer;background:linear-gradient(135deg,rgba(46,125,50,0.08),rgba(46,125,50,0.03));border:1.5px solid rgba(46,125,50,0.2);" onclick="showSection('practice')">
+        <div style="font-size:2rem;margin-bottom:8px;">🎯</div>
+        <div style="font-weight:800;font-size:0.95rem;color:var(--green);margin-bottom:4px;">Practice Test Series</div>
+        <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Attempt karo, results aur comparison dekho</div>
+        <div style="margin-top:10px;"><span class="btn btn-green btn-xs">▶ Practice</span></div>
+      </div>
     </div>
 
-    <div id="quizList"></div>
+    <!-- Quick Stats -->
+    <div class="card">
+      <div class="card-title">📊 Quick Stats</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <div style="text-align:center;padding:12px 6px;background:var(--surface2);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--accent);" id="tsStat1">0</div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-top:2px;">Quizzes</div>
+        </div>
+        <div style="text-align:center;padding:12px 6px;background:var(--surface2);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--green);" id="tsStat2">0</div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-top:2px;">Total Attempts</div>
+        </div>
+        <div style="text-align:center;padding:12px 6px;background:var(--surface2);border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--orange);" id="tsStat3">0%</div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-top:2px;">Avg Accuracy</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Attempts -->
+    <div class="card" id="tsRecentCard" style="display:none;">
+      <div class="card-title">🕐 Recent Attempts</div>
+      <div id="tsRecentList"></div>
+    </div>
+
+    <!-- Bulk Import Help -->
+    <div class="card">
+      <div class="card-title">💻 Bulk Import via Console</div>
+      <div style="font-size:0.78rem;color:var(--text2);line-height:1.7;background:var(--surface2);border-radius:8px;padding:10px;font-family:monospace;">
+        window.tsAddQuestions(quizId, [<br>
+        &nbsp;{q:"Question?", options:["A","B","C","D"], correct:0, explanation:"..."},<br>
+        &nbsp;...up to 200 questions<br>
+        ])
+      </div>
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:8px;">Quiz ID questions page par dikhega. Browser Console (F12) mein paste karo.</div>
+    </div>
   </div>
 
-  <!-- NEW / EDIT QUIZ FORM -->
-  <div id="page-newquiz" class="page">
+  <!-- ===== CREATE PAGE ===== -->
+  <div id="page-create" class="page">
     <div class="page-header">
       <div>
-        <div class="page-title">➕ Naya Quiz</div>
-        <div class="page-subtitle">Quiz ka basic info bhar lo</div>
+        <div class="page-title">🏗️ Create Test Series</div>
+        <div class="page-subtitle">Naya quiz banao ya existing manage karo</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm" onclick="openNewQuizForm()">➕ New Quiz</button>
+        <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
+      </div>
     </div>
-    <div class="card">
+
+    <!-- New Quiz Form -->
+    <div class="card" id="newQuizForm" style="display:none;">
+      <div class="card-title">➕ Naya Quiz Banao</div>
       <div class="field-group">
         <label class="field-label">Quiz Naam:</label>
-        <input type="text" class="inp" id="nqName" placeholder="Jaise: SSC GK Mock 1" />
+        <input type="text" class="inp" id="nqName" placeholder="Jaise: UP GK Mock Test 1..." />
       </div>
       <div class="card-grid">
         <div class="field-group">
@@ -286,7 +259,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         </div>
         <div class="field-group">
           <label class="field-label">Topic (optional):</label>
-          <input type="text" class="inp" id="nqTopic" placeholder="History, Algebra..." />
+          <input type="text" class="inp" id="nqTopic" placeholder="History, Geography..." />
         </div>
       </div>
       <div class="card-grid">
@@ -294,44 +267,65 @@ textarea.inp{resize:vertical; min-height:64px;}
           <label class="field-label">⏱ Timer Type:</label>
           <select class="inp" id="nqTimerType" onchange="onTimerTypeChange()">
             <option value="none">No Timer</option>
-            <option value="full">Full Quiz Timer (minutes)</option>
-            <option value="perQ">Per Question (seconds)</option>
+            <option value="full">Full Quiz Timer</option>
+            <option value="perQ">Per Question Timer</option>
           </select>
         </div>
         <div class="field-group" id="nqTimerValRow" style="display:none;">
-          <label class="field-label" id="nqTimerValLabel">Minutes:</label>
-          <input type="number" class="inp" id="nqTimerVal" min="1" max="300" value="30" />
+          <label class="field-label" id="nqTimerValLabel">Total Minutes:</label>
+          <input type="number" class="inp" id="nqTimerVal" min="1" max="300" value="60" />
         </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="saveNewQuiz()">✅ Quiz Banao</button>
-        <button class="btn btn-outline" onclick="goHome()">Cancel</button>
+        <button class="btn btn-outline" onclick="document.getElementById('newQuizForm').style.display='none'">Cancel</button>
       </div>
     </div>
+
+    <!-- Quiz List -->
+    <div id="createList"></div>
   </div>
 
-  <!-- QUESTIONS PAGE -->
+  <!-- ===== QUESTIONS PAGE ===== -->
   <div id="page-questions" class="page">
     <div class="page-header">
       <div>
-        <div class="page-title">❓ Questions</div>
-        <div class="page-subtitle" id="qpSubtitle">—</div>
+        <div class="page-title">❓ Quiz Questions</div>
+        <div class="page-subtitle" id="qqSubtitle">Add/Manage Questions</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="shuffleAllQ()" title="Shuffle">🔀</button>
+        <button class="btn btn-outline btn-sm" onclick="showSection('create')">← Back</button>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-title" id="qFormTitle">➕ Question Add Karo</div>
+    <!-- Quiz Info Bar -->
+    <div class="card" style="background:linear-gradient(135deg,rgba(21,101,192,0.07),rgba(21,101,192,0.02));border:1.5px solid rgba(21,101,192,0.15);margin-bottom:10px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <div style="flex:1;min-width:140px;">
+          <div style="font-weight:800;font-size:0.9rem;color:var(--accent);" id="qqName">Quiz Name</div>
+          <div style="font-size:0.72rem;color:var(--text2);" id="qqMeta">0 questions</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:0.7rem;font-weight:700;color:var(--text2);" id="qqTimerBadge">No Timer</div>
+          <div style="background:rgba(21,101,192,0.1);border:1px solid rgba(21,101,192,0.25);border-radius:20px;padding:3px 10px;font-size:0.7rem;font-weight:700;color:var(--accent);" id="qqIdBadge">ID: ---</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Question Form -->
+    <div class="card" id="addQForm">
+      <div class="card-title" id="addQFormTitle">➕ Question Add Karo</div>
       <input type="hidden" id="editQId" value="">
       <div class="field-group">
         <label class="field-label">Question:</label>
-        <textarea class="inp" id="qText" rows="3" placeholder="Question likho..."></textarea>
+        <textarea class="inp" id="qText" rows="3" placeholder="Question likhao..."></textarea>
       </div>
       <div class="card-grid">
-        <div class="field-group"><label class="field-label">A:</label><input type="text" class="inp" id="qOpt0"/></div>
-        <div class="field-group"><label class="field-label">B:</label><input type="text" class="inp" id="qOpt1"/></div>
-        <div class="field-group"><label class="field-label">C:</label><input type="text" class="inp" id="qOpt2"/></div>
-        <div class="field-group"><label class="field-label">D:</label><input type="text" class="inp" id="qOpt3"/></div>
+        <div class="field-group"><label class="field-label">A:</label><input type="text" class="inp" id="qOpt0" placeholder="Option A..."/></div>
+        <div class="field-group"><label class="field-label">B:</label><input type="text" class="inp" id="qOpt1" placeholder="Option B..."/></div>
+        <div class="field-group"><label class="field-label">C:</label><input type="text" class="inp" id="qOpt2" placeholder="Option C..."/></div>
+        <div class="field-group"><label class="field-label">D:</label><input type="text" class="inp" id="qOpt3" placeholder="Option D..."/></div>
       </div>
       <div class="card-grid">
         <div class="field-group">
@@ -343,71 +337,132 @@ textarea.inp{resize:vertical; min-height:64px;}
         </div>
         <div class="field-group">
           <label class="field-label">Explanation (optional):</label>
-          <input type="text" class="inp" id="qExpl" />
+          <input type="text" class="inp" id="qExpl" placeholder="Explain karo..."/>
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="qAddBtn" onclick="addOrUpdateQuestion()">➕ Add Question</button>
+        <button class="btn btn-primary" id="addQBtn" onclick="addOrUpdateQ()">➕ Add Question</button>
         <button class="btn btn-outline btn-sm" onclick="cancelEditQ()">Cancel</button>
       </div>
     </div>
 
-    <div id="qList"></div>
+    <!-- Questions List -->
+    <div id="questionsList"></div>
   </div>
 
-  <!-- ATTEMPT PAGE -->
-  <div id="page-attempt" class="page">
-    <div class="attempt-bar">
-      <div style="flex:1; min-width:0;">
-        <div style="font-weight:800; font-size:0.88rem; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="atTitle">Quiz</div>
-        <div style="font-size:0.7rem; color:var(--text2);" id="atProgress">Q 1 / 10</div>
+  <!-- ===== PRACTICE PAGE ===== -->
+  <div id="page-practice" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🎯 Practice Test Series</div>
+        <div class="page-subtitle">Quiz dhundo aur attempt karo</div>
       </div>
-      <div class="timer-pill" id="atTimer" style="display:none;">⏱ <span id="atTimerVal">--:--</span></div>
-      <button class="btn btn-green btn-sm" onclick="confirmSubmit()">Submit</button>
+      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
     </div>
-    <div style="padding:16px 14px;">
-      <div class="progress-bar"><div id="atBar" style="width:0%;"></div></div>
-      <div class="card" style="min-height:280px;">
-        <div style="font-size:0.7rem; font-weight:800; color:var(--text2);" id="atQNum">Question 1</div>
-        <div style="font-size:0.95rem; font-weight:700; line-height:1.65; margin:10px 0 14px;" id="atQBody"></div>
-        <div id="atOpts"></div>
-        <div id="atPerQ" style="display:none; text-align:center; margin-top:10px; font-weight:800; color:#e65100;">⏱ <span id="atPerQVal">30</span>s</div>
+    <div id="practiceList"></div>
+  </div>
+
+  <!-- ===== ATTEMPT PAGE ===== -->
+  <div id="page-attempt" class="page" style="padding:0;">
+    <!-- Attempt Header -->
+    <div style="position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1.5px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:0.88rem;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="atTitle">Quiz</div>
+        <div style="font-size:0.7rem;color:var(--text2);" id="atProgress">Q 1 / 10</div>
       </div>
-      <div class="btn-row" style="justify-content:space-between;">
-        <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev">← Pichla</button>
-        <button class="btn btn-primary btn-sm" onclick="navQ(1)" id="atNext">Agla →</button>
+      <div id="atTimer" style="display:none;background:linear-gradient(135deg,#e65100,#ff8f00);color:#fff;padding:4px 10px;border-radius:20px;font-weight:900;font-size:0.82rem;font-family:monospace;white-space:nowrap;">
+        ⏱ <span id="atTimerVal">60:00</span>
+      </div>
+      <button onclick="confirmSubmit()" style="padding:6px 12px;background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;flex-shrink:0;">Submit</button>
+    </div>
+
+    <div style="padding:12px 14px;">
+      <!-- Progress bar -->
+      <div style="height:4px;background:var(--bg2);border-radius:4px;margin-bottom:12px;overflow:hidden;">
+        <div id="atBar" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;border-radius:4px;"></div>
+      </div>
+
+      <!-- Question card -->
+      <div class="card" style="min-height:320px;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-shrink:0;">
+          <div style="font-size:0.7rem;font-weight:800;color:var(--text2);" id="atQNum">Question 1</div>
+          <div id="atMarkBadge" style="display:none;background:rgba(255,152,0,0.18);border:1px solid rgba(255,152,0,0.5);color:#e65100;border-radius:20px;padding:2px 10px;font-size:0.68rem;font-weight:800;">🔖 Marked</div>
+        </div>
+        <div style="font-size:0.92rem;font-weight:700;color:var(--text);line-height:1.65;margin-bottom:14px;flex-shrink:0;word-break:break-word;" id="atQBody"></div>
+        <div id="atOptions" style="display:flex;flex-direction:column;gap:8px;flex:1;"></div>
+        <div id="atPerQTimer" style="display:none;margin-top:10px;text-align:center;font-size:0.82rem;font-weight:800;color:#e65100;flex-shrink:0;">⏱ <span id="atPerQVal">30</span>s bache hain</div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button onclick="skipQ()" id="atSkipBtn" style="flex:1;min-width:100px;padding:8px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;font-size:0.78rem;font-weight:700;color:var(--text2);cursor:pointer;">⏩ Skip</button>
+        <button onclick="markForReview()" id="atMarkBtn" style="flex:1;min-width:130px;padding:8px 10px;background:rgba(255,152,0,0.08);border:1.5px solid rgba(255,152,0,0.35);border-radius:9px;font-size:0.78rem;font-weight:700;color:#e65100;cursor:pointer;">🔖 Mark for Review</button>
+      </div>
+
+      <!-- Navigation -->
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px;">
+        <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev" style="flex:1;">← Pichla</button>
+        <button class="btn btn-outline btn-sm" onclick="openOverview()" style="flex:0 0 auto;padding:6px 10px;">📋</button>
+        <button class="btn btn-primary btn-sm" onclick="navQ(1)" id="atNext" style="flex:1;">Agla →</button>
+      </div>
+
+      <!-- Q Overview Panel -->
+      <div id="overviewPanel" style="display:none;margin-top:12px;">
+        <div class="card">
+          <div class="card-title">📋 Question Overview</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:0.68rem;color:var(--text2);">
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(46,125,50,0.25);border:1.5px solid var(--green);margin-right:3px;vertical-align:middle;"></span>Answered</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,152,0,0.2);border:1.5px solid #e65100;margin-right:3px;vertical-align:middle;"></span>Marked</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(198,40,40,0.12);border:1.5px solid var(--red);margin-right:3px;vertical-align:middle;"></span>Skipped</span>
+            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--surface2);border:1.5px solid var(--border);margin-right:3px;vertical-align:middle;"></span>Not visited</span>
+          </div>
+          <div id="overviewGrid" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div style="margin-top:12px;">
+            <button onclick="confirmSubmit()" style="width:100%;padding:10px;background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:0.85rem;cursor:pointer;">✅ Submit Test</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- RESULT PAGE -->
+  <!-- ===== RESULT PAGE ===== -->
   <div id="page-result" class="page">
     <div class="page-header">
       <div>
-        <div class="page-title">📊 Result</div>
-        <div class="page-subtitle" id="rsSubtitle">—</div>
+        <div class="page-title">📊 Result & Analysis</div>
+        <div class="page-subtitle" id="rsSubtitle">Attempt Analysis</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="goHome()">← Home</button>
+      <button class="btn btn-outline btn-sm" onclick="showSection('practice')">← Back</button>
     </div>
-    <div class="score-card">
-      <div style="font-size:3rem;" id="rsEmoji">🎯</div>
-      <div class="score-num" id="rsScore">0/0</div>
-      <div class="score-pct" id="rsPct">0%</div>
-      <div style="font-size:0.78rem; color:var(--text2); margin-top:6px;" id="rsTime"></div>
-      <div class="btn-row" style="justify-content:center;">
+
+    <!-- Score Card -->
+    <div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(46,125,50,0.06));border:1.5px solid rgba(21,101,192,0.18);margin-bottom:14px;">
+      <div style="font-size:3rem;margin-bottom:4px;" id="rsEmoji">🎯</div>
+      <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="rsScore">0/0</div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--green);" id="rsAcc">0%</div>
+      <div style="font-size:0.78rem;color:var(--text2);margin-top:6px;" id="rsTime">Time: --</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;">
         <button class="btn btn-primary btn-sm" onclick="reattempt()">🔄 Reattempt</button>
-        <button class="btn btn-outline btn-sm" onclick="goHome()">🏠 Home</button>
+        <button class="btn btn-outline btn-sm" onclick="showFullAnalysis()">📊 Full Analysis</button>
       </div>
     </div>
-    <div class="card">
+
+    <!-- Comparison Card -->
+    <div class="card" id="compCard" style="display:none;">
+      <div class="card-title">📈 Last 3 Attempts Comparison</div>
+      <div id="compContent"></div>
+    </div>
+
+    <!-- Full Analysis -->
+    <div class="card" id="analysisCard" style="display:none;">
       <div class="card-title">🔍 Question-wise Analysis</div>
-      <div id="rsAnalysis"></div>
+      <div id="analysisContent"></div>
     </div>
   </div>
 
   <!-- LOADING -->
   <div id="page-loading" class="page">
-    <div class="center-loader"><div class="loader"></div><div style="margin-top:10px; color:var(--text2);">Loading...</div></div>
+    <div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Loading...</div></div>
   </div>
 
 </div>
@@ -415,52 +470,91 @@ textarea.inp{resize:vertical; min-height:64px;}
 <div id="toast"></div>
 
 <script>
-/* ===========================================================
-   FIREBASE CONFIG  — replace with your own project config
-   ===========================================================
-   1. https://console.firebase.google.com → Add project
-   2. Project settings → "Web app" → register → copy config
-   3. Authentication → Sign-in methods → enable Anonymous (and Google if chahiye)
-   4. Firestore Database → Create database → Production mode
-   5. Paste below 👇
-*/
+// ================================================================
+// FIREBASE CONFIG — Apna config yahan paste karo
+// ================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyBy0fvh4NVH5BUSrYVC5NyQqCs7gpHT-wk",
   authDomain: "learn-and-practice-47598.firebaseapp.com",
   projectId: "learn-and-practice-47598",
   storageBucket: "learn-and-practice-47598.firebasestorage.app",
   messagingSenderId: "1046292749242",
-  appId: "1:1046292749242:web:0cbf1c334fd4adff535b83",
-  measurementId: "G-9Q8D9YP33X"
+  appId: "1:1046292749242:web:0cbf1c334fd4adff535b83"
 };
 
-let _db = null, _auth = null, _user = null, _uid = null;
-let _quizzesUnsub = null, _attemptsUnsub = null;
+// ================================================================
+// STATE
+// ================================================================
+var _db = null, _auth = null, _user = null, _uid = null;
+var _quizListener = null, _attemptListener = null;
+var STATE = { quizzes: [], attempts: [] };
 
-const STATE = { quizzes: [], attempts: [] };
-
-/* ---------- Init ---------- */
-function initFirebase() {
-  if(firebaseConfig.apiKey === "YOUR_API_KEY"){
-    document.getElementById('setupBanner').style.display = 'block';
-    showPage('login');
-    return;
+// ================================================================
+// UTILS
+// ================================================================
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function showToast(msg, type){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ' '+type : '');
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(function(){ t.className = ''; }, 2400);
+}
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1)); var tmp=a[i]; a[i]=a[j]; a[j]=tmp;
   }
+  return a;
+}
+function getActivePage(){
+  var a = document.querySelector('.page.active');
+  return a ? a.id.replace('page-','') : null;
+}
+
+// ================================================================
+// PAGE NAV
+// ================================================================
+function showPage(name){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  var el = document.getElementById('page-'+name);
+  if(el) el.classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function goHome(){
+  showPage('home');
+  renderHome();
+  document.getElementById('topbarTitle').textContent = '📝 Test Series';
+}
+function showSection(sec){
+  if(sec==='create'){
+    showPage('create');
+    document.getElementById('topbarTitle').textContent = '🏗️ Create Test Series';
+    renderCreateList();
+  } else if(sec==='practice'){
+    showPage('practice');
+    document.getElementById('topbarTitle').textContent = '🎯 Practice Test Series';
+    renderPracticeList();
+  }
+}
+
+// ================================================================
+// FIREBASE INIT
+// ================================================================
+function initFirebase(){
   try{
-    // Agar already initialized hai to reuse karo
-    if(firebase.apps && firebase.apps.length > 0){
-      firebase.app(); // existing app use karo
-    } else {
-      firebase.initializeApp(firebaseConfig);
-    }
+    if(firebase.apps && firebase.apps.length){ firebase.app(); }
+    else{ firebase.initializeApp(firebaseConfig); }
     _db = firebase.firestore();
     _auth = firebase.auth();
-    // Redirect se wapas aane par result handle karo
-    _auth.getRedirectResult().catch(e=>{ console.warn('redirect result err:', e); });
+    _auth.getRedirectResult().catch(function(e){ console.warn('redirect err:',e); });
     _auth.onAuthStateChanged(onAuth);
   }catch(e){
-    console.error('Firebase init error:', e);
-    toast('Firebase init failed: ' + e.message, 'error');
+    showToast('Firebase error: '+e.message,'error');
     showPage('login');
   }
 }
@@ -471,8 +565,8 @@ function onAuth(user){
     document.getElementById('userChip').style.display = 'flex';
     document.getElementById('userName').textContent = user.displayName || (user.isAnonymous ? 'Guest' : 'User');
     attachListeners();
-    showPage('home');
-  }else{
+    goHome();
+  } else {
     _uid = null;
     document.getElementById('userChip').style.display = 'none';
     detachListeners();
@@ -480,431 +574,744 @@ function onAuth(user){
   }
 }
 function signInAnon(){
-  if(!_auth){ toast('Firebase setup pending', 'error'); return; }
+  if(!_auth){ showToast('Firebase setup pending','error'); return; }
   showPage('loading');
-  _auth.signInAnonymously().catch(e=>{ toast('Sign-in failed: '+e.message,'error'); showPage('login'); });
+  _auth.signInAnonymously().catch(function(e){ showToast('Sign-in failed: '+e.message,'error'); showPage('login'); });
 }
 function signInGoogle(){
-  if(!_auth){ toast('Firebase setup pending', 'error'); return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
+  if(!_auth){ showToast('Firebase setup pending','error'); return; }
+  var provider = new firebase.auth.GoogleAuthProvider();
   showPage('loading');
-  _auth.signInWithRedirect(provider).catch(e=>{
-    toast('Google sign-in failed: '+e.message,'error');
-    showPage('login');
-  });
+  _auth.signInWithRedirect(provider).catch(function(e){ showToast('Google failed: '+e.message,'error'); showPage('login'); });
 }
-function signOut(){
+function doSignOut(){
   if(!_auth) return;
-  if(confirm('Sign out karna hai?')){
-    _auth.signOut();
-  }
+  if(confirm('Sign out karna hai?')){ _auth.signOut(); }
 }
 
-/* ---------- Realtime listeners ---------- */
+// ================================================================
+// REALTIME LISTENERS
+// ================================================================
 function attachListeners(){
   detachListeners();
-  if(!_db || !_uid) return;
-  _quizzesUnsub = _db.collection('users').doc(_uid).collection('quizzes')
-    .onSnapshot(snap=>{
+  if(!_db||!_uid) return;
+
+  // Quiz listener
+  _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
+    .onSnapshot(function(snap){
       STATE.quizzes = [];
-      snap.forEach(d=>{ if(d.exists) STATE.quizzes.push(d.data()); });
-      STATE.quizzes.sort((a,b)=> (b.createdAtMs||0) - (a.createdAtMs||0));
-      renderHome();
-      if(getActivePage()==='questions') renderQuestionsPage();
-    }, err=>{ console.warn(err); toast('Cloud read fail: '+err.message,'error'); });
-  _attemptsUnsub = _db.collection('users').doc(_uid).collection('attempts')
-    .onSnapshot(snap=>{
+      snap.forEach(function(d){ if(d.exists) STATE.quizzes.push(d.data()); });
+      STATE.quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+      var ap = getActivePage();
+      if(ap==='home') renderHome();
+      if(ap==='create') renderCreateList();
+      if(ap==='practice') renderPracticeList();
+      if(ap==='questions') renderQuestionsPage();
+    }, function(err){ showToast('Cloud read fail: '+err.message,'error'); });
+
+  // Attempts listener
+  _attemptListener = _db.collection('users').doc(_uid).collection('ts_attempts')
+    .onSnapshot(function(snap){
       STATE.attempts = [];
-      snap.forEach(d=>{ if(d.exists) STATE.attempts.push(d.data()); });
-      renderHome();
-    }, err=>{ console.warn(err); });
+      snap.forEach(function(d){ if(d.exists) STATE.attempts.push(d.data()); });
+      STATE.attempts.sort(function(a,b){ return (a.id||0)-(b.id||0); });
+      var ap = getActivePage();
+      if(ap==='home') renderHome();
+      if(ap==='create') renderCreateList();
+    }, function(err){ console.warn(err); });
 }
 function detachListeners(){
-  if(_quizzesUnsub){ try{_quizzesUnsub();}catch(e){} _quizzesUnsub=null; }
-  if(_attemptsUnsub){ try{_attemptsUnsub();}catch(e){} _attemptsUnsub=null; }
-  STATE.quizzes = []; STATE.attempts = [];
+  if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
+  if(_attemptListener){ try{_attemptListener();}catch(e){} _attemptListener=null; }
+  STATE.quizzes=[]; STATE.attempts=[];
 }
 
-/* ---------- Cloud writes ---------- */
+// ================================================================
+// CLOUD WRITES
+// ================================================================
 function cloudSaveQuiz(q){
-  if(!_db||!_uid) return Promise.reject('not-auth');
-  return _db.collection('users').doc(_uid).collection('quizzes').doc(String(q.id)).set(q);
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('ts_quizzes').doc(String(q.id)).set(q)
+    .catch(function(e){ console.warn('saveQuiz err:',e); });
 }
 function cloudDeleteQuiz(id){
   if(!_db||!_uid) return;
-  _db.collection('users').doc(_uid).collection('quizzes').doc(String(id)).delete();
-  // also clean attempts
-  _db.collection('users').doc(_uid).collection('attempts')
-    .where('quizId','==', id).get().then(s=>{
-      s.forEach(d=>d.ref.delete());
-    }).catch(()=>{});
+  _db.collection('users').doc(_uid).collection('ts_quizzes').doc(String(id)).delete();
+  _db.collection('users').doc(_uid).collection('ts_attempts')
+    .where('quizId','==',id).get().then(function(s){ s.forEach(function(d){ d.ref.delete(); }); }).catch(function(){});
 }
 function cloudSaveAttempt(a){
   if(!_db||!_uid) return;
-  _db.collection('users').doc(_uid).collection('attempts').doc(String(a.id)).set(a);
+  _db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a)
+    .catch(function(e){ console.warn('saveAttempt err:',e); });
 }
 
-/* ---------- UI helpers ---------- */
-function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function getActivePage(){
-  const a = document.querySelector('.page.active');
-  return a ? a.id.replace('page-','') : null;
-}
-function showPage(name){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  const el = document.getElementById('page-'+name);
-  if(el) el.classList.add('active');
-  window.scrollTo({top:0, behavior:'instant'});
-}
-function toast(msg, type){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show' + (type ? ' '+type : '');
-  clearTimeout(window._toastT);
-  window._toastT = setTimeout(()=>{ t.className=''; }, 2400);
-}
-function goHome(){ showPage('home'); renderHome(); }
-
-/* ---------- Home ---------- */
+// ================================================================
+// HOME
+// ================================================================
 function renderHome(){
-  document.getElementById('statQuizzes').textContent = STATE.quizzes.length;
-  document.getElementById('statQuestions').textContent = STATE.quizzes.reduce((s,q)=>s+(q.questions||[]).length, 0);
-  document.getElementById('statAttempts').textContent = STATE.attempts.length;
+  var q = STATE.quizzes; var a = STATE.attempts;
+  var el1=document.getElementById('tsStat1'); if(el1) el1.textContent=q.length;
+  var el2=document.getElementById('tsStat2'); if(el2) el2.textContent=a.length;
+  var avg=0;
+  if(a.length){ avg=Math.round(a.reduce(function(s,x){ return s+(x.total>0?Math.round(x.score/x.total*100):0); },0)/a.length); }
+  var el3=document.getElementById('tsStat3'); if(el3) el3.textContent=avg+'%';
 
-  const list = document.getElementById('quizList');
-  if(!STATE.quizzes.length){
-    list.innerHTML = `<div class="empty"><div class="ico">📭</div><div>Koi quiz nahi. <b>➕ New Quiz</b> dabao.</div></div>`;
-    return;
+  var rc=document.getElementById('tsRecentCard');
+  var rl=document.getElementById('tsRecentList');
+  if(rc&&rl){
+    var recent = a.slice(-5).reverse();
+    if(recent.length){
+      rc.style.display='block';
+      rl.innerHTML = recent.map(function(at){
+        var pct=at.total>0?Math.round(at.score/at.total*100):0;
+        var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(at.quizName)+'</div>' +
+          '<div style="font-size:0.7rem;color:var(--text2);">'+(at.completedAt||'')+'</div></div>' +
+          '<div style="font-weight:900;font-size:0.95rem;color:'+color+';">'+pct+'%</div>' +
+          '<div style="font-size:0.72rem;color:var(--text2);">'+at.score+'/'+at.total+'</div>' +
+        '</div>';
+      }).join('');
+    } else { rc.style.display='none'; }
   }
-  list.innerHTML = STATE.quizzes.map(q=>{
-    const atts = STATE.attempts.filter(a=>a.quizId===q.id);
-    const best = atts.length ? Math.max(...atts.map(a=>a.total>0?Math.round(a.score/a.total*100):0)) : null;
-    const tag = [q.subject, q.topic].filter(Boolean).join(' › ');
-    const tlabel = q.timer && q.timer.type!=='none'
-      ? (q.timer.type==='full' ? q.timer.value+' min' : q.timer.value+'s/Q')
-      : 'No Timer';
-    const bestColor = best===null?'':(best>=75?'var(--green)':best>=50?'var(--accent2)':'var(--red)');
-    const bestBg = best===null?'':(best>=75?'rgba(46,125,50,0.12)':best>=50?'rgba(230,81,0,0.12)':'rgba(198,40,40,0.12)');
-    return `
-    <div class="quiz-row">
-      <div class="info">
-        <div class="name">${escHtml(q.name)}</div>
-        ${tag?`<div style="font-size:0.72rem;color:var(--accent);margin-top:2px;">${escHtml(tag)}</div>`:''}
-        <div class="meta">
-          <span>❓ ${(q.questions||[]).length} Qs</span>
-          <span>⏱ ${tlabel}</span>
-          <span>📋 ${atts.length} attempts</span>
-        </div>
-      </div>
-      <div class="actions">
-        ${best!==null?`<div class="badge-best" style="background:${bestBg};color:${bestColor};">Best ${best}%</div>`:''}
-        <button class="btn btn-green btn-xs" ${(q.questions||[]).length?'':'disabled'} onclick="startAttempt(${q.id})">▶ Start</button>
-        <button class="btn btn-primary btn-xs" onclick="openQuestions(${q.id})">✏️ Edit</button>
-        <button class="btn btn-danger btn-xs" onclick="deleteQuiz(${q.id})">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
 }
 
-/* ---------- New Quiz ---------- */
-function openNewQuiz(){
-  ['nqName','nqSubject','nqTopic'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('nqTimerType').value = 'none';
-  document.getElementById('nqTimerVal').value = 30;
-  document.getElementById('nqTimerValRow').style.display = 'none';
-  showPage('newquiz');
+// ================================================================
+// CREATE FLOW
+// ================================================================
+function openNewQuizForm(){
+  var f=document.getElementById('newQuizForm');
+  ['nqName','nqSubject','nqTopic'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('nqTimerType').value='none';
+  document.getElementById('nqTimerValRow').style.display='none';
+  f.style.display='block';
+  f.scrollIntoView({behavior:'smooth'});
 }
 function onTimerTypeChange(){
-  const t = document.getElementById('nqTimerType').value;
-  const row = document.getElementById('nqTimerValRow');
-  const lbl = document.getElementById('nqTimerValLabel');
-  const val = document.getElementById('nqTimerVal');
+  var t=document.getElementById('nqTimerType').value;
+  var row=document.getElementById('nqTimerValRow');
+  var lbl=document.getElementById('nqTimerValLabel');
   if(t==='none'){ row.style.display='none'; return; }
   row.style.display='';
-  if(t==='full'){ lbl.textContent='Total Minutes:'; val.value = val.value || 30; }
-  else { lbl.textContent='Seconds per Question:'; val.value = 30; }
+  lbl.textContent = t==='perQ' ? 'Seconds per Question:' : 'Total Minutes:';
+  document.getElementById('nqTimerVal').value = t==='perQ' ? 30 : 60;
 }
 function saveNewQuiz(){
-  const name = document.getElementById('nqName').value.trim();
-  if(!name){ toast('Quiz naam daalo!', 'error'); return; }
-  const timerType = document.getElementById('nqTimerType').value;
-  const timerVal = parseInt(document.getElementById('nqTimerVal').value)||30;
-  const quiz = {
+  var name=(document.getElementById('nqName').value||'').trim();
+  if(!name){ showToast('Quiz naam daalo!','error'); return; }
+  var timerType=document.getElementById('nqTimerType').value;
+  var timerVal=parseInt(document.getElementById('nqTimerVal').value)||60;
+  var quiz={
     id: Date.now(),
-    name,
-    subject: document.getElementById('nqSubject').value.trim(),
-    topic: document.getElementById('nqTopic').value.trim(),
-    timer: { type: timerType, value: timerVal },
+    name: name,
+    subjectName: (document.getElementById('nqSubject').value||'').trim(),
+    topicName: (document.getElementById('nqTopic').value||'').trim(),
+    timer: {type:timerType, value:timerVal},
     questions: [],
-    createdAt: new Date().toLocaleDateString('en-IN'),
+    createdAt: new Date().toLocaleDateString('hi-IN'),
     createdAtMs: Date.now()
   };
-  cloudSaveQuiz(quiz).then(()=>{
-    toast('✅ Quiz "'+name+'" bana diya!', 'success');
-    _currentQuizId = quiz.id;
-    setTimeout(()=>openQuestions(quiz.id), 250);
-  }).catch(e=>toast('Save fail: '+e.message,'error'));
+  cloudSaveQuiz(quiz);
+  document.getElementById('newQuizForm').style.display='none';
+  showToast('✅ Quiz "'+name+'" bana diya!','success');
+  setTimeout(function(){ openQuizQuestions(quiz.id); }, 300);
+}
+function renderCreateList(){
+  var container=document.getElementById('createList');
+  if(!container) return;
+  var quizzes=STATE.quizzes;
+  if(!quizzes.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><div>Koi quiz nahi. ➕ New Quiz dabao.</div></div>';
+    return;
+  }
+  container.innerHTML = quizzes.map(function(q){
+    var attempts=STATE.attempts.filter(function(a){ return a.quizId===q.id; });
+    var bestPct=attempts.length?Math.max.apply(null,attempts.map(function(a){ return a.total>0?Math.round(a.score/a.total*100):0; })):null;
+    var tags=[q.subjectName,q.topicName].filter(Boolean).join(' › ');
+    var timerLabel=q.timer&&q.timer.type!=='none'?(q.timer.type==='full'?q.timer.value+' min':q.timer.value+'s/Q'):'No Timer';
+    return '<div class="card" style="margin-bottom:10px;">' +
+      '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:800;font-size:0.92rem;">'+escHtml(q.name)+'</div>' +
+          (tags?'<div style="font-size:0.7rem;color:var(--accent);margin-top:2px;">'+escHtml(tags)+'</div>':'')+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">'+
+            '<span>❓ '+(q.questions||[]).length+' questions</span>'+
+            '<span>📅 '+(q.createdAt||'')+'</span>'+
+            '<span>⏱ '+timerLabel+'</span>'+
+          '</div>'+
+          '<div style="font-size:0.65rem;color:var(--text2);font-family:monospace;margin-top:3px;">ID: '+q.id+'</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">'+
+          (bestPct!==null?'<div style="background:'+(bestPct>=75?'rgba(46,125,50,0.12)':bestPct>=50?'rgba(230,81,0,0.1)':'rgba(198,40,40,0.1)')+';border-radius:20px;padding:2px 10px;font-weight:900;font-size:0.82rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';text-align:center;">Best: '+bestPct+'%</div>':'')+
+          '<button class="btn btn-primary btn-xs" onclick="openQuizQuestions('+q.id+')">✏️ Edit</button>'+
+          '<button class="btn btn-green btn-xs" onclick="startAttempt('+q.id+',false)">▶ Attempt</button>'+
+          '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" style="font-size:0.7rem;">🔀 Shuffled</button>'+
+          '<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function deleteQuiz(id){
+  if(!confirm('Is quiz ko delete karo? Saare questions aur attempts bhi jayenge.')) return;
+  cloudDeleteQuiz(id);
+  showToast('Quiz delete ho gayi.','success');
 }
 
-/* ---------- Questions Page ---------- */
-let _currentQuizId = null;
-function openQuestions(id){
+// ================================================================
+// QUESTION MANAGER
+// ================================================================
+var _currentQuizId = null;
+
+function openQuizQuestions(id){
   _currentQuizId = id;
   cancelEditQ();
   showPage('questions');
+  document.getElementById('topbarTitle').textContent = '❓ Quiz Questions';
   renderQuestionsPage();
 }
 function getCurrentQuiz(){
-  return STATE.quizzes.find(q=>String(q.id)===String(_currentQuizId));
+  return STATE.quizzes.find(function(q){ return String(q.id)===String(_currentQuizId); });
 }
 function renderQuestionsPage(){
-  const q = getCurrentQuiz();
-  if(!q){ goHome(); return; }
-  document.getElementById('qpSubtitle').textContent = `${q.name} · ${(q.questions||[]).length} questions`;
-  const list = document.getElementById('qList');
-  if(!(q.questions||[]).length){
-    list.innerHTML = `<div class="empty"><div class="ico">📝</div><div>Koi question nahi. Upar form se add karo.</div></div>`;
+  var quiz=getCurrentQuiz();
+  if(!quiz){ showSection('create'); return; }
+  document.getElementById('qqSubtitle').textContent = escHtml(quiz.name);
+  document.getElementById('qqName').textContent = escHtml(quiz.name);
+  document.getElementById('qqMeta').textContent = (quiz.questions||[]).length+' questions';
+  var tb=document.getElementById('qqTimerBadge');
+  if(tb) tb.textContent = quiz.timer&&quiz.timer.type!=='none'?(quiz.timer.type==='full'?'⏱ '+quiz.timer.value+' min':'⏱ '+quiz.timer.value+'s/Q'):'No Timer';
+  var ib=document.getElementById('qqIdBadge');
+  if(ib) ib.textContent = 'ID: '+quiz.id;
+  renderQuestionsList(quiz);
+}
+function renderQuestionsList(quiz){
+  var container=document.getElementById('questionsList');
+  if(!container) return;
+  var qs=quiz.questions||[];
+  if(!qs.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:20px;">Koi question nahi. Upar form se add karo ya console se bulk import karo.</div>';
     return;
   }
-  list.innerHTML = q.questions.map((it,i)=>{
-    const letters = ['A','B','C','D'];
-    return `
-    <div class="q-item">
-      <div class="qt">${i+1}. ${escHtml(it.q)}</div>
-      ${(it.options||[]).map((o,oi)=>o?`<div class="opt ${oi===it.correct?'correct':''}">${letters[oi]}. ${escHtml(o)}${oi===it.correct?' ✓':''}</div>`:'').join('')}
-      ${it.explanation?`<div style="font-size:0.74rem; color:var(--text2); margin-top:4px;">💡 ${escHtml(it.explanation)}</div>`:''}
-      <div class="actions">
-        <button class="btn btn-outline btn-xs" onclick="editQuestion('${it.id}')">✏ Edit</button>
-        <button class="btn btn-danger btn-xs" onclick="deleteQuestion('${it.id}')">🗑 Delete</button>
-      </div>
-    </div>`;
-  }).join('');
+  container.innerHTML = '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div class="card-title" style="margin:0;">📋 Questions ('+qs.length+')</div></div>'+
+    qs.map(function(q,i){
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);" id="qItem_'+q.id+'">'+
+        '<div style="display:flex;align-items:flex-start;gap:8px;">'+
+          '<div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;margin-top:2px;">'+(i+1)+'</div>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;word-break:break-word;">'+escHtml(q.q)+'</div>'+
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:6px;">'+
+              q.options.map(function(opt,oi){
+                var isCor=oi===q.correct;
+                return '<div style="font-size:0.74rem;padding:3px 6px;border-radius:5px;background:'+(isCor?'rgba(46,125,50,0.15)':'var(--surface2)')+';color:'+(isCor?'var(--green)':'var(--text)')+';font-weight:'+(isCor?'800':'400')+';word-break:break-word;">'+
+                  String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isCor?' ✓':'')+
+                '</div>';
+              }).join('')+
+            '</div>'+
+            (q.explanation?'<div style="font-size:0.72rem;color:#1565c0;margin-top:4px;font-style:italic;">💡 '+escHtml(q.explanation)+'</div>':'')+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">'+
+            '<button onclick="editQ('+q.id+')" style="background:rgba(21,101,192,0.1);border:1px solid rgba(21,101,192,0.25);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;font-weight:700;">✏️</button>'+
+            '<button onclick="moveQ('+q.id+',-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;">↑</button>'+
+            '<button onclick="moveQ('+q.id+',1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;">↓</button>'+
+            '<button onclick="deleteQ('+q.id+')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.8rem;padding:2px 5px;">🗑</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('')+'</div>';
 }
 function clearQForm(){
-  ['qText','qOpt0','qOpt1','qOpt2','qOpt3','qExpl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('qText').value='';
+  [0,1,2,3].forEach(function(i){ document.getElementById('qOpt'+i).value=''; });
   document.getElementById('qCorrect').value='0';
+  document.getElementById('qExpl').value='';
   document.getElementById('editQId').value='';
 }
 function cancelEditQ(){
   clearQForm();
-  document.getElementById('qFormTitle').textContent = '➕ Question Add Karo';
-  document.getElementById('qAddBtn').textContent = '➕ Add Question';
+  document.getElementById('addQFormTitle').textContent='➕ Question Add Karo';
+  document.getElementById('addQBtn').textContent='➕ Add Question';
 }
-function addOrUpdateQuestion(){
-  const text = document.getElementById('qText').value.trim();
-  const opts = [0,1,2,3].map(i=>document.getElementById('qOpt'+i).value.trim());
-  const correct = parseInt(document.getElementById('qCorrect').value)||0;
-  const expl = document.getElementById('qExpl').value.trim();
-  if(!text){ toast('Question likho!','error'); return; }
-  // Saare 4 options mandatory (bade app ki tarah)
-  if(opts.some(o=>!o)){ toast('Saare 4 options daalo!','error'); return; }
-
-  if(!_db || !_uid){ toast('Login karo pehle!','error'); return; }
-
-  const editId = document.getElementById('editQId').value;
-  const quizId = String(_currentQuizId);
-
-  // Firestore se fresh quiz fetch karo — stale STATE reference avoid karne ke liye
-  _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).get().then(doc=>{
-    if(!doc.exists){ toast('Quiz nahi mila!','error'); return; }
-    const q = doc.data();
-    q.questions = q.questions || [];
-
-    if(editId){
-      const idx = q.questions.findIndex(x=>String(x.id)===String(editId));
-      if(idx>-1){
-        q.questions[idx] = { ...q.questions[idx], q:text, options:opts, correct, explanation:expl };
-      } else {
-        toast('Question nahi mila edit ke liye!','error'); return;
-      }
-    } else {
-      if(q.questions.length >= 200){ toast('Max 200 questions allowed!','error'); return; }
-      q.questions.push({ id: Date.now(), q:text, options:opts, correct, explanation:expl });
-    }
-
-    return _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).set(q)
-      .then(()=>{
-        toast(editId?'✅ Updated':'✅ Question add ho gaya!','success');
-        cancelEditQ();
-      });
-  }).catch(e=>{ toast('Save fail: '+e.message,'error'); console.error(e); });
+function editQ(qid){
+  var quiz=getCurrentQuiz(); if(!quiz) return;
+  var q=(quiz.questions||[]).find(function(x){ return x.id===qid; }); if(!q) return;
+  document.getElementById('editQId').value=qid;
+  document.getElementById('qText').value=q.q;
+  [0,1,2,3].forEach(function(i){ document.getElementById('qOpt'+i).value=q.options[i]||''; });
+  document.getElementById('qCorrect').value=q.correct;
+  document.getElementById('qExpl').value=q.explanation||'';
+  document.getElementById('addQFormTitle').textContent='✏️ Question Edit Karo';
+  document.getElementById('addQBtn').textContent='💾 Update Question';
+  document.getElementById('addQForm').scrollIntoView({behavior:'smooth'});
 }
-function editQuestion(qid){
-  const q = getCurrentQuiz(); if(!q) return;
-  const it = q.questions.find(x=>String(x.id)===String(qid)); if(!it) return;
-  document.getElementById('qText').value = it.q;
-  [0,1,2,3].forEach(i=>document.getElementById('qOpt'+i).value = it.options[i]||'');
-  document.getElementById('qCorrect').value = it.correct;
-  document.getElementById('qExpl').value = it.explanation||'';
-  document.getElementById('editQId').value = it.id;
-  document.getElementById('qFormTitle').textContent = '✏️ Question Edit Karo';
-  document.getElementById('qAddBtn').textContent = '💾 Update';
-  window.scrollTo({top:0, behavior:'smooth'});
+function addOrUpdateQ(){
+  var editId=document.getElementById('editQId').value;
+  var qText=(document.getElementById('qText').value||'').trim();
+  if(!qText){ showToast('Question likhao!','error'); return; }
+  var opts=[0,1,2,3].map(function(i){ return (document.getElementById('qOpt'+i).value||'').trim(); });
+  if(opts.some(function(o){ return !o; })){ showToast('Saare 4 options daalo!','error'); return; }
+  var correct=parseInt(document.getElementById('qCorrect').value)||0;
+  var expl=(document.getElementById('qExpl').value||'').trim();
+
+  var quiz=getCurrentQuiz(); if(!quiz) return;
+  if(!quiz.questions) quiz.questions=[];
+
+  if(editId){
+    var idx=quiz.questions.findIndex(function(x){ return String(x.id)===String(editId); });
+    if(idx>-1){
+      quiz.questions[idx]={...quiz.questions[idx], q:qText, options:opts, correct:correct, explanation:expl};
+    } else { showToast('Question nahi mila!','error'); return; }
+  } else {
+    if(quiz.questions.length>=200){ showToast('Max 200 questions!','error'); return; }
+    quiz.questions.push({id:Date.now()+Math.random(), q:qText, options:opts, correct:correct, explanation:expl});
+  }
+
+  cloudSaveQuiz(quiz);
+  cancelEditQ();
+  renderQuestionsPage();
+  showToast(editId?'✅ Updated!':'✅ Question add ho gaya!','success');
 }
-function deleteQuestion(qid){
-  if(!confirm('Question delete karna hai?')) return;
-  if(!_db || !_uid) return;
-  const quizId = String(_currentQuizId);
-  _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).get().then(doc=>{
-    if(!doc.exists) return;
-    const q = doc.data();
-    q.questions = (q.questions||[]).filter(x=>String(x.id)!==String(qid));
-    return _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).set(q)
-      .then(()=>toast('🗑 Deleted','success'));
-  }).catch(e=>toast('Delete fail: '+e.message,'error'));
+function deleteQ(qid){
+  if(!confirm('Yeh question delete karo?')) return;
+  var quiz=getCurrentQuiz(); if(!quiz) return;
+  quiz.questions=(quiz.questions||[]).filter(function(x){ return x.id!==qid; });
+  cloudSaveQuiz(quiz);
+  renderQuestionsPage();
+  showToast('Question delete ho gaya.','success');
 }
-function deleteQuiz(id){
-  if(!confirm('Pura quiz delete karna hai? Saare questions aur attempts bhi delete honge.')) return;
-  cloudDeleteQuiz(id);
-  toast('🗑 Quiz deleted','success');
+function moveQ(qid, dir){
+  var quiz=getCurrentQuiz(); if(!quiz) return;
+  var qs=quiz.questions||[];
+  var idx=qs.findIndex(function(q){ return q.id===qid; }); if(idx<0) return;
+  var ni=idx+dir; if(ni<0||ni>=qs.length) return;
+  var tmp=qs[idx]; qs[idx]=qs[ni]; qs[ni]=tmp;
+  quiz.questions=qs;
+  cloudSaveQuiz(quiz);
+  renderQuestionsPage();
+}
+function shuffleAllQ(){
+  var quiz=getCurrentQuiz();
+  if(!quiz||!(quiz.questions||[]).length) return;
+  if(!confirm('Saare questions ki order shuffle karni hai?')) return;
+  quiz.questions=shuffle(quiz.questions);
+  cloudSaveQuiz(quiz);
+  renderQuestionsPage();
+  showToast('🔀 Questions shuffle ho gaye!','success');
 }
 
-/* ---------- Attempt ---------- */
-let _att = null; // current attempt state
-function startAttempt(quizId){
-  const q = STATE.quizzes.find(x=>x.id===quizId);
-  if(!q || !(q.questions||[]).length){ toast('Questions nahi hain','error'); return; }
-  _att = {
-    quizId: q.id, quizName: q.name,
-    questions: q.questions.slice(),
-    answers: new Array(q.questions.length).fill(null),
-    idx: 0,
-    startedAt: Date.now(),
-    timer: q.timer || {type:'none'}
-  };
-  document.getElementById('atTitle').textContent = q.name;
-  showPage('attempt');
-  renderAttempt();
-  setupTimer();
-}
-function renderAttempt(){
-  const a = _att; if(!a) return;
-  const cur = a.questions[a.idx];
-  document.getElementById('atQNum').textContent = `Question ${a.idx+1}`;
-  document.getElementById('atProgress').textContent = `Q ${a.idx+1} / ${a.questions.length}`;
-  document.getElementById('atQBody').textContent = cur.q;
-  const letters = ['A','B','C','D'];
-  document.getElementById('atOpts').innerHTML = (cur.options||[]).map((o,i)=>{
-    if(!o) return '';
-    const sel = a.answers[a.idx]===i ? 'selected' : '';
-    return `<button class="opt-btn ${sel}" onclick="selectOpt(${i})"><b>${letters[i]}.</b> ${escHtml(o)}</button>`;
+// ================================================================
+// BULK IMPORT — window.tsAddQuestions
+// ================================================================
+window.tsAddQuestions = function(quizId, qArray){
+  if(!quizId){ console.error('[TS] quizId required'); return; }
+  if(!Array.isArray(qArray)||!qArray.length){ console.error('[TS] qArray must be non-empty array'); return; }
+
+  var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
+  if(!quiz){ console.error('[TS] Quiz not found for ID:', quizId, '| Available IDs:', STATE.quizzes.map(function(q){ return q.id; })); return; }
+  if(!quiz.questions) quiz.questions=[];
+
+  var added=0, skipped=0;
+  qArray.forEach(function(item,i){
+    if(!item.q||!Array.isArray(item.options)||item.options.length<2){ console.warn('[TS] Skipping invalid at index',i); skipped++; return; }
+    if(quiz.questions.length>=200){ skipped++; return; }
+    var opts=item.options.slice(0,4);
+    while(opts.length<4) opts.push('');
+    quiz.questions.push({
+      id: Date.now()+Math.random(),
+      q: String(item.q),
+      options: opts.map(String),
+      correct: typeof item.correct==='number' ? item.correct : 0,
+      explanation: item.explanation ? String(item.explanation) : ''
+    });
+    added++;
+  });
+
+  cloudSaveQuiz(quiz);
+  if(getActivePage()==='questions'){ _currentQuizId=quiz.id; renderQuestionsPage(); }
+  console.log('[TS] Import done! Added:', added, '| Skipped:', skipped, '| Total:', quiz.questions.length);
+  showToast('✅ '+added+' questions imported!','success');
+  return { added:added, skipped:skipped, total:quiz.questions.length };
+};
+
+// ================================================================
+// PRACTICE LIST
+// ================================================================
+function renderPracticeList(){
+  var container=document.getElementById('practiceList'); if(!container) return;
+  var quizzes=STATE.quizzes;
+  if(!quizzes.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><div>Koi quiz nahi. Pehle Create karo.</div></div>';
+    return;
+  }
+  container.innerHTML = quizzes.map(function(q){
+    var attempts=STATE.attempts.filter(function(a){ return a.quizId===q.id; });
+    var lastAttempt=attempts.length?attempts[attempts.length-1]:null;
+    var bestPct=attempts.length?Math.max.apply(null,attempts.map(function(a){ return a.total>0?Math.round(a.score/a.total*100):0; })):null;
+    var tags=[q.subjectName,q.topicName].filter(Boolean).join(' › ');
+    return '<div class="card" style="margin-bottom:10px;">'+
+      '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-weight:800;font-size:0.92rem;">'+escHtml(q.name)+'</div>'+
+          (tags?'<div style="font-size:0.7rem;color:var(--accent);margin-top:2px;">'+escHtml(tags)+'</div>':'')+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">'+
+            '<span>❓ '+(q.questions||[]).length+' Qs</span>'+
+            (q.timer&&q.timer.type!=='none'?'<span>⏱ '+(q.timer.type==='full'?q.timer.value+' min':q.timer.value+'s/Q')+'</span>':'<span>No Timer</span>')+
+            '<span>📋 '+attempts.length+' attempts</span>'+
+          '</div>'+
+          (lastAttempt?'<div style="font-size:0.72rem;color:var(--text2);margin-top:4px;">Last: '+(lastAttempt.total>0?Math.round(lastAttempt.score/lastAttempt.total*100):0)+'% ('+( lastAttempt.completedAt||'')+')</div>':'')+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">'+
+          (bestPct!==null?'<div style="text-align:center;font-weight:900;font-size:0.88rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';">Best '+bestPct+'%</div>':'')+
+          '<button class="btn btn-primary btn-sm" onclick="startAttempt('+q.id+',false)" '+(!(q.questions||[]).length?'disabled style="opacity:0.5;"':'')+'>▶ Start</button>'+
+          '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
+          (attempts.length?'<button class="btn btn-outline btn-xs" onclick="viewLastResult('+q.id+')">📊 Results</button>':'')+
+        '</div>'+
+      '</div>'+
+    '</div>';
   }).join('');
-  document.getElementById('atBar').style.width = ((a.idx+1)/a.questions.length*100)+'%';
-  document.getElementById('atPrev').disabled = a.idx===0;
-  document.getElementById('atNext').textContent = a.idx===a.questions.length-1 ? 'Submit ✓' : 'Agla →';
-  if(a.timer.type==='perQ') restartPerQTimer();
+}
+
+// ================================================================
+// ATTEMPT
+// ================================================================
+var _att = {
+  quizId:null, quiz:null, answers:[], marked:[], skipped:[], currentQ:0,
+  timer:null, timeLeft:0, perQTimer:null, startTime:0, submitted:false
+};
+
+function startAttempt(quizId, shuffleQs){
+  var quiz=STATE.quizzes.find(function(q){ return q.id===quizId; });
+  if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
+  if(!(quiz.questions||[]).length){ showToast('Is quiz mein koi question nahi!','error'); return; }
+
+  if(_att.timer) clearInterval(_att.timer);
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+
+  var qCopy=JSON.parse(JSON.stringify(quiz));
+  if(shuffleQs){
+    qCopy.questions=shuffle(qCopy.questions);
+    qCopy.questions.forEach(function(q){
+      var ct=q.options[q.correct];
+      q.options=shuffle(q.options);
+      q.correct=q.options.indexOf(ct);
+    });
+  }
+
+  _att={
+    quizId:quizId, quiz:qCopy,
+    answers:qCopy.questions.map(function(){ return null; }),
+    marked:qCopy.questions.map(function(){ return false; }),
+    skipped:qCopy.questions.map(function(){ return false; }),
+    currentQ:0, timer:null, timeLeft:0, perQTimer:null,
+    startTime:Date.now(), submitted:false
+  };
+
+  showPage('attempt');
+  document.getElementById('topbarTitle').textContent = '📝 '+quiz.name;
+
+  // Setup full timer
+  if(quiz.timer&&quiz.timer.type==='full'){
+    _att.timeLeft=quiz.timer.value*60;
+    document.getElementById('atTimer').style.display='inline-flex';
+    updateTimerDisplay();
+    _att.timer=setInterval(function(){
+      if(_att.submitted){ clearInterval(_att.timer); return; }
+      _att.timeLeft--;
+      updateTimerDisplay();
+      if(_att.timeLeft<=0){
+        clearInterval(_att.timer);
+        showToast('⏱ Time Up! Auto-submitting...','error');
+        setTimeout(function(){ submitAttempt(true); }, 1000);
+      }
+    },1000);
+  } else {
+    document.getElementById('atTimer').style.display='none';
+  }
+
+  renderCurrentQ();
+}
+function updateTimerDisplay(){
+  var t=_att.timeLeft;
+  var m=Math.floor(t/60), s=t%60;
+  var d=document.getElementById('atTimerVal');
+  if(d) d.textContent=(m<10?'0'+m:m)+':'+(s<10?'0'+s:s);
+  var el=document.getElementById('atTimer');
+  if(el) el.style.background=t<=60?'linear-gradient(135deg,#c62828,#e53935)':'linear-gradient(135deg,#e65100,#ff8f00)';
+}
+function renderCurrentQ(){
+  var st=_att; var qs=st.quiz.questions; var q=qs[st.currentQ]; if(!q) return;
+  var total=qs.length;
+  var answered=st.answers.filter(function(a){ return a!==null; }).length;
+  var markedCount=st.marked.filter(Boolean).length;
+  var progText='Q '+(st.currentQ+1)+' / '+total+' | '+answered+' answered';
+  if(markedCount) progText+=' | 🔖 '+markedCount+' marked';
+  document.getElementById('atTitle').textContent=st.quiz.name;
+  document.getElementById('atProgress').textContent=progText;
+  document.getElementById('atBar').style.width=Math.round(((st.currentQ+1)/total)*100)+'%';
+  document.getElementById('atQNum').textContent='Question '+(st.currentQ+1)+' of '+total;
+  document.getElementById('atQBody').textContent=q.q;
+
+  var mb=document.getElementById('atMarkBadge');
+  if(mb) mb.style.display=st.marked[st.currentQ]?'inline-block':'none';
+  var mBtn=document.getElementById('atMarkBtn');
+  if(mBtn){
+    mBtn.textContent=st.marked[st.currentQ]?'🔖 Unmark':'🔖 Mark for Review';
+    mBtn.style.background=st.marked[st.currentQ]?'rgba(255,152,0,0.2)':'rgba(255,152,0,0.08)';
+  }
+  var sBtn=document.getElementById('atSkipBtn');
+  if(sBtn){
+    if(st.skipped[st.currentQ]&&st.answers[st.currentQ]===null){
+      sBtn.textContent='⏩ Skipped'; sBtn.style.opacity='0.5';
+    } else { sBtn.textContent='⏩ Skip'; sBtn.style.opacity='1'; }
+  }
+
+  var optsEl=document.getElementById('atOptions');
+  optsEl.innerHTML=q.options.map(function(opt,i){
+    var isSel=st.answers[st.currentQ]===i;
+    return '<div onclick="selectOpt('+i+')" style="cursor:pointer;padding:10px 14px;border-radius:10px;border:2px solid '+(isSel?'var(--accent)':'var(--border)')+';background:'+(isSel?'rgba(21,101,192,0.1)':'var(--surface2)')+';font-weight:'+(isSel?'800':'500')+';font-size:0.85rem;color:var(--text);display:flex;align-items:flex-start;gap:10px;min-height:44px;word-break:break-word;transition:border-color 0.15s,background 0.15s;">'+
+      '<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(isSel?'var(--accent)':'var(--border)')+';background:'+(isSel?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'+
+        (isSel?'<div style="width:8px;height:8px;border-radius:50%;background:#fff;"></div>':'')+
+      '</div>'+
+      '<span style="flex:1;">'+String.fromCharCode(65+i)+'. '+escHtml(opt)+'</span>'+
+    '</div>';
+  }).join('');
+
+  var prev=document.getElementById('atPrev'); if(prev) prev.disabled=st.currentQ===0;
+  var next=document.getElementById('atNext'); if(next) next.textContent=(st.currentQ===total-1)?'Finish →':'Agla →';
+
+  // Per-Q timer
+  if(st.quiz.timer&&st.quiz.timer.type==='perQ'){
+    if(st.perQTimer) clearInterval(st.perQTimer);
+    var perQEl=document.getElementById('atPerQTimer');
+    var perQD=document.getElementById('atPerQVal');
+    if(perQEl) perQEl.style.display='block';
+    var pLeft=st.quiz.timer.value;
+    if(perQD) perQD.textContent=pLeft;
+    _att.perQTimer=setInterval(function(){
+      if(_att.submitted){ clearInterval(_att.perQTimer); return; }
+      pLeft--;
+      if(perQD) perQD.textContent=pLeft;
+      if(pLeft<=0){
+        clearInterval(_att.perQTimer);
+        if(_att.currentQ<qs.length-1){ navQ(1); }
+        else { showToast('Time up! Submitting...','error'); setTimeout(function(){ submitAttempt(true); },800); }
+      }
+    },1000);
+  } else {
+    var pe=document.getElementById('atPerQTimer'); if(pe) pe.style.display='none';
+  }
+
+  var ov=document.getElementById('overviewPanel'); if(ov) ov.style.display='none';
 }
 function selectOpt(i){
-  if(!_att) return;
-  _att.answers[_att.idx] = i;
-  renderAttempt();
+  if(_att.submitted) return;
+  _att.answers[_att.currentQ]=i;
+  _att.skipped[_att.currentQ]=false;
+  renderCurrentQ();
+}
+function skipQ(){
+  if(_att.submitted) return;
+  _att.skipped[_att.currentQ]=true;
+  _att.answers[_att.currentQ]=null;
+  showToast('⏩ Question skip ho gaya','info');
+  var total=(_att.quiz.questions||[]).length;
+  if(_att.currentQ<total-1){
+    if(_att.perQTimer) clearInterval(_att.perQTimer);
+    _att.currentQ++;
+    renderCurrentQ();
+  } else { renderCurrentQ(); }
+}
+function markForReview(){
+  if(_att.submitted) return;
+  _att.marked[_att.currentQ]=!_att.marked[_att.currentQ];
+  renderCurrentQ();
+  showToast(_att.marked[_att.currentQ]?'🔖 Marked for review!':'Unmark ho gaya','info');
 }
 function navQ(dir){
-  if(!_att) return;
-  if(dir>0 && _att.idx === _att.questions.length-1){ confirmSubmit(); return; }
-  _att.idx = Math.max(0, Math.min(_att.questions.length-1, _att.idx+dir));
-  renderAttempt();
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+  var ni=_att.currentQ+dir;
+  var total=(_att.quiz.questions||[]).length;
+  if(ni<0) return;
+  if(ni>=total){ openOverview(); return; }
+  _att.currentQ=ni;
+  renderCurrentQ();
 }
-
-/* timer */
-let _timerInt = null, _perQInt = null;
-function setupTimer(){
-  clearInterval(_timerInt); clearInterval(_perQInt);
-  document.getElementById('atTimer').style.display = 'none';
-  document.getElementById('atPerQ').style.display = 'none';
-  if(!_att || _att.timer.type==='none') return;
-  if(_att.timer.type==='full'){
-    document.getElementById('atTimer').style.display = '';
-    let left = _att.timer.value*60;
-    const tick = ()=>{
-      if(left<=0){ clearInterval(_timerInt); toast('⏱ Time over!','error'); submitAttempt(); return; }
-      const m = String(Math.floor(left/60)).padStart(2,'0');
-      const s = String(left%60).padStart(2,'0');
-      document.getElementById('atTimerVal').textContent = m+':'+s;
-      left--;
-    };
-    tick(); _timerInt = setInterval(tick, 1000);
-  }
-  if(_att.timer.type==='perQ'){
-    document.getElementById('atPerQ').style.display = '';
-    restartPerQTimer();
-  }
+function openOverview(){
+  var panel=document.getElementById('overviewPanel');
+  var grid=document.getElementById('overviewGrid');
+  if(!panel||!grid) return;
+  var qs=_att.quiz.questions; var st=_att;
+  grid.innerHTML=qs.map(function(q,i){
+    var ans=st.answers[i]; var isMarked=st.marked[i];
+    var isSkipped=st.skipped[i]&&ans===null;
+    var isAnswered=ans!==null; var isCurrent=i===st.currentQ;
+    var bc,bg,tc;
+    if(isCurrent){ bc='var(--accent)'; bg='rgba(21,101,192,0.15)'; tc='var(--accent)'; }
+    else if(isMarked&&isAnswered){ bc='#e65100'; bg='rgba(255,152,0,0.25)'; tc='#e65100'; }
+    else if(isMarked){ bc='#e65100'; bg='rgba(255,152,0,0.15)'; tc='#e65100'; }
+    else if(isAnswered){ bc='var(--green)'; bg='rgba(46,125,50,0.14)'; tc='var(--green)'; }
+    else if(isSkipped){ bc='var(--red)'; bg='rgba(198,40,40,0.1)'; tc='var(--red)'; }
+    else { bc='var(--border)'; bg='var(--surface2)'; tc='var(--text2)'; }
+    return '<div onclick="goToQ('+i+')" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;cursor:pointer;border:2px solid '+bc+';background:'+bg+';color:'+tc+';position:relative;">'+
+      (i+1)+(isMarked?'<span style="position:absolute;top:-4px;right:-4px;font-size:0.5rem;">🔖</span>':'')+
+    '</div>';
+  }).join('');
+  panel.style.display='block';
 }
-function restartPerQTimer(){
-  clearInterval(_perQInt);
-  if(!_att || _att.timer.type!=='perQ') return;
-  let left = _att.timer.value;
-  const tick = ()=>{
-    document.getElementById('atPerQVal').textContent = left;
-    if(left<=0){
-      clearInterval(_perQInt);
-      if(_att.idx === _att.questions.length-1){ submitAttempt(); }
-      else { _att.idx++; renderAttempt(); }
-      return;
-    }
-    left--;
-  };
-  tick(); _perQInt = setInterval(tick, 1000);
+function goToQ(idx){
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+  _att.currentQ=idx; renderCurrentQ();
 }
 function confirmSubmit(){
-  if(!_att) return;
-  const unanswered = _att.answers.filter(a=>a===null).length;
-  if(unanswered>0 && !confirm(unanswered+' questions unanswered hain. Submit karna hai?')) return;
-  submitAttempt();
+  var st=_att;
+  var unanswered=st.answers.filter(function(a){ return a===null; }).length;
+  var markedCount=st.marked.filter(Boolean).length;
+  var msgs=[];
+  if(unanswered>0) msgs.push(unanswered+' questions unanswered hain');
+  if(markedCount>0) msgs.push(markedCount+' questions marked hain');
+  if(msgs.length>0){ if(!confirm(msgs.join('\n')+'\n\nPhir bhi submit karo?')) return; }
+  submitAttempt(false);
 }
-function submitAttempt(){
-  if(!_att) return;
-  clearInterval(_timerInt); clearInterval(_perQInt);
-  const a = _att;
-  let score = 0;
-  a.questions.forEach((q,i)=>{ if(a.answers[i]===q.correct) score++; });
-  const attempt = {
+function submitAttempt(auto){
+  if(_att.submitted) return;
+  _att.submitted=true;
+  if(_att.timer) clearInterval(_att.timer);
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+
+  var st=_att; var qs=st.quiz.questions; var score=0;
+  qs.forEach(function(q,i){ if(st.answers[i]===q.correct) score++; });
+  var timeTaken=Math.round((Date.now()-st.startTime)/1000);
+  var m=Math.floor(timeTaken/60), s=timeTaken%60;
+  var timeStr=(m>0?m+' min ':'')+s+' sec';
+
+  var attempt={
     id: Date.now(),
-    quizId: a.quizId,
-    quizName: a.quizName,
-    score, total: a.questions.length,
-    answers: a.answers,
-    questions: a.questions,
-    timeTakenSec: Math.round((Date.now()-a.startedAt)/1000),
-    completedAt: new Date().toLocaleString('en-IN')
+    quizId: st.quizId,
+    quizName: st.quiz.name,
+    answers: st.answers.slice(),
+    score: score,
+    total: qs.length,
+    timeTaken: timeTaken,
+    timeStr: timeStr,
+    completedAt: new Date().toLocaleDateString('hi-IN')+' '+new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})
   };
+
   cloudSaveAttempt(attempt);
-  showResult(attempt);
-  _att = null;
-}
-function showResult(at){
-  const pct = at.total>0 ? Math.round(at.score/at.total*100) : 0;
-  document.getElementById('rsSubtitle').textContent = at.quizName;
-  document.getElementById('rsScore').textContent = at.score+'/'+at.total;
-  document.getElementById('rsPct').textContent = pct+'%';
-  document.getElementById('rsEmoji').textContent = pct>=75?'🏆':pct>=50?'👍':'📚';
-  const m = Math.floor(at.timeTakenSec/60), s = at.timeTakenSec%60;
-  document.getElementById('rsTime').textContent = `Time: ${m}m ${s}s`;
-  const letters = ['A','B','C','D'];
-  document.getElementById('rsAnalysis').innerHTML = at.questions.map((q,i)=>{
-    const sel = at.answers[i];
-    const ok = sel===q.correct;
-    return `<div class="q-item" style="border-left:3px solid ${ok?'var(--green)':'var(--red)'};">
-      <div class="qt">${i+1}. ${escHtml(q.q)}</div>
-      <div class="opt">Aapka: <b style="color:${ok?'var(--green)':'var(--red)'};">${sel===null?'Not answered':letters[sel]+'. '+escHtml(q.options[sel]||'')}</b></div>
-      ${!ok?`<div class="opt correct">Sahi: ${letters[q.correct]}. ${escHtml(q.options[q.correct]||'')} ✓</div>`:''}
-      ${q.explanation?`<div style="font-size:0.74rem; color:var(--text2); margin-top:4px;">💡 ${escHtml(q.explanation)}</div>`:''}
-    </div>`;
-  }).join('');
-  showPage('result');
-  window._lastQuizId = at.quizId;
-}
-function reattempt(){
-  if(window._lastQuizId) startAttempt(window._lastQuizId);
+  _lastAttempt=attempt;
+  _lastQuiz=JSON.parse(JSON.stringify(st.quiz));
+  showResult(attempt, st.quiz);
 }
 
-/* ---------- Boot ---------- */
+// ================================================================
+// RESULT
+// ================================================================
+var _lastAttempt=null, _lastQuiz=null;
+
+function showResult(attempt, quiz){
+  showPage('result');
+  document.getElementById('topbarTitle').textContent='📊 Result';
+  document.getElementById('rsSubtitle').textContent=escHtml(quiz.name);
+
+  var pct=attempt.total>0?Math.round(attempt.score/attempt.total*100):0;
+  var emoji=pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅';
+  var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
+
+  document.getElementById('rsEmoji').textContent=emoji;
+  var sd=document.getElementById('rsScore'); sd.textContent=attempt.score+'/'+attempt.total; sd.style.color=color;
+  var ad=document.getElementById('rsAcc'); ad.textContent=pct+'%'; ad.style.color=color;
+  document.getElementById('rsTime').textContent='⏱ Time: '+(attempt.timeStr||'--');
+
+  // Comparison
+  var allAttempts=STATE.attempts.filter(function(a){ return a.quizId===quiz.id; });
+  var last3=allAttempts.slice(-3);
+  var cc=document.getElementById('compCard');
+  var ccContent=document.getElementById('compContent');
+  if(cc&&ccContent&&last3.length>1){
+    cc.style.display='block';
+    ccContent.innerHTML='<div style="display:flex;flex-direction:column;gap:10px;">'+
+      last3.slice().reverse().map(function(a,ri){
+        var p=a.total>0?Math.round(a.score/a.total*100):0;
+        var isCur=a.id===attempt.id;
+        var bc=p>=75?'#2e7d32':p>=50?'#e65100':'#c62828';
+        return '<div style="padding:10px 12px;border-radius:10px;background:'+(isCur?'rgba(21,101,192,0.08)':'var(--surface2)')+';border:1.5px solid '+(isCur?'rgba(21,101,192,0.25)':'var(--border)')+';">'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'+
+            '<div style="font-size:0.78rem;font-weight:700;flex:1;">'+(isCur?'🔵 Current':'🕐 Attempt '+(last3.length-ri))+' — '+(a.completedAt||'')+'</div>'+
+            '<div style="font-weight:900;color:'+bc+';font-size:0.95rem;">'+p+'%</div>'+
+          '</div>'+
+          '<div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;">'+
+            '<div style="height:100%;width:'+p+'%;background:'+bc+';border-radius:4px;"></div>'+
+          '</div>'+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;">'+a.score+'/'+a.total+' correct | '+(a.timeStr||'--')+'</div>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+  } else if(cc){ cc.style.display='none'; }
+
+  var ac=document.getElementById('analysisCard'); if(ac) ac.style.display='none';
+}
+function showFullAnalysis(){
+  var ac=document.getElementById('analysisCard');
+  var acContent=document.getElementById('analysisContent');
+  if(!ac||!acContent||!_lastAttempt||!_lastQuiz) return;
+  ac.style.display='block';
+  var qs=_lastQuiz.questions; var answers=_lastAttempt.answers;
+  acContent.innerHTML=qs.map(function(q,i){
+    var userAns=answers[i];
+    var isCorrect=userAns===q.correct;
+    var isSkipped=userAns===null;
+    var statusColor=isSkipped?'#9e9e9e':isCorrect?'#2e7d32':'#c62828';
+    var statusIcon=isSkipped?'⏭':isCorrect?'✅':'❌';
+    return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'+
+      '<div style="display:flex;gap:8px;align-items:flex-start;">'+
+        '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
+        '<div style="flex:1;">'+
+          '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
+          '<div style="display:flex;flex-direction:column;gap:4px;">'+
+            q.options.map(function(opt,oi){
+              var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
+              var bg=isCOpt?'rgba(46,125,50,0.15)':(isUOpt&&!isCOpt)?'rgba(198,40,40,0.12)':'var(--surface2)';
+              var clr=isCOpt?'#2e7d32':(isUOpt&&!isCOpt)?'#c62828':'var(--text)';
+              var fw=(isCOpt||isUOpt)?'800':'400';
+              return '<div style="padding:5px 10px;border-radius:7px;background:'+bg+';color:'+clr+';font-weight:'+fw+';font-size:0.79rem;">'+
+                String.fromCharCode(65+oi)+'. '+escHtml(opt)+
+                (isCOpt?' ✓':'')+(isUOpt&&!isCOpt?' ✗':'')+
+              '</div>';
+            }).join('')+
+          '</div>'+
+          (isSkipped?'<div style="font-size:0.72rem;color:#9e9e9e;margin-top:4px;">⏭ Skipped</div>':'')+
+          (q.explanation?'<div style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
+          '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  ac.scrollIntoView({behavior:'smooth'});
+}
+function reattempt(){
+  if(!_lastQuiz) return;
+  startAttempt(_lastQuiz.id, false);
+}
+function viewLastResult(quizId){
+  var attempts=STATE.attempts.filter(function(a){ return a.quizId===quizId; });
+  if(!attempts.length){ showToast('Koi attempt nahi!','error'); return; }
+  var last=attempts[attempts.length-1];
+  var quiz=STATE.quizzes.find(function(q){ return q.id===quizId; });
+  if(!quiz) return;
+  _lastAttempt=last;
+  _lastQuiz=JSON.parse(JSON.stringify(quiz));
+  showResult(last, quiz);
+}
+
+// ================================================================
+// BOOT
+// ================================================================
 showPage('loading');
-window.addEventListener('load', function() {
-  if (typeof firebase !== 'undefined') {
+window.addEventListener('load', function(){
+  if(typeof firebase !== 'undefined'){
     initFirebase();
   } else {
-    toast('Firebase load nahi hua. Internet check karo.', 'error');
+    showToast('Firebase load nahi hua. Internet check karo.','error');
     showPage('login');
   }
 });
