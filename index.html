@@ -762,8 +762,11 @@ function signInAnon(){
 function signInGoogle(){
   if(!_auth){ showToast('Firebase setup pending','error'); return; }
   var provider = new firebase.auth.GoogleAuthProvider();
-  showPage('loading');
-  _auth.signInWithRedirect(provider).catch(function(e){ showToast('Google failed: '+e.message,'error'); showPage('login'); });
+  showToast('Google login khul raha hai...','info');
+  _auth.signInWithPopup(provider).catch(function(e){ 
+    dbg('Google popup error: '+e.message,'error');
+    showToast('Google failed: '+e.message,'error'); 
+  });
 }
 function doSignOut(){
   if(!_auth) return;
