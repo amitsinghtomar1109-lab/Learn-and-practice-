@@ -140,20 +140,32 @@ textarea.inp{resize:vertical; min-height:64px;}
 .login-card p{color:var(--text2); font-size:0.85rem; margin-bottom:18px;}
 </style>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<!-- Firebase SDK loaded at body end -->
 </head>
 <body>
 
 <!-- Top bar -->
 <header class="topbar">
   <h1 id="topbarTitle">📝 Test Series</h1>
-  <div class="user-chip" id="userChip" onclick="doSignOut()" style="display:none;">
-    <span id="userName">Guest</span> · 🚪
+  <div style="display:flex;gap:6px;align-items:center;">
+    <div onclick="toggleDebugConsole()" title="Debug Console" style="cursor:pointer;background:rgba(255,255,255,0.15);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;" id="debugBtn">🛠</div>
+    <div class="user-chip" id="userChip" onclick="doSignOut()" style="display:none;">
+      <span id="userName">Guest</span> · 🚪
+    </div>
   </div>
 </header>
+
+<!-- Debug Console Panel -->
+<div id="debugConsole" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;background:#0d1b2a;color:#a5d6a7;font-family:monospace;font-size:0.7rem;max-height:45vh;overflow-y:auto;border-top:2px solid #1565c0;padding:8px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;position:sticky;top:0;background:#0d1b2a;padding:2px 0;">
+    <span style="color:#90caf9;font-weight:700;">🛠 Debug Console</span>
+    <div style="display:flex;gap:8px;">
+      <span onclick="clearDebugLog()" style="cursor:pointer;color:#ef9a9a;font-size:0.7rem;">🗑 Clear</span>
+      <span onclick="toggleDebugConsole()" style="cursor:pointer;color:#ef9a9a;font-size:0.7rem;">✖ Close</span>
+    </div>
+  </div>
+  <div id="debugLog"></div>
+</div>
 
 <div class="container">
 
@@ -164,9 +176,13 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="logo">📝</div>
         <h2>Test Series</h2>
         <p>Quiz banao, practice karo, progress track karo — sab cloud me live sync.</p>
-        <button class="btn btn-primary" style="width:100%;" onclick="signInAnon()">🚀 Continue as Guest</button>
-        <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="signInGoogle()">🔐 Sign in with Google</button>
-        <div style="font-size:0.7rem;color:var(--text2);margin-top:14px;">Aapka data sirf aapke account me save hota hai.</div>
+        <button class="btn btn-primary" style="width:100%;" onclick="signInGoogle()">🔐 Sign in with Google</button>
+        <div style="background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:0.75rem;color:var(--accent);font-weight:700;text-align:left;">
+          ✅ <b>Google se login karo</b> — tab saari devices par data live sync hoga.<br>
+          <span style="color:var(--red);">⚠️ Guest login alag device par kaam nahi karta (alag UID banta hai).</span>
+        </div>
+        <button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:0.75rem;color:var(--text2);" onclick="signInAnon()">👤 Continue as Guest (sirf is device)</button>
+        <div style="font-size:0.7rem;color:var(--text2);margin-top:10px;">Aapka data sirf aapke account me save hota hai.</div>
       </div>
     </div>
   </div>
@@ -601,6 +617,35 @@ function escHtml(s){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+// ================================================================
+// DEBUG CONSOLE
+// ================================================================
+var _debugLogs = [];
+function dbg(msg, type){
+  var t = new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var color = type==='error'?'#ef9a9a':type==='success'?'#a5d6a7':type==='warn'?'#ffe082':'#90caf9';
+  var entry = '<div style="border-bottom:1px solid #1e3a5f;padding:3px 0;color:'+color+';">['+t+'] '+escHtml(String(msg))+'</div>';
+  _debugLogs.push(entry);
+  if(_debugLogs.length>100) _debugLogs.shift();
+  var log=document.getElementById('debugLog');
+  if(log){ log.innerHTML=_debugLogs.join(''); log.scrollTop=log.scrollHeight; }
+  if(type==='error') console.error(msg); else console.log(msg);
+}
+function toggleDebugConsole(){
+  var dc=document.getElementById('debugConsole');
+  if(!dc) return;
+  dc.style.display = dc.style.display==='none'?'block':'none';
+  if(dc.style.display==='block'){
+    var log=document.getElementById('debugLog');
+    if(log) log.scrollTop=log.scrollHeight;
+  }
+}
+function clearDebugLog(){
+  _debugLogs=[];
+  var log=document.getElementById('debugLog');
+  if(log) log.innerHTML='';
+}
+
 function showToast(msg, type){
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -660,24 +705,33 @@ function showSection(sec){
 // FIREBASE INIT
 // ================================================================
 function initFirebase(){
+  // Agar Firebase SDK abhi load nahi hua to retry karo (bade app jaisa)
+  if(typeof firebase === 'undefined'){
+    dbg('Firebase SDK abhi ready nahi — retry...','warn');
+    setTimeout(initFirebase, 100);
+    return;
+  }
   try{
+    dbg('Firebase init start...','info');
     if(firebase.apps && firebase.apps.length){ firebase.app(); }
     else{ firebase.initializeApp(firebaseConfig); }
     _db = firebase.firestore();
+    dbg('Firestore connected ✓','success');
     // Offline persistence — tab sync ke saath (dusri device/tab me bhi live update)
     _db.enablePersistence({synchronizeTabs:true}).catch(function(err){
       if(err.code==='failed-precondition'){
-        // Multiple tabs open hai — ignore karo
-        console.warn('Firestore persistence: multiple tabs open');
+        dbg('Persistence: multiple tabs open','warn');
       } else if(err.code==='unimplemented'){
-        // Browser support nahi karta — ignore
-        console.warn('Firestore persistence: not supported in this browser');
+        dbg('Persistence: not supported in this browser','warn');
+      } else {
+        dbg('Persistence error: '+err.message,'error');
       }
     });
     _auth = firebase.auth();
-    _auth.getRedirectResult().catch(function(e){ console.warn('redirect err:',e); });
+    _auth.getRedirectResult().catch(function(e){ dbg('Redirect err: '+e.message,'warn'); });
     _auth.onAuthStateChanged(onAuth);
   }catch(e){
+    dbg('Firebase CRASH: '+e.message,'error');
     showToast('Firebase error: '+e.message,'error');
     showPage('login');
   }
@@ -686,11 +740,14 @@ function onAuth(user){
   _user = user;
   if(user){
     _uid = user.uid;
+    dbg('Auth OK — UID: '+_uid.substring(0,12)+'... | '+( user.isAnonymous?'GUEST (Anonymous)':'Google: '+user.email),'success');
+    if(user.isAnonymous) dbg('⚠️ Guest login — dusri device par alag UID hoga, sync nahi hoga!','warn');
     document.getElementById('userChip').style.display = 'flex';
     document.getElementById('userName').textContent = user.displayName || (user.isAnonymous ? 'Guest' : 'User');
     attachListeners();
     goHome();
   } else {
+    dbg('Auth: No user — login page','info');
     _uid = null;
     document.getElementById('userChip').style.display = 'none';
     detachListeners();
@@ -719,6 +776,7 @@ function doSignOut(){
 function attachListeners(){
   detachListeners();
   if(!_db||!_uid) return;
+  dbg('Listeners attach ho rahe hain...','info');
   loadSavedQ();
 
   // Quiz listener
@@ -727,12 +785,13 @@ function attachListeners(){
       STATE.quizzes = [];
       snap.forEach(function(d){ if(d.exists) STATE.quizzes.push(d.data()); });
       STATE.quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+      dbg('Quizzes loaded: '+STATE.quizzes.length+' quizzes | fromCache:'+snap.metadata.fromCache,'success');
       var ap = getActivePage();
       if(ap==='home') renderHome();
       if(ap==='create') renderCreateList();
       if(ap==='practice') renderPracticeList();
       if(ap==='questions') renderQuestionsPage();
-    }, function(err){ showToast('Cloud read fail: '+err.message,'error'); });
+    }, function(err){ dbg('Quiz listener ERROR: '+err.message,'error'); showToast('Cloud read fail: '+err.message,'error'); });
 
   // Attempts listener
   _attemptListener = _db.collection('users').doc(_uid).collection('ts_attempts')
@@ -740,13 +799,14 @@ function attachListeners(){
       STATE.attempts = [];
       snap.forEach(function(d){ if(d.exists) STATE.attempts.push(d.data()); });
       STATE.attempts.sort(function(a,b){ return (a.id||0)-(b.id||0); });
+      dbg('Attempts loaded: '+STATE.attempts.length+' | fromCache:'+snap.metadata.fromCache,'success');
       var ap = getActivePage();
       if(ap==='home') renderHome();
       if(ap==='create') renderCreateList();
       if(ap==='practice') renderPracticeList();
       if(ap==='history'){ initHistoryFilters(); renderHistory(); }
       if(ap==='vault'){ initVaultFilters(); renderVaultPage(); }
-    }, function(err){ console.warn('Attempts listener error:',err); });
+    }, function(err){ dbg('Attempts listener ERROR: '+err.message,'error'); console.warn('Attempts listener error:',err); });
 }
 function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
@@ -1808,22 +1868,18 @@ function viewLastResult(quizId){
 // BOOT
 // ================================================================
 showPage('loading');
-window.addEventListener('load', function(){
-  // Firebase SDK load hone ka wait karo
-  var attempts=0;
-  function tryInit(){
-    if(typeof firebase !== 'undefined'){
-      initFirebase();
-    } else if(attempts<20){
-      attempts++;
-      setTimeout(tryInit, 200);
-    } else {
-      showToast('Firebase load nahi hua. Internet check karo.','error');
-      showPage('login');
-    }
-  }
-  tryInit();
-});
+dbg('App script ready — Firebase SDK load ho raha hai...','info');
+
+</script>
+
+<!-- Firebase SDK — body end me load (guaranteed available) -->
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script>
+  // Firebase scripts ab load ho chuke hain — seedha init karo
+  dbg('Firebase SDK ready ✓','success');
+  initFirebase();
 </script>
 
 </body>
