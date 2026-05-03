@@ -691,24 +691,43 @@ function cancelEditQ(){
   document.getElementById('qAddBtn').textContent = '➕ Add Question';
 }
 function addOrUpdateQuestion(){
-  const q = getCurrentQuiz(); if(!q) return;
   const text = document.getElementById('qText').value.trim();
   const opts = [0,1,2,3].map(i=>document.getElementById('qOpt'+i).value.trim());
   const correct = parseInt(document.getElementById('qCorrect').value)||0;
   const expl = document.getElementById('qExpl').value.trim();
   if(!text){ toast('Question likho!','error'); return; }
-  if(opts.filter(o=>o).length < 2){ toast('Kam se kam 2 options chahiye','error'); return; }
-  if(!opts[correct]){ toast('Sahi answer ka option khaali hai','error'); return; }
+  // Saare 4 options mandatory (bade app ki tarah)
+  if(opts.some(o=>!o)){ toast('Saare 4 options daalo!','error'); return; }
+
+  if(!_db || !_uid){ toast('Login karo pehle!','error'); return; }
 
   const editId = document.getElementById('editQId').value;
-  if(editId){
-    const idx = q.questions.findIndex(x=>String(x.id)===String(editId));
-    if(idx>-1){ q.questions[idx] = { ...q.questions[idx], q:text, options:opts, correct, explanation:expl }; }
-  }else{
+  const quizId = String(_currentQuizId);
+
+  // Firestore se fresh quiz fetch karo — stale STATE reference avoid karne ke liye
+  _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).get().then(doc=>{
+    if(!doc.exists){ toast('Quiz nahi mila!','error'); return; }
+    const q = doc.data();
     q.questions = q.questions || [];
-    q.questions.push({ id: Date.now()+''+Math.floor(Math.random()*1000), q:text, options:opts, correct, explanation:expl });
-  }
-  cloudSaveQuiz(q).then(()=>{ toast(editId?'✅ Updated':'✅ Added','success'); cancelEditQ(); }).catch(e=>toast('Save fail: '+e.message,'error'));
+
+    if(editId){
+      const idx = q.questions.findIndex(x=>String(x.id)===String(editId));
+      if(idx>-1){
+        q.questions[idx] = { ...q.questions[idx], q:text, options:opts, correct, explanation:expl };
+      } else {
+        toast('Question nahi mila edit ke liye!','error'); return;
+      }
+    } else {
+      if(q.questions.length >= 200){ toast('Max 200 questions allowed!','error'); return; }
+      q.questions.push({ id: Date.now(), q:text, options:opts, correct, explanation:expl });
+    }
+
+    return _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).set(q)
+      .then(()=>{
+        toast(editId?'✅ Updated':'✅ Question add ho gaya!','success');
+        cancelEditQ();
+      });
+  }).catch(e=>{ toast('Save fail: '+e.message,'error'); console.error(e); });
 }
 function editQuestion(qid){
   const q = getCurrentQuiz(); if(!q) return;
@@ -723,10 +742,16 @@ function editQuestion(qid){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function deleteQuestion(qid){
-  const q = getCurrentQuiz(); if(!q) return;
   if(!confirm('Question delete karna hai?')) return;
-  q.questions = (q.questions||[]).filter(x=>String(x.id)!==String(qid));
-  cloudSaveQuiz(q).then(()=>toast('🗑 Deleted','success'));
+  if(!_db || !_uid) return;
+  const quizId = String(_currentQuizId);
+  _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).get().then(doc=>{
+    if(!doc.exists) return;
+    const q = doc.data();
+    q.questions = (q.questions||[]).filter(x=>String(x.id)!==String(qid));
+    return _db.collection('users').doc(_uid).collection('quizzes').doc(quizId).set(q)
+      .then(()=>toast('🗑 Deleted','success'));
+  }).catch(e=>toast('Delete fail: '+e.message,'error'));
 }
 function deleteQuiz(id){
   if(!confirm('Pura quiz delete karna hai? Saare questions aur attempts bhi delete honge.')) return;
