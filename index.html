@@ -218,7 +218,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         </div>
         <div style="text-align:center;padding:12px 6px;background:var(--surface2);border-radius:10px;">
           <div style="font-size:1.4rem;font-weight:900;color:var(--green);" id="tsStat2">0</div>
-          <div style="font-size:0.68rem;color:var(--text2);margin-top:2px;">Total Attempts</div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-top:2px;">Saved Attempts</div>
         </div>
         <div style="text-align:center;padding:12px 6px;background:var(--surface2);border-radius:10px;">
           <div style="font-size:1.4rem;font-weight:900;color:var(--orange);" id="tsStat3">0%</div>
@@ -394,6 +394,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         </select>
         <button class="btn btn-outline btn-xs" onclick="renderHistory()">🔄</button>
       </div>
+      <div style="font-size:0.68rem;color:var(--text2);margin-top:6px;padding:4px 8px;background:rgba(21,101,192,0.06);border-radius:6px;">ℹ️ Har quiz ke sirf last 3 attempts save hote hain (purane automatic delete ho jaate hain)</div>
     </div>
     <div id="historyList"></div>
   </div>
@@ -433,7 +434,10 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">📊 Attempt Detail</div>
         <div class="page-subtitle" id="adSubtitle">Detail</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="showSection('history')">← History</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" id="adToggleBtn" onclick="toggleDetailAnswers()" style="color:#6a1b9a;border-color:rgba(106,27,154,0.3);">👁 Chhupao</button>
+        <button class="btn btn-outline btn-sm" onclick="showSection('history')">← History</button>
+      </div>
     </div>
     <div id="adContent"></div>
   </div>
@@ -466,6 +470,7 @@ textarea.inp{resize:vertical; min-height:64px;}
         </div>
         <div style="font-size:0.92rem;font-weight:700;color:var(--text);line-height:1.65;margin-bottom:14px;flex-shrink:0;word-break:break-word;" id="atQBody"></div>
         <div id="atOptions" style="display:flex;flex-direction:column;gap:8px;flex:1;"></div>
+        <div id="atExplanation"></div>
         <div id="atPerQTimer" style="display:none;margin-top:10px;text-align:center;font-size:0.82rem;font-weight:800;color:#e65100;flex-shrink:0;">⏱ <span id="atPerQVal">30</span>s bache hain</div>
       </div>
 
@@ -473,6 +478,7 @@ textarea.inp{resize:vertical; min-height:64px;}
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <button onclick="skipQ()" id="atSkipBtn" style="flex:1;min-width:100px;padding:8px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;font-size:0.78rem;font-weight:700;color:var(--text2);cursor:pointer;">⏩ Skip</button>
         <button onclick="markForReview()" id="atMarkBtn" style="flex:1;min-width:130px;padding:8px 10px;background:rgba(255,152,0,0.08);border:1.5px solid rgba(255,152,0,0.35);border-radius:9px;font-size:0.78rem;font-weight:700;color:#e65100;cursor:pointer;">🔖 Mark for Review</button>
+        <button onclick="toggleAnswerReveal()" id="atRevealBtn" style="flex:1;min-width:120px;padding:8px 10px;background:rgba(106,27,154,0.08);border:1.5px solid rgba(106,27,154,0.3);border-radius:9px;font-size:0.78rem;font-weight:700;color:#6a1b9a;cursor:pointer;">👁 Answer Dikhao</button>
       </div>
 
       <!-- Difficulty + Save row -->
@@ -740,8 +746,24 @@ function cloudDeleteQuiz(id){
 }
 function cloudSaveAttempt(a){
   if(!_db||!_uid) return;
-  _db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a)
-    .catch(function(e){ console.warn('saveAttempt err:',e); });
+  // First get existing attempts for this quiz, then delete oldest if >=3, then save new
+  var existingForQuiz=STATE.attempts.filter(function(x){ return x.quizId===a.quizId; });
+  existingForQuiz.sort(function(x,y){ return (x.id||0)-(y.id||0); });
+  // If already 3 or more, delete oldest to make room
+  var deletePromises=[];
+  if(existingForQuiz.length>=3){
+    var toDelete=existingForQuiz.slice(0,existingForQuiz.length-2); // keep last 2, add 1 new = 3
+    toDelete.forEach(function(old){
+      deletePromises.push(
+        _db.collection('users').doc(_uid).collection('ts_attempts').doc(String(old.id)).delete()
+          .catch(function(e){ console.warn('delete old attempt err:',e); })
+      );
+    });
+  }
+  Promise.all(deletePromises).then(function(){
+    _db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a)
+      .catch(function(e){ console.warn('saveAttempt err:',e); });
+  });
 }
 
 // ================================================================
@@ -1076,7 +1098,8 @@ function renderPracticeList(){
 var _att = {
   quizId:null, quiz:null, answers:[], marked:[], skipped:[],
   difficulty:[], // 'easy'|'tough'|'doubt'|null per question
-  currentQ:0, timer:null, timeLeft:0, perQTimer:null, startTime:0, submitted:false
+  currentQ:0, timer:null, timeLeft:0, perQTimer:null, startTime:0, submitted:false,
+  answerRevealed: false
 };
 // Global saved questions set (key = quizId+'_'+qIdx)
 if(!STATE.savedQuestions) STATE.savedQuestions = {};
@@ -1106,7 +1129,7 @@ function startAttempt(quizId, shuffleQs){
     skipped:qCopy.questions.map(function(){ return false; }),
     difficulty:qCopy.questions.map(function(){ return null; }),
     currentQ:0, timer:null, timeLeft:0, perQTimer:null,
-    startTime:Date.now(), submitted:false
+    startTime:Date.now(), submitted:false, answerRevealed:false
   };
 
   showPage('attempt');
@@ -1169,15 +1192,32 @@ function renderCurrentQ(){
   }
 
   var optsEl=document.getElementById('atOptions');
+  var revealed=_att.answerRevealed;
   optsEl.innerHTML=q.options.map(function(opt,i){
     var isSel=st.answers[st.currentQ]===i;
-    return '<div onclick="selectOpt('+i+')" style="cursor:pointer;padding:10px 14px;border-radius:10px;border:2px solid '+(isSel?'var(--accent)':'var(--border)')+';background:'+(isSel?'rgba(21,101,192,0.1)':'var(--surface2)')+';font-weight:'+(isSel?'800':'500')+';font-size:0.85rem;color:var(--text);display:flex;align-items:flex-start;gap:10px;min-height:44px;word-break:break-word;transition:border-color 0.15s,background 0.15s;">'+
-      '<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(isSel?'var(--accent)':'var(--border)')+';background:'+(isSel?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'+
-        (isSel?'<div style="width:8px;height:8px;border-radius:50%;background:#fff;"></div>':'')+
+    var isCorrect=revealed&&(i===q.correct);
+    var isWrong=revealed&&isSel&&(i!==q.correct);
+    var borderColor=isCorrect?'var(--green)':isWrong?'var(--red)':isSel?'var(--accent)':'var(--border)';
+    var bgColor=isCorrect?'rgba(46,125,50,0.14)':isWrong?'rgba(198,40,40,0.1)':isSel?'rgba(21,101,192,0.1)':'var(--surface2)';
+    var fw=(isSel||isCorrect)?'800':'500';
+    return '<div onclick="selectOpt('+i+')" style="cursor:pointer;padding:10px 14px;border-radius:10px;border:2px solid '+borderColor+';background:'+bgColor+';font-weight:'+fw+';font-size:0.85rem;color:var(--text);display:flex;align-items:flex-start;gap:10px;min-height:44px;word-break:break-word;transition:border-color 0.15s,background 0.15s;">'+
+      '<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(isCorrect?'var(--green)':isWrong?'var(--red)':isSel?'var(--accent)':'var(--border)')+';background:'+(isCorrect?'var(--green)':isWrong?'var(--red)':isSel?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'+
+        ((isSel||isCorrect)?'<div style="width:8px;height:8px;border-radius:50%;background:#fff;"></div>':'')+
       '</div>'+
-      '<span style="flex:1;">'+String.fromCharCode(65+i)+'. '+escHtml(opt)+'</span>'+
+      '<span style="flex:1;">'+String.fromCharCode(65+i)+'. '+escHtml(opt)+(isCorrect?' ✓':'')+(isWrong?' ✗':'')+
+      '</span>'+
     '</div>';
   }).join('');
+  // Update reveal button text
+  var revBtn=document.getElementById('atRevealBtn');
+  if(revBtn){ revBtn.textContent=revealed?'🙈 Answer Chhupao':'👁 Answer Dikhao'; revBtn.style.background=revealed?'rgba(106,27,154,0.16)':'rgba(106,27,154,0.08)'; }
+  // Show explanation if revealed
+  var explEl=document.getElementById('atExplanation');
+  if(explEl){
+    if(revealed&&q.explanation){
+      explEl.innerHTML='<div style="font-size:0.75rem;color:#1565c0;margin-top:8px;padding:7px 10px;background:rgba(21,101,192,0.08);border-radius:8px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>';
+    } else { explEl.innerHTML=''; }
+  }
 
   var prev=document.getElementById('atPrev'); if(prev) prev.disabled=st.currentQ===0;
   var next=document.getElementById('atNext'); if(next) next.textContent=(st.currentQ===total-1)?'Finish →':'Agla →';
@@ -1255,6 +1295,10 @@ function markForReview(){
   renderCurrentQ();
   showToast(_att.marked[_att.currentQ]?'🔖 Marked for review!':'Unmark ho gaya','info');
 }
+function toggleAnswerReveal(){
+  _att.answerRevealed=!_att.answerRevealed;
+  renderCurrentQ();
+}
 function navQ(dir){
   if(_att.perQTimer) clearInterval(_att.perQTimer);
   var ni=_att.currentQ+dir;
@@ -1262,6 +1306,7 @@ function navQ(dir){
   if(ni<0) return;
   if(ni>=total){ openOverview(); return; }
   _att.currentQ=ni;
+  _att.answerRevealed=false;
   renderCurrentQ();
 }
 function openOverview(){
@@ -1427,14 +1472,27 @@ function renderHistory(){
     '</div>';
   }).join('');
 }
+var _detailAnswersHidden = false;
+function toggleDetailAnswers(){
+  _detailAnswersHidden=!_detailAnswersHidden;
+  var btn=document.getElementById('adToggleBtn');
+  if(btn) btn.textContent=_detailAnswersHidden?'👁 Dikhao':'👁 Chhupao';
+  // Re-render
+  if(_lastAttempt){
+    var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(_lastAttempt.quizId); });
+    renderAttemptDetail(_lastAttempt, quiz||_lastQuiz);
+  }
+}
 function viewAttemptDetail(attemptId){
   var at=STATE.attempts.find(function(a){ return String(a.id)===String(attemptId); }); if(!at) return;
   var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(at.quizId); });
   _lastAttempt=at;
   if(quiz) _lastQuiz=JSON.parse(JSON.stringify(quiz));
+  _detailAnswersHidden=false;
   showPage('attemptdetail');
   document.getElementById('topbarTitle').textContent='📊 Detail';
   document.getElementById('adSubtitle').textContent=escHtml(at.quizName);
+  var btn=document.getElementById('adToggleBtn'); if(btn) btn.textContent='👁 Chhupao';
   renderAttemptDetail(at, quiz);
 }
 function renderAttemptDetail(at, quiz){
@@ -1454,7 +1512,7 @@ function renderAttemptDetail(at, quiz){
   '</div>';
   // Question-wise analysis
   if(quiz && at.answers){
-    html+='<div class="card"><div class="card-title">🔍 Question-wise Analysis</div>';
+    html+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div class="card-title" style="margin:0;">🔍 Question-wise Analysis</div></div>';
     var qs=quiz.questions||[];
     var diffArr=at.difficulty||[];
     html+=qs.map(function(q,i){
@@ -1467,6 +1525,7 @@ function renderAttemptDetail(at, quiz){
       var diffLabel=diff?({easy:'😊 Easy',tough:'😓 Tough',doubt:'🤔 Doubtful'}[diff]||''):'';
       var qKey=String(at.quizId)+'_'+i;
       var isSaved=STATE.savedQuestions&&STATE.savedQuestions[qKey];
+      var hidden=_detailAnswersHidden;
       return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'+
         '<div style="display:flex;gap:8px;align-items:flex-start;">'+
           '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
@@ -1476,19 +1535,26 @@ function renderAttemptDetail(at, quiz){
               (isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
             '</div>'+
             '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
-            '<div style="display:flex;flex-direction:column;gap:3px;">'+
-              q.options.map(function(opt,oi){
-                var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
-                var bg=isCOpt?'rgba(46,125,50,0.15)':(isUOpt&&!isCOpt)?'rgba(198,40,40,0.12)':'var(--surface2)';
-                var clr=isCOpt?'#2e7d32':(isUOpt&&!isCOpt)?'#c62828':'var(--text)';
-                var fw=(isCOpt||isUOpt)?'800':'400';
-                return '<div style="padding:5px 10px;border-radius:7px;background:'+bg+';color:'+clr+';font-weight:'+fw+';font-size:0.79rem;">'+
-                  String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isCOpt?' ✓':'')+(isUOpt&&!isCOpt?' ✗':'')+
-                '</div>';
-              }).join('')+
-            '</div>'+
-            (q.explanation?'<div style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
-            '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'+
+            (hidden
+              ? '<div style="padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:0.78rem;font-weight:700;text-align:center;border:1.5px dashed var(--border);">🙈 Answer chhupa hua hai — "Dikhao" button dabao</div>'
+              : '<div style="display:flex;flex-direction:column;gap:3px;">'+
+                  q.options.map(function(opt,oi){
+                    var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
+                    var bg=isCOpt?'rgba(46,125,50,0.15)':(isUOpt&&!isCOpt)?'rgba(198,40,40,0.12)':'var(--surface2)';
+                    var clr=isCOpt?'#2e7d32':(isUOpt&&!isCOpt)?'#c62828':'var(--text)';
+                    var fw=(isCOpt||isUOpt)?'800':'400';
+                    return '<div style="padding:5px 10px;border-radius:7px;background:'+bg+';color:'+clr+';font-weight:'+fw+';font-size:0.79rem;">'+
+                      String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isCOpt?' ✓':'')+(isUOpt&&!isCOpt?' ✗':'')+
+                    '</div>';
+                  }).join('')+
+                '</div>'+
+                (q.explanation&&!hidden?'<div style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
+                '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'
+            )+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:4px;">'+
+            '<button onclick="editQFromDetail(\''+at.quizId+'\','+JSON.stringify(q.id)+')" style="background:rgba(21,101,192,0.1);border:1px solid rgba(21,101,192,0.25);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;font-weight:700;" title="Edit question">✏️</button>'+
+            '<button onclick="deleteQFromDetail(\''+at.quizId+'\','+JSON.stringify(q.id)+')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.8rem;padding:2px 5px;" title="Delete question">🗑</button>'+
           '</div>'+
         '</div>'+
       '</div>';
@@ -1496,6 +1562,23 @@ function renderAttemptDetail(at, quiz){
     html+='</div>';
   }
   container.innerHTML=html;
+}
+function editQFromDetail(quizId, qid){
+  // Open question manager for that quiz, pre-fill edit form
+  _currentQuizId=quizId;
+  openQuizQuestions(quizId);
+  setTimeout(function(){ editQ(qid); },300);
+}
+function deleteQFromDetail(quizId, qid){
+  if(!confirm('Is question ko delete karo?')) return;
+  var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
+  if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
+  quiz.questions=(quiz.questions||[]).filter(function(x){ return x.id!==qid; });
+  cloudSaveQuiz(quiz);
+  showToast('Question delete ho gaya.','success');
+  // Re-render detail
+  var at=_lastAttempt;
+  if(at){ renderAttemptDetail(at, quiz); }
 }
 function reattemptFromHistory(quizId){
   var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
