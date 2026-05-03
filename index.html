@@ -19,10 +19,12 @@
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
+html{scroll-behavior:smooth;}
 body{
   font-family:'Inter','Baloo 2',system-ui,sans-serif;
   background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
   color:var(--text); min-height:100vh; font-size:14px; line-height:1.5;
+  -webkit-overflow-scrolling:touch;
 }
 
 /* Topbar */
@@ -191,6 +193,18 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div style="font-weight:800;font-size:0.95rem;color:var(--green);margin-bottom:4px;">Practice Test Series</div>
         <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Attempt karo, results aur comparison dekho</div>
         <div style="margin-top:10px;"><span class="btn btn-green btn-xs">▶ Practice</span></div>
+      </div>
+      <div class="card" style="cursor:pointer;background:linear-gradient(135deg,rgba(106,27,154,0.08),rgba(106,27,154,0.03));border:1.5px solid rgba(106,27,154,0.2);" onclick="showSection('history')">
+        <div style="font-size:2rem;margin-bottom:8px;">📜</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#6a1b9a;margin-bottom:4px;">Attempt History</div>
+        <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Purane attempts dekho, reattempt karo</div>
+        <div style="margin-top:10px;"><span class="btn btn-xs" style="background:linear-gradient(135deg,#6a1b9a,#8e24aa);color:#fff;">📜 History</span></div>
+      </div>
+      <div class="card" style="cursor:pointer;background:linear-gradient(135deg,rgba(0,105,92,0.08),rgba(0,105,92,0.03));border:1.5px solid rgba(0,105,92,0.2);" onclick="showSection('vault')">
+        <div style="font-size:2rem;margin-bottom:8px;">🗄️</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#00695c;margin-bottom:4px;">Quiz Vault</div>
+        <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Wrong/Saved/Tough questions filter karo</div>
+        <div style="margin-top:10px;"><span class="btn btn-xs" style="background:linear-gradient(135deg,#00695c,#00897b);color:#fff;">🗄️ Vault</span></div>
       </div>
     </div>
 
@@ -362,6 +376,68 @@ textarea.inp{resize:vertical; min-height:64px;}
     <div id="practiceList"></div>
   </div>
 
+  <!-- ===== HISTORY PAGE ===== -->
+  <div id="page-history" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📜 Attempt History</div>
+        <div class="page-subtitle">Saare attempts ka complete record</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
+    </div>
+    <!-- Filter bar -->
+    <div class="card" style="margin-bottom:10px;padding:10px 12px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.72rem;font-weight:700;color:var(--text2);">Quiz:</span>
+        <select class="inp" id="histQuizFilter" onchange="renderHistory()" style="flex:1;min-width:120px;padding:5px 8px;font-size:0.78rem;">
+          <option value="all">Saari Quizzes</option>
+        </select>
+        <button class="btn btn-outline btn-xs" onclick="renderHistory()">🔄</button>
+      </div>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- ===== VAULT PAGE ===== -->
+  <div id="page-vault" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🗄️ Quiz Vault</div>
+        <div class="page-subtitle">Questions by status — filter aur review karo</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="goHome()">← Back</button>
+    </div>
+    <!-- Filter bar -->
+    <div class="card" style="margin-bottom:10px;padding:10px 12px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <select class="inp" id="vaultQuizFilter" onchange="renderVaultPage()" style="flex:1;min-width:120px;padding:5px 8px;font-size:0.78rem;">
+          <option value="all">Saari Quizzes</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-xs" id="vf_all" onclick="setVaultFilter('all')" style="border:1.5px solid var(--accent);color:var(--accent);background:rgba(21,101,192,0.08);">📋 All</button>
+        <button class="btn btn-xs" id="vf_wrong" onclick="setVaultFilter('wrong')" style="border:1.5px solid var(--border);color:var(--text2);">❌ Wrong</button>
+        <button class="btn btn-xs" id="vf_correct" onclick="setVaultFilter('correct')" style="border:1.5px solid var(--border);color:var(--text2);">✅ Correct</button>
+        <button class="btn btn-xs" id="vf_saved" onclick="setVaultFilter('saved')" style="border:1.5px solid var(--border);color:var(--text2);">📌 Saved</button>
+        <button class="btn btn-xs" id="vf_tough" onclick="setVaultFilter('tough')" style="border:1.5px solid var(--border);color:var(--text2);">😓 Tough</button>
+        <button class="btn btn-xs" id="vf_doubt" onclick="setVaultFilter('doubt')" style="border:1.5px solid var(--border);color:var(--text2);">🤔 Doubtful</button>
+      </div>
+    </div>
+    <div id="vaultPageContent"></div>
+  </div>
+
+  <!-- ===== ATTEMPT DETAIL PAGE ===== -->
+  <div id="page-attemptdetail" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📊 Attempt Detail</div>
+        <div class="page-subtitle" id="adSubtitle">Detail</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showSection('history')">← History</button>
+    </div>
+    <div id="adContent"></div>
+  </div>
+
   <!-- ===== ATTEMPT PAGE ===== -->
   <div id="page-attempt" class="page" style="padding:0;">
     <!-- Attempt Header -->
@@ -397,6 +473,15 @@ textarea.inp{resize:vertical; min-height:64px;}
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <button onclick="skipQ()" id="atSkipBtn" style="flex:1;min-width:100px;padding:8px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;font-size:0.78rem;font-weight:700;color:var(--text2);cursor:pointer;">⏩ Skip</button>
         <button onclick="markForReview()" id="atMarkBtn" style="flex:1;min-width:130px;padding:8px 10px;background:rgba(255,152,0,0.08);border:1.5px solid rgba(255,152,0,0.35);border-radius:9px;font-size:0.78rem;font-weight:700;color:#e65100;cursor:pointer;">🔖 Mark for Review</button>
+      </div>
+
+      <!-- Difficulty + Save row -->
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.68rem;font-weight:700;color:var(--text2);flex-shrink:0;">Tag:</span>
+        <button id="atEasyBtn" onclick="setAttDifficulty('easy')" style="flex:1;padding:5px 6px;border-radius:20px;border:1.5px solid rgba(46,125,50,0.3);background:transparent;color:var(--green);font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;">😊 Easy</button>
+        <button id="atToughBtn" onclick="setAttDifficulty('tough')" style="flex:1;padding:5px 6px;border-radius:20px;border:1.5px solid rgba(198,40,40,0.3);background:transparent;color:var(--red);font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;">😓 Tough</button>
+        <button id="atDoubtBtn" onclick="setAttDifficulty('doubt')" style="flex:1;padding:5px 6px;border-radius:20px;border:1.5px solid rgba(230,81,0,0.3);background:transparent;color:var(--orange);font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;">🤔 Doubtful</button>
+        <button id="atSaveBtn" onclick="toggleSaveCurrentQ()" style="flex:1;padding:5px 6px;border-radius:20px;border:1.5px solid rgba(106,27,154,0.3);background:transparent;color:#6a1b9a;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;">📌 Save</button>
       </div>
 
       <!-- Navigation -->
@@ -444,6 +529,7 @@ textarea.inp{resize:vertical; min-height:64px;}
       <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;">
         <button class="btn btn-primary btn-sm" onclick="reattempt()">🔄 Reattempt</button>
         <button class="btn btn-outline btn-sm" onclick="showFullAnalysis()">📊 Full Analysis</button>
+        <button class="btn btn-outline btn-sm" onclick="showSection('history')" style="color:#6a1b9a;border-color:rgba(106,27,154,0.3);">📜 History</button>
       </div>
     </div>
 
@@ -487,7 +573,7 @@ const firebaseConfig = {
 // ================================================================
 var _db = null, _auth = null, _user = null, _uid = null;
 var _quizListener = null, _attemptListener = null;
-var STATE = { quizzes: [], attempts: [] };
+var STATE = { quizzes: [], attempts: [], savedQuestions: {} };
 
 // ================================================================
 // UTILS
@@ -539,6 +625,16 @@ function showSection(sec){
     showPage('practice');
     document.getElementById('topbarTitle').textContent = '🎯 Practice Test Series';
     renderPracticeList();
+  } else if(sec==='history'){
+    showPage('history');
+    document.getElementById('topbarTitle').textContent = '📜 Attempt History';
+    initHistoryFilters();
+    renderHistory();
+  } else if(sec==='vault'){
+    showPage('vault');
+    document.getElementById('topbarTitle').textContent = '🗄️ Quiz Vault';
+    initVaultFilters();
+    renderVaultPage();
   }
 }
 
@@ -595,6 +691,7 @@ function doSignOut(){
 function attachListeners(){
   detachListeners();
   if(!_db||!_uid) return;
+  loadSavedQ();
 
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
@@ -624,6 +721,7 @@ function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
   if(_attemptListener){ try{_attemptListener();}catch(e){} _attemptListener=null; }
   STATE.quizzes=[]; STATE.attempts=[];
+  // savedQuestions ko preserve karo — reload on next auth
 }
 
 // ================================================================
@@ -976,9 +1074,12 @@ function renderPracticeList(){
 // ATTEMPT
 // ================================================================
 var _att = {
-  quizId:null, quiz:null, answers:[], marked:[], skipped:[], currentQ:0,
-  timer:null, timeLeft:0, perQTimer:null, startTime:0, submitted:false
+  quizId:null, quiz:null, answers:[], marked:[], skipped:[],
+  difficulty:[], // 'easy'|'tough'|'doubt'|null per question
+  currentQ:0, timer:null, timeLeft:0, perQTimer:null, startTime:0, submitted:false
 };
+// Global saved questions set (key = quizId+'_'+qIdx)
+if(!STATE.savedQuestions) STATE.savedQuestions = {};
 
 function startAttempt(quizId, shuffleQs){
   var quiz=STATE.quizzes.find(function(q){ return q.id===quizId; });
@@ -1003,6 +1104,7 @@ function startAttempt(quizId, shuffleQs){
     answers:qCopy.questions.map(function(){ return null; }),
     marked:qCopy.questions.map(function(){ return false; }),
     skipped:qCopy.questions.map(function(){ return false; }),
+    difficulty:qCopy.questions.map(function(){ return null; }),
     currentQ:0, timer:null, timeLeft:0, perQTimer:null,
     startTime:Date.now(), submitted:false
   };
@@ -1079,6 +1181,31 @@ function renderCurrentQ(){
 
   var prev=document.getElementById('atPrev'); if(prev) prev.disabled=st.currentQ===0;
   var next=document.getElementById('atNext'); if(next) next.textContent=(st.currentQ===total-1)?'Finish →':'Agla →';
+
+  // Difficulty buttons state
+  var diff=st.difficulty[st.currentQ];
+  ['easy','tough','doubt'].forEach(function(d){
+    var btn=document.getElementById('at'+d.charAt(0).toUpperCase()+d.slice(1)+'Btn');
+    if(btn){
+      if(diff===d){
+        var bgs={easy:'rgba(46,125,50,0.18)',tough:'rgba(198,40,40,0.15)',doubt:'rgba(230,81,0,0.15)'};
+        btn.style.background=bgs[d];
+        btn.style.fontWeight='900';
+      } else {
+        btn.style.background='transparent';
+        btn.style.fontWeight='800';
+      }
+    }
+  });
+  // Save button state
+  var saveBtn=document.getElementById('atSaveBtn');
+  if(saveBtn){
+    var qKey=String(st.quizId)+'_'+st.currentQ;
+    var isSaved=STATE.savedQuestions&&STATE.savedQuestions[qKey];
+    saveBtn.textContent=isSaved?'📌 Saved ✓':'📌 Save';
+    saveBtn.style.background=isSaved?'rgba(106,27,154,0.15)':'transparent';
+    saveBtn.style.fontWeight=isSaved?'900':'800';
+  }
 
   // Per-Q timer
   if(st.quiz.timer&&st.quiz.timer.type==='perQ'){
@@ -1190,10 +1317,14 @@ function submitAttempt(auto){
     quizId: st.quizId,
     quizName: st.quiz.name,
     answers: st.answers.slice(),
+    difficulty: st.difficulty.slice(),
     score: score,
     total: qs.length,
     timeTaken: timeTaken,
     timeStr: timeStr,
+    toughCount: st.difficulty.filter(function(d){ return d==='tough'; }).length,
+    doubtCount: st.difficulty.filter(function(d){ return d==='doubt'; }).length,
+    savedCount: (function(){ var c=0; st.difficulty.forEach(function(_,i){ var k=String(st.quizId)+'_'+i; if(STATE.savedQuestions&&STATE.savedQuestions[k]) c++; }); return c; })(),
     completedAt: new Date().toLocaleDateString('hi-IN')+' '+new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})
   };
 
@@ -1203,10 +1334,272 @@ function submitAttempt(auto){
   showResult(attempt, st.quiz);
 }
 
+function setAttDifficulty(diff){
+  if(_att.submitted) return;
+  var cur=_att.difficulty[_att.currentQ];
+  _att.difficulty[_att.currentQ]=(cur===diff)?null:diff; // toggle
+  renderCurrentQ();
+  var labels={easy:'😊 Easy',tough:'😓 Tough',doubt:'🤔 Doubtful'};
+  if(_att.difficulty[_att.currentQ]===diff) showToast(labels[diff]+' mark ho gaya','info');
+  else showToast('Tag hata diya','info');
+}
+function toggleSaveCurrentQ(){
+  if(_att.submitted) return;
+  var qKey=String(_att.quizId)+'_'+_att.currentQ;
+  if(!STATE.savedQuestions) STATE.savedQuestions={};
+  if(STATE.savedQuestions[qKey]){
+    delete STATE.savedQuestions[qKey];
+    showToast('📌 Unsaved','info');
+  } else {
+    STATE.savedQuestions[qKey]={
+      quizId:_att.quizId,
+      quizName:_att.quiz.name,
+      qIdx:_att.currentQ,
+      q:_att.quiz.questions[_att.currentQ]
+    };
+    showToast('📌 Question save ho gaya!','success');
+  }
+  cloudSaveSavedQ();
+  renderCurrentQ();
+}
+function cloudSaveSavedQ(){
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('ts_meta').doc('savedQ').set({savedQuestions:STATE.savedQuestions||{}})
+    .catch(function(e){ console.warn('savedQ save err:',e); });
+}
+function loadSavedQ(){
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('ts_meta').doc('savedQ').get()
+    .then(function(d){ if(d.exists){ STATE.savedQuestions=d.data().savedQuestions||{}; } })
+    .catch(function(){});
+}
+
 // ================================================================
-// RESULT
+// HISTORY
 // ================================================================
-var _lastAttempt=null, _lastQuiz=null;
+function initHistoryFilters(){
+  var sel=document.getElementById('histQuizFilter'); if(!sel) return;
+  var quizzes=STATE.quizzes;
+  sel.innerHTML='<option value="all">Saari Quizzes</option>'+
+    quizzes.map(function(q){ return '<option value="'+q.id+'">'+escHtml(q.name)+'</option>'; }).join('');
+}
+function renderHistory(){
+  var container=document.getElementById('historyList'); if(!container) return;
+  var filterQuiz=document.getElementById('histQuizFilter');
+  var fqId=filterQuiz?filterQuiz.value:'all';
+  var attempts=STATE.attempts.slice().reverse(); // latest first
+  if(fqId!=='all') attempts=attempts.filter(function(a){ return String(a.quizId)===String(fqId); });
+  if(!attempts.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><div>Koi attempt nahi mili.</div></div>';
+    return;
+  }
+  container.innerHTML=attempts.map(function(at){
+    var pct=at.total>0?Math.round(at.score/at.total*100):0;
+    var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
+    var badge=pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅';
+    // Difficulty stats from saved attempt
+    var toughCount=at.toughCount||0, doubtCount=at.doubtCount||0, savedCount=at.savedCount||0;
+    var tags='';
+    if(toughCount) tags+='<span style="font-size:0.65rem;background:rgba(198,40,40,0.1);color:var(--red);border-radius:10px;padding:2px 7px;font-weight:700;">😓 '+toughCount+' Tough</span>';
+    if(doubtCount) tags+='<span style="font-size:0.65rem;background:rgba(230,81,0,0.1);color:var(--orange);border-radius:10px;padding:2px 7px;font-weight:700;">🤔 '+doubtCount+' Doubt</span>';
+    if(savedCount) tags+='<span style="font-size:0.65rem;background:rgba(106,27,154,0.1);color:#6a1b9a;border-radius:10px;padding:2px 7px;font-weight:700;">📌 '+savedCount+' Saved</span>';
+    return '<div class="card" style="margin-bottom:10px;">'+
+      '<div style="display:flex;align-items:flex-start;gap:10px;">'+
+        '<div style="font-size:2rem;line-height:1;">'+badge+'</div>'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-weight:800;font-size:0.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(at.quizName)+'</div>'+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:2px;">'+escHtml(at.completedAt||'')+'&nbsp;·&nbsp;⏱ '+(at.timeStr||'--')+'</div>'+
+          '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+
+            '<span style="font-size:0.7rem;background:rgba(46,125,50,0.1);color:var(--green);border-radius:10px;padding:2px 8px;font-weight:700;">✅ '+at.score+'/'+at.total+'</span>'+
+            tags+
+          '</div>'+
+          // Progress bar
+          '<div style="height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:6px;">'+
+            '<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:4px;transition:width 0.5s;"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'+
+          '<div style="font-weight:900;font-size:1.1rem;color:'+color+';">'+pct+'%</div>'+
+          '<button class="btn btn-outline btn-xs" onclick="viewAttemptDetail(\''+at.id+'\')">👁 Detail</button>'+
+          '<button class="btn btn-green btn-xs" onclick="reattemptFromHistory(\''+at.quizId+'\')">🔄 Retry</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function viewAttemptDetail(attemptId){
+  var at=STATE.attempts.find(function(a){ return String(a.id)===String(attemptId); }); if(!at) return;
+  var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(at.quizId); });
+  _lastAttempt=at;
+  if(quiz) _lastQuiz=JSON.parse(JSON.stringify(quiz));
+  showPage('attemptdetail');
+  document.getElementById('topbarTitle').textContent='📊 Detail';
+  document.getElementById('adSubtitle').textContent=escHtml(at.quizName);
+  renderAttemptDetail(at, quiz);
+}
+function renderAttemptDetail(at, quiz){
+  var container=document.getElementById('adContent'); if(!container) return;
+  var pct=at.total>0?Math.round(at.score/at.total*100):0;
+  var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
+  var html='';
+  // Score summary card
+  html+='<div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(21,101,192,0.07),rgba(46,125,50,0.05));border:1.5px solid rgba(21,101,192,0.15);margin-bottom:12px;">'+
+    '<div style="font-size:2.5rem;margin-bottom:4px;">'+(pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅')+'</div>'+
+    '<div style="font-size:1.8rem;font-weight:900;color:'+color+';">'+at.score+'/'+at.total+'</div>'+
+    '<div style="font-size:1rem;font-weight:800;color:'+color+';">'+pct+'%</div>'+
+    '<div style="font-size:0.78rem;color:var(--text2);margin-top:4px;">⏱ '+(at.timeStr||'--')+'&nbsp;·&nbsp;'+escHtml(at.completedAt||'')+'</div>'+
+    '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">'+
+      '<button class="btn btn-primary btn-sm" onclick="reattemptFromHistory(\''+at.quizId+'\')">🔄 Reattempt</button>'+
+    '</div>'+
+  '</div>';
+  // Question-wise analysis
+  if(quiz && at.answers){
+    html+='<div class="card"><div class="card-title">🔍 Question-wise Analysis</div>';
+    var qs=quiz.questions||[];
+    var diffArr=at.difficulty||[];
+    html+=qs.map(function(q,i){
+      var userAns=at.answers[i];
+      var isCorrect=userAns===q.correct;
+      var isSkipped=userAns===null;
+      var diff=diffArr[i]||null;
+      var statusColor=isSkipped?'#9e9e9e':isCorrect?'#2e7d32':'#c62828';
+      var statusIcon=isSkipped?'⏭':isCorrect?'✅':'❌';
+      var diffLabel=diff?({easy:'😊 Easy',tough:'😓 Tough',doubt:'🤔 Doubtful'}[diff]||''):'';
+      var qKey=String(at.quizId)+'_'+i;
+      var isSaved=STATE.savedQuestions&&STATE.savedQuestions[qKey];
+      return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'+
+        '<div style="display:flex;gap:8px;align-items:flex-start;">'+
+          '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
+          '<div style="flex:1;">'+
+            '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px;">'+
+              (diffLabel?'<span style="font-size:0.65rem;font-weight:800;background:rgba(0,0,0,0.06);border-radius:10px;padding:1px 7px;">'+diffLabel+'</span>':'')+
+              (isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
+            '</div>'+
+            '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
+            '<div style="display:flex;flex-direction:column;gap:3px;">'+
+              q.options.map(function(opt,oi){
+                var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
+                var bg=isCOpt?'rgba(46,125,50,0.15)':(isUOpt&&!isCOpt)?'rgba(198,40,40,0.12)':'var(--surface2)';
+                var clr=isCOpt?'#2e7d32':(isUOpt&&!isCOpt)?'#c62828':'var(--text)';
+                var fw=(isCOpt||isUOpt)?'800':'400';
+                return '<div style="padding:5px 10px;border-radius:7px;background:'+bg+';color:'+clr+';font-weight:'+fw+';font-size:0.79rem;">'+
+                  String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isCOpt?' ✓':'')+(isUOpt&&!isCOpt?' ✗':'')+
+                '</div>';
+              }).join('')+
+            '</div>'+
+            (q.explanation?'<div style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
+            '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+    html+='</div>';
+  }
+  container.innerHTML=html;
+}
+function reattemptFromHistory(quizId){
+  var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
+  if(!quiz){ showToast('Quiz nahi mili — shayad delete ho gayi!','error'); return; }
+  startAttempt(quiz.id, false);
+}
+
+// ================================================================
+// QUIZ VAULT
+// ================================================================
+var _vaultFilter='all';
+function initVaultFilters(){
+  var sel=document.getElementById('vaultQuizFilter'); if(!sel) return;
+  var quizzes=STATE.quizzes;
+  sel.innerHTML='<option value="all">Saari Quizzes</option>'+
+    quizzes.map(function(q){ return '<option value="'+q.id+'">'+escHtml(q.name)+'</option>'; }).join('');
+}
+function setVaultFilter(f){
+  _vaultFilter=f;
+  // Update button styles
+  ['all','wrong','correct','saved','tough','doubt'].forEach(function(ff){
+    var btn=document.getElementById('vf_'+ff);
+    if(btn){
+      if(ff===f){
+        btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; btn.style.background='rgba(21,101,192,0.08)';
+      } else {
+        btn.style.borderColor='var(--border)'; btn.style.color='var(--text2)'; btn.style.background='';
+      }
+    }
+  });
+  renderVaultPage();
+}
+function renderVaultPage(){
+  var container=document.getElementById('vaultPageContent'); if(!container) return;
+  var quizFilter=document.getElementById('vaultQuizFilter');
+  var fqId=quizFilter?quizFilter.value:'all';
+  // Collect all questions from all attempts
+  var allAttempts=STATE.attempts;
+  if(fqId!=='all') allAttempts=allAttempts.filter(function(a){ return String(a.quizId)===String(fqId); });
+
+  // Build per-question map: use latest attempt for each quiz+idx combo
+  var qMap={};
+  allAttempts.forEach(function(at){
+    var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(at.quizId); });
+    if(!quiz) return;
+    var qs=quiz.questions||[];
+    var diffArr=at.difficulty||[];
+    qs.forEach(function(q,i){
+      var key=String(at.quizId)+'_'+i;
+      var userAns=at.answers?at.answers[i]:undefined;
+      var isCorrect=userAns===q.correct;
+      var isSkipped=userAns===null||userAns===undefined;
+      var isSaved=STATE.savedQuestions&&STATE.savedQuestions[key];
+      var diff=diffArr[i]||null;
+      // Latest attempt overwrites
+      qMap[key]={
+        key:key, quizId:at.quizId, quizName:at.quizName, qIdx:i, q:q,
+        userAns:userAns, isCorrect:isCorrect, isSkipped:isSkipped,
+        isSaved:!!isSaved, difficulty:diff
+      };
+    });
+  });
+
+  var items=Object.values(qMap);
+  // Apply filter
+  if(_vaultFilter==='wrong') items=items.filter(function(x){ return !x.isCorrect&&!x.isSkipped; });
+  else if(_vaultFilter==='correct') items=items.filter(function(x){ return x.isCorrect; });
+  else if(_vaultFilter==='saved') items=items.filter(function(x){ return x.isSaved; });
+  else if(_vaultFilter==='tough') items=items.filter(function(x){ return x.difficulty==='tough'; });
+  else if(_vaultFilter==='doubt') items=items.filter(function(x){ return x.difficulty==='doubt'; });
+
+  if(!items.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">🗄️</div><div>Is filter mein koi question nahi.<br><span style="font-size:0.78rem;">Attempt karo — questions yahan track honge!</span></div></div>';
+    return;
+  }
+
+  container.innerHTML='<div style="font-size:0.72rem;color:var(--text2);margin-bottom:8px;padding:0 2px;">'+items.length+' questions</div>'+
+    items.map(function(item){
+      var statusColor=item.isSkipped?'#9e9e9e':item.isCorrect?'#2e7d32':'#c62828';
+      var statusIcon=item.isSkipped?'⏭':item.isCorrect?'✅':'❌';
+      var diffLabel=item.difficulty?({easy:'😊 Easy',tough:'😓 Tough',doubt:'🤔 Doubtful'}[item.difficulty]||''):'';
+      return '<div class="card" style="margin-bottom:10px;">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">'+
+          '<span style="font-size:0.68rem;color:var(--text2);font-weight:700;">'+escHtml(item.quizName)+'</span>'+
+          '<span style="font-size:0.65rem;color:'+statusColor+';background:'+statusColor+'18;border-radius:10px;padding:1px 7px;font-weight:800;">'+statusIcon+' '+(item.isSkipped?'Skipped':item.isCorrect?'Correct':'Wrong')+'</span>'+
+          (diffLabel?'<span style="font-size:0.65rem;font-weight:800;background:rgba(0,0,0,0.06);border-radius:10px;padding:1px 7px;">'+diffLabel+'</span>':'')+
+          (item.isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
+        '</div>'+
+        '<div style="font-weight:700;font-size:0.85rem;line-height:1.55;margin-bottom:8px;">'+escHtml(item.q.q)+'</div>'+
+        '<div style="display:flex;flex-direction:column;gap:3px;">'+
+          item.q.options.map(function(opt,oi){
+            var isCOpt=oi===item.q.correct; var isUOpt=oi===item.userAns;
+            var bg=isCOpt?'rgba(46,125,50,0.14)':(isUOpt&&!isCOpt)?'rgba(198,40,40,0.1)':'var(--surface2)';
+            var clr=isCOpt?'#2e7d32':(isUOpt&&!isCOpt)?'#c62828':'var(--text)';
+            var fw=(isCOpt||isUOpt)?'800':'400';
+            return '<div style="padding:5px 10px;border-radius:7px;background:'+bg+';color:'+clr+';font-weight:'+fw+';font-size:0.78rem;">'+
+              String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isCOpt?' ✓':'')+(isUOpt&&!isCOpt?' ✗':'')+
+            '</div>';
+          }).join('')+
+        '</div>'+
+        (item.q.explanation?'<div style="font-size:0.71rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(item.q.explanation)+'</div>':'')+
+      '</div>';
+    }).join('');
+}
 
 function showResult(attempt, quiz){
   showPage('result');
