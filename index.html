@@ -141,9 +141,9 @@ textarea.inp{resize:vertical; min-height:64px;}
 </style>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -560,8 +560,20 @@ textarea.inp{resize:vertical; min-height:64px;}
 </div>
 
 <div id="toast"></div>
+<div id="offlineBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c62828;color:#fff;text-align:center;font-size:0.78rem;font-weight:700;padding:7px;animation:fadeIn 0.3s;">📵 Aap offline hain — Cached data se kaam kar raha hai</div>
 
 <script>
+// Online/offline detection
+function updateOnlineStatus(){
+  var bar=document.getElementById('offlineBar');
+  if(!bar) return;
+  if(navigator.onLine){ bar.style.display='none'; }
+  else { bar.style.display='block'; }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+</script>
 // ================================================================
 // FIREBASE CONFIG — Apna config yahan paste karo
 // ================================================================
@@ -652,6 +664,16 @@ function initFirebase(){
     if(firebase.apps && firebase.apps.length){ firebase.app(); }
     else{ firebase.initializeApp(firebaseConfig); }
     _db = firebase.firestore();
+    // Offline persistence — tab sync ke saath (dusri device/tab me bhi live update)
+    _db.enablePersistence({synchronizeTabs:true}).catch(function(err){
+      if(err.code==='failed-precondition'){
+        // Multiple tabs open hai — ignore karo
+        console.warn('Firestore persistence: multiple tabs open');
+      } else if(err.code==='unimplemented'){
+        // Browser support nahi karta — ignore
+        console.warn('Firestore persistence: not supported in this browser');
+      }
+    });
     _auth = firebase.auth();
     _auth.getRedirectResult().catch(function(e){ console.warn('redirect err:',e); });
     _auth.onAuthStateChanged(onAuth);
@@ -721,7 +743,10 @@ function attachListeners(){
       var ap = getActivePage();
       if(ap==='home') renderHome();
       if(ap==='create') renderCreateList();
-    }, function(err){ console.warn(err); });
+      if(ap==='practice') renderPracticeList();
+      if(ap==='history'){ initHistoryFilters(); renderHistory(); }
+      if(ap==='vault'){ initVaultFilters(); renderVaultPage(); }
+    }, function(err){ console.warn('Attempts listener error:',err); });
 }
 function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
@@ -1784,12 +1809,20 @@ function viewLastResult(quizId){
 // ================================================================
 showPage('loading');
 window.addEventListener('load', function(){
-  if(typeof firebase !== 'undefined'){
-    initFirebase();
-  } else {
-    showToast('Firebase load nahi hua. Internet check karo.','error');
-    showPage('login');
+  // Firebase SDK load hone ka wait karo
+  var attempts=0;
+  function tryInit(){
+    if(typeof firebase !== 'undefined'){
+      initFirebase();
+    } else if(attempts<20){
+      attempts++;
+      setTimeout(tryInit, 200);
+    } else {
+      showToast('Firebase load nahi hua. Internet check karo.','error');
+      showPage('login');
+    }
   }
+  tryInit();
 });
 </script>
 
