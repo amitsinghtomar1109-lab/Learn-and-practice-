@@ -455,6 +455,8 @@ function initFirebase() {
     }
     _db = firebase.firestore();
     _auth = firebase.auth();
+    // Redirect se wapas aane par result handle karo
+    _auth.getRedirectResult().catch(e=>{ console.warn('redirect result err:', e); });
     _auth.onAuthStateChanged(onAuth);
   }catch(e){
     console.error('Firebase init error:', e);
@@ -485,7 +487,11 @@ function signInAnon(){
 function signInGoogle(){
   if(!_auth){ toast('Firebase setup pending', 'error'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
-  _auth.signInWithPopup(provider).catch(e=>{ toast('Google sign-in failed: '+e.message,'error'); });
+  showPage('loading');
+  _auth.signInWithRedirect(provider).catch(e=>{
+    toast('Google sign-in failed: '+e.message,'error');
+    showPage('login');
+  });
 }
 function signOut(){
   if(!_auth) return;
