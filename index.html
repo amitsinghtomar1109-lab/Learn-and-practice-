@@ -170,130 +170,59 @@ textarea.inp{resize:vertical; min-height:64px;}
 .login-card h2{margin:0 0 6px; color:var(--accent); font-size:1.4rem;}
 .login-card p{color:var(--text2); font-size:0.85rem; margin-bottom:18px;}
 
-/* ===== QUESTION EDIT MODAL ===== */
-#qEditModal{
-  display:none; position:fixed; inset:0; z-index:900;
-  background:rgba(13,27,42,0.72); backdrop-filter:blur(4px);
-  animation:fadeInBg 0.2s ease;
+/* ===== HIGHLIGHTER TOOLBAR ===== */
+.hl-toolbar {
+  display:flex; align-items:center; gap:4px; padding:6px 10px;
+  background:rgba(255,235,59,0.10); border:1.5px solid rgba(255,193,7,0.30);
+  border-radius:10px; margin-bottom:10px; flex-wrap:wrap;
+  box-shadow:0 1px 6px rgba(255,193,7,0.10);
 }
-#qEditModal.open{ display:flex; flex-direction:column; }
-@keyframes fadeInBg{ from{opacity:0;} to{opacity:1;} }
-
-#qEditModalInner{
-  background:var(--surface); border-radius:20px 20px 0 0;
-  margin-top:auto; max-height:94vh; overflow-y:auto;
-  animation:slideUpModal 0.28s cubic-bezier(0.34,1.36,0.64,1);
-  display:flex; flex-direction:column;
+.hl-toolbar .hl-label {
+  font-size:0.6rem; font-weight:800; color:rgba(0,0,0,0.45);
+  letter-spacing:0.4px; white-space:nowrap; flex-shrink:0; margin-right:2px;
 }
-@keyframes slideUpModal{ from{transform:translateY(60px);opacity:0;} to{transform:none;opacity:1;} }
-
-/* Modal Header */
-#qEditModalHeader{
-  position:sticky; top:0; z-index:10;
-  background:linear-gradient(135deg,#1565c0,#1976d2);
-  color:#fff; padding:14px 16px;
-  display:flex; align-items:center; gap:10px;
-  border-radius:20px 20px 0 0;
+.hl-tbtn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:7px; border:1.5px solid var(--border);
+  background:var(--surface); cursor:pointer; font-size:0.82rem;
+  transition:all 0.12s; flex-shrink:0; -webkit-tap-highlight-color:transparent;
+  padding:0;
 }
-#qEditModalHeader .modal-title{ flex:1; font-weight:800; font-size:0.95rem; }
-
-/* Toolbar */
-.qedit-toolbar{
-  display:flex; gap:6px; padding:10px 14px; background:var(--surface2);
-  border-bottom:1.5px solid var(--border); flex-wrap:wrap; align-items:center;
-  position:sticky; top:52px; z-index:9;
+.hl-tbtn:active { transform:scale(0.91); }
+.hl-tbtn.active {
+  border-color: #f9a825; background:#fff176; box-shadow:0 0 0 2px rgba(249,168,37,0.3);
 }
-.qedit-tool{
+.hl-tbtn.eraser-active {
+  border-color: var(--red); background:rgba(198,40,40,0.10); box-shadow:0 0 0 2px rgba(198,40,40,0.2);
+}
+.hl-sep { width:1px; height:22px; background:var(--border); flex-shrink:0; margin:0 2px; }
+.hl-cdot {
+  width:18px; height:18px; border-radius:50%; cursor:pointer;
+  border:2px solid transparent; flex-shrink:0;
+  box-shadow:0 0 0 1.5px rgba(0,0,0,0.18);
+  transition:transform 0.12s, box-shadow 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.hl-cdot.sel, .hl-cdot:active {
+  transform:scale(1.25); box-shadow:0 0 0 2.5px rgba(0,0,0,0.35);
+}
+/* Highlighted text mark */
+.q-hl-mark {
+  border-radius:3px; padding:0 2px; cursor:pointer;
+  transition:opacity 0.12s;
+}
+.hl-eraser-on .q-hl-mark:hover {
+  opacity:0.45; outline:2px dashed var(--red);
+}
+.hl-save-btn {
   display:inline-flex; align-items:center; gap:4px;
-  padding:5px 10px; border-radius:20px; border:1.5px solid var(--border);
-  background:#fff; font-size:0.74rem; font-weight:700; cursor:pointer;
-  transition:all 0.12s; color:var(--text2); user-select:none; flex-shrink:0;
+  padding:5px 10px; border-radius:8px; border:1.5px solid rgba(106,27,154,0.35);
+  background:rgba(106,27,154,0.08); color:#6a1b9a;
+  font-weight:800; font-size:0.74rem; cursor:pointer;
+  transition:all 0.12s; -webkit-tap-highlight-color:transparent; flex-shrink:0;
 }
-.qedit-tool:hover{ border-color:var(--accent); color:var(--accent); background:rgba(21,101,192,0.06); }
-.qedit-tool.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
-.qedit-tool:disabled{ opacity:0.4; cursor:not-allowed; }
-
-/* Modal content area */
-.qedit-body{ padding:16px 14px 6px; flex:1; }
-
-/* Question display card */
-.qedit-q-card{
-  background:linear-gradient(135deg,rgba(21,101,192,0.06),rgba(21,101,192,0.02));
-  border:1.5px solid rgba(21,101,192,0.18); border-radius:12px;
-  padding:14px; margin-bottom:14px;
-}
-.qedit-q-num{ font-size:0.68rem; font-weight:800; color:var(--text2); margin-bottom:6px; }
-.qedit-q-text{
-  font-size:0.95rem; font-weight:700; line-height:1.7; color:var(--text);
-  word-break:break-word;
-}
-
-/* Highlighted text in question display */
-.qedit-q-text mark.hl-yellow{ background:#fff176; color:#333; border-radius:3px; padding:0 2px; }
-.qedit-q-text mark.hl-green{ background:#c8e6c9; color:#1b5e20; border-radius:3px; padding:0 2px; }
-.qedit-q-text mark.hl-blue{ background:#bbdefb; color:#0d47a1; border-radius:3px; padding:0 2px; }
-.qedit-q-text mark.hl-orange{ background:#ffe0b2; color:#bf360c; border-radius:3px; padding:0 2px; }
-
-/* Options in edit modal */
-.qedit-options{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
-.qedit-opt{
-  display:flex; align-items:flex-start; gap:8px;
-  padding:9px 12px; border-radius:9px; border:1.5px solid var(--border);
-  background:var(--surface2); font-size:0.85rem;
-}
-.qedit-opt.correct{ background:rgba(46,125,50,0.12); border-color:rgba(46,125,50,0.4); }
-.qedit-opt.user-wrong{ background:rgba(198,40,40,0.1); border-color:rgba(198,40,40,0.35); }
-.qedit-opt-letter{ font-weight:900; font-size:0.8rem; flex-shrink:0; margin-top:1px; }
-.qedit-opt.correct .qedit-opt-letter{ color:var(--green); }
-.qedit-opt.user-wrong .qedit-opt-letter{ color:var(--red); }
-
-/* Explanation box */
-.qedit-expl-box{
-  background:rgba(21,101,192,0.06); border:1.5px solid rgba(21,101,192,0.2);
-  border-left:4px solid var(--accent); border-radius:10px; padding:12px;
-  margin-bottom:14px;
-}
-.qedit-expl-label{ font-size:0.7rem; font-weight:800; color:var(--accent); margin-bottom:6px; }
-.qedit-expl-text{ font-size:0.85rem; line-height:1.7; color:var(--text); white-space:pre-wrap; word-break:break-word; }
-
-/* Edit form in modal */
-.qedit-form{ background:var(--surface2); border-radius:12px; padding:14px; margin-bottom:14px; border:1.5px solid var(--border); }
-.qedit-form-title{ font-size:0.78rem; font-weight:800; color:var(--accent); margin-bottom:10px; }
-.qedit-inp{
-  width:100%; padding:9px 12px; background:#fff;
-  border:1.5px solid var(--border); border-radius:8px;
-  font-size:0.85rem; font-family:inherit; color:var(--text); outline:none;
-  transition:border-color 0.15s, box-shadow 0.15s; resize:vertical;
-}
-.qedit-inp:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(21,101,192,0.15); }
-.qedit-field{ margin-bottom:10px; }
-.qedit-field-label{ font-size:0.72rem; font-weight:700; color:var(--text2); margin-bottom:4px; display:block; }
-.qedit-opts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-@media(max-width:480px){ .qedit-opts-grid{ grid-template-columns:1fr; } }
-.qedit-correct-sel{ display:flex; gap:6px; flex-wrap:wrap; }
-.qedit-correct-btn{
-  padding:5px 12px; border-radius:20px; border:1.5px solid var(--border);
-  background:#fff; font-weight:800; font-size:0.78rem; cursor:pointer;
-  transition:all 0.12s; color:var(--text2);
-}
-.qedit-correct-btn.selected{ background:var(--green); color:#fff; border-color:var(--green); }
-
-/* Save bar */
-#qEditSaveBar{
-  position:sticky; bottom:0; background:#fff;
-  border-top:1.5px solid var(--border); padding:12px 14px;
-  display:flex; gap:8px; align-items:center;
-}
-.qedit-save-info{ flex:1; font-size:0.72rem; color:var(--text2); }
-
-/* Color picker for highlight */
-.hl-color-row{ display:flex; gap:5px; align-items:center; padding:4px 14px 8px; }
-.hl-dot{
-  width:22px; height:22px; border-radius:50%; cursor:pointer;
-  border:2.5px solid transparent; transition:transform 0.12s, border-color 0.12s;
-}
-.hl-dot:hover{ transform:scale(1.2); }
-.hl-dot.selected{ border-color:var(--text); transform:scale(1.1); }
+.hl-save-btn:active { transform:scale(0.95); }
+.hl-save-btn.saved { background:rgba(106,27,154,0.18); border-color:#6a1b9a; }
 </style>
 
 <!-- Firebase SDK loaded at body end -->
@@ -310,105 +239,6 @@ textarea.inp{resize:vertical; min-height:64px;}
     </div>
     <button onclick="pwaInstall()" style="background:#fff;color:#1565c0;border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;flex-shrink:0;">📲 Install</button>
     <button onclick="pwaDismiss()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:8px;padding:8px 10px;font-weight:700;font-size:0.8rem;cursor:pointer;flex-shrink:0;">✕</button>
-  </div>
-</div>
-
-<!-- ===== QUESTION EDIT MODAL ===== -->
-<div id="qEditModal" onclick="qEditModalBgClick(event)">
-  <div id="qEditModalInner">
-
-    <!-- Modal Header -->
-    <div id="qEditModalHeader">
-      <button onclick="closeQEditModal()" style="background:rgba(255,255,255,0.18);border:none;color:#fff;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
-      <div class="modal-title">✏️ Question Edit Karo</div>
-      <div id="qEditQNum" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:800;">Q --</div>
-    </div>
-
-    <!-- Toolbar -->
-    <div class="qedit-toolbar">
-      <button class="qedit-tool" id="qeTool_highlight" onclick="qeToggleTool('highlight')" title="Text highlight karo">🖊 Highlight</button>
-      <div class="hl-color-row" id="qeColorRow" style="display:none;padding:0;gap:5px;">
-        <div class="hl-dot selected" style="background:#fff176;" data-hl="hl-yellow" onclick="qeSetHlColor(this)"></div>
-        <div class="hl-dot" style="background:#c8e6c9;" data-hl="hl-green" onclick="qeSetHlColor(this)"></div>
-        <div class="hl-dot" style="background:#bbdefb;" data-hl="hl-blue" onclick="qeSetHlColor(this)"></div>
-        <div class="hl-dot" style="background:#ffe0b2;" data-hl="hl-orange" onclick="qeSetHlColor(this)"></div>
-      </div>
-      <button class="qedit-tool" id="qeTool_eraser" onclick="qeToggleTool('eraser')" title="Highlight hatao">🧹 Eraser</button>
-      <button class="qedit-tool" id="qeUndo" onclick="qeUndo()" title="Undo" style="margin-left:auto;">↩ Undo</button>
-      <button class="qedit-tool" id="qeRedo" onclick="qeRedo()" title="Redo">↪ Redo</button>
-    </div>
-
-    <!-- Body -->
-    <div class="qedit-body">
-
-      <!-- Question display (for highlight/reading) -->
-      <div class="qedit-q-card" id="qeQuestionCard">
-        <div class="qedit-q-num" id="qeQNumLabel">Question 1</div>
-        <div class="qedit-q-text" id="qeQDisplay" onmouseup="qeOnTextSelect()" ontouchend="qeOnTextSelect()"></div>
-      </div>
-
-      <!-- Options display -->
-      <div class="qedit-options" id="qeOptionsDisplay"></div>
-
-      <!-- Explanation display -->
-      <div class="qedit-expl-box" id="qeExplBox" style="display:none;">
-        <div class="qedit-expl-label">💡 Explanation</div>
-        <div class="qedit-expl-text" id="qeExplDisplay"></div>
-      </div>
-
-      <!-- Edit Form -->
-      <div class="qedit-form" id="qeEditFormBox" style="display:none;">
-        <div class="qedit-form-title">✏️ Question Edit Form</div>
-
-        <div class="qedit-field">
-          <label class="qedit-field-label">Question Text:</label>
-          <textarea class="qedit-inp" id="qeQText" rows="3" placeholder="Question likhao..."></textarea>
-        </div>
-
-        <div class="qedit-opts-grid">
-          <div class="qedit-field">
-            <label class="qedit-field-label">A:</label>
-            <input type="text" class="qedit-inp" id="qeOpt0" placeholder="Option A..."/>
-          </div>
-          <div class="qedit-field">
-            <label class="qedit-field-label">B:</label>
-            <input type="text" class="qedit-inp" id="qeOpt1" placeholder="Option B..."/>
-          </div>
-          <div class="qedit-field">
-            <label class="qedit-field-label">C:</label>
-            <input type="text" class="qedit-inp" id="qeOpt2" placeholder="Option C..."/>
-          </div>
-          <div class="qedit-field">
-            <label class="qedit-field-label">D:</label>
-            <input type="text" class="qedit-inp" id="qeOpt3" placeholder="Option D..."/>
-          </div>
-        </div>
-
-        <div class="qedit-field">
-          <label class="qedit-field-label">✅ Sahi Answer:</label>
-          <div class="qedit-correct-sel" id="qeCorrectBtns">
-            <button class="qedit-correct-btn" data-val="0" onclick="qeSetCorrect(0)">A</button>
-            <button class="qedit-correct-btn" data-val="1" onclick="qeSetCorrect(1)">B</button>
-            <button class="qedit-correct-btn" data-val="2" onclick="qeSetCorrect(2)">C</button>
-            <button class="qedit-correct-btn" data-val="3" onclick="qeSetCorrect(3)">D</button>
-          </div>
-        </div>
-
-        <div class="qedit-field">
-          <label class="qedit-field-label">💡 Explanation (pura likhao):</label>
-          <textarea class="qedit-inp" id="qeExplText" rows="4" placeholder="Detailed explanation likhao..."></textarea>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Save Bar -->
-    <div id="qEditSaveBar">
-      <div class="qedit-save-info" id="qeSaveInfo">📖 Read mode — Edit button dabao</div>
-      <button class="btn btn-outline btn-sm" id="qeEditToggleBtn" onclick="qeToggleEditForm()" style="color:var(--accent);border-color:rgba(21,101,192,0.35);">✏️ Edit</button>
-      <button class="btn btn-primary btn-sm" id="qeSaveBtn" onclick="qeSaveQuestion()" style="display:none;">💾 Save</button>
-    </div>
-
   </div>
 </div>
 
@@ -731,6 +561,27 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-subtitle" id="adSubtitle">Detail</div>
       </div>
       <button class="btn btn-outline btn-sm" id="adToggleBtn" onclick="toggleDetailAnswers()" style="color:#6a1b9a;border-color:rgba(106,27,154,0.3);">👁 Chhupao</button>
+      <button class="btn btn-outline btn-sm" id="adHlToggleBar" onclick="hlToggleToolbar('ad')" style="color:#f57f17;border-color:rgba(255,193,7,0.5);background:rgba(255,235,59,0.10);">🖊 HL</button>
+    </div>
+    <!-- Highlighter Toolbar for Detail Page -->
+    <div id="adHlToolbar" class="hl-toolbar" style="display:none;">
+      <span class="hl-label">✨ ANNOTATE:</span>
+      <button class="hl-tbtn" id="adHlBtn" onclick="hlToggle('ad','highlight')" title="Highlight karo">🖊</button>
+      <button class="hl-tbtn" id="adEraserBtn" onclick="hlToggle('ad','eraser')" title="Highlight hatao">🧹</button>
+      <div class="hl-sep"></div>
+      <div id="adHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;display:flex;">
+        <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('ad','#ffe000',this)" title="Yellow"></div>
+        <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('ad','#ff6f00',this)" title="Orange"></div>
+        <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('ad','#e91e63',this)" title="Pink"></div>
+        <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('ad','#00c853',this)" title="Green"></div>
+        <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('ad','#29b6f6',this)" title="Blue"></div>
+        <div class="hl-cdot" data-c="#ce93d8" style="background:#ce93d8;" onclick="hlSetColor('ad','#ce93d8',this)" title="Purple"></div>
+      </div>
+      <div class="hl-sep"></div>
+      <button class="hl-tbtn" id="adUndoBtn" onclick="hlUndo('ad')" title="Undo" style="opacity:0.35;">↩</button>
+      <button class="hl-tbtn" id="adRedoBtn" onclick="hlRedo('ad')" title="Redo" style="opacity:0.35;">↪</button>
+      <div class="hl-sep"></div>
+      <button class="hl-save-btn" id="adSaveHlBtn" onclick="hlSave('ad')" title="Highlights save karo">💾 Save</button>
     </div>
     <div id="adContent"></div>
   </div>
@@ -839,7 +690,29 @@ textarea.inp{resize:vertical; min-height:64px;}
 
     <!-- Full Analysis -->
     <div class="card" id="analysisCard" style="display:none;">
-      <div class="card-title">🔍 Question-wise Analysis</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+        <div class="card-title" style="margin:0;">🔍 Question-wise Analysis</div>
+      </div>
+      <!-- Highlighter Toolbar for Result Analysis -->
+      <div id="rsHlToolbar" class="hl-toolbar">
+        <span class="hl-label">✨ ANNOTATE:</span>
+        <button class="hl-tbtn" id="rsHlBtn" onclick="hlToggle('rs','highlight')" title="Highlight karo">🖊</button>
+        <button class="hl-tbtn" id="rsEraserBtn" onclick="hlToggle('rs','eraser')" title="Highlight hatao">🧹</button>
+        <div class="hl-sep"></div>
+        <div id="rsHlColors" style="display:flex;align-items:center;gap:3px;flex-shrink:0;display:none;">
+          <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('rs','#ffe000',this)" title="Yellow"></div>
+          <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('rs','#ff6f00',this)" title="Orange"></div>
+          <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('rs','#e91e63',this)" title="Pink"></div>
+          <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('rs','#00c853',this)" title="Green"></div>
+          <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('rs','#29b6f6',this)" title="Blue"></div>
+          <div class="hl-cdot" data-c="#ce93d8" style="background:#ce93d8;" onclick="hlSetColor('rs','#ce93d8',this)" title="Purple"></div>
+        </div>
+        <div class="hl-sep"></div>
+        <button class="hl-tbtn" id="rsUndoBtn" onclick="hlUndo('rs')" title="Undo" style="opacity:0.35;">↩</button>
+        <button class="hl-tbtn" id="rsRedoBtn" onclick="hlRedo('rs')" title="Redo" style="opacity:0.35;">↪</button>
+        <div class="hl-sep"></div>
+        <button class="hl-save-btn" id="rsSaveHlBtn" onclick="hlSave('rs')" title="Highlights save karo">💾 Save</button>
+      </div>
       <div id="analysisContent"></div>
     </div>
   </div>
@@ -2192,7 +2065,7 @@ function renderAttemptDetail(at, quiz){
               (diffLabel?'<span style="font-size:0.65rem;font-weight:800;background:rgba(0,0,0,0.06);border-radius:10px;padding:1px 7px;">'+diffLabel+'</span>':'')+
               (isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
             '</div>'+
-            '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
+            '<div class="hl-zone" id="adQ_'+i+'" data-hlzone="ad_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
             (hidden
               ? '<div style="padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:0.78rem;font-weight:700;text-align:center;border:1.5px dashed var(--border);">🙈 Answer chhupa hua hai — "Dikhao" button dabao</div>'
               : '<div style="display:flex;flex-direction:column;gap:3px;">'+
@@ -2220,10 +2093,17 @@ function renderAttemptDetail(at, quiz){
     html+='</div>';
   }
   container.innerHTML=html;
+  // Show HL toolbar and restore saved highlights
+  var tb = document.getElementById('adHlToolbar');
+  if(tb) tb.style.display='flex';
+  hlRestoreAll('ad');
+  hlAttachListeners('ad', container);
 }
 function editQFromDetail(quizId, qid){
-  // Open the focused question edit modal directly — no page navigation
-  openQEditModal(quizId, qid, _lastAttempt);
+  // Open question manager for that quiz, pre-fill edit form
+  _currentQuizId=quizId;
+  openQuizQuestions(quizId);
+  setTimeout(function(){ editQ(qid); },300);
 }
 function deleteQFromDetail(quizId, qid){
   if(!confirm('Is question ko delete karo?')) return;
@@ -2236,321 +2116,6 @@ function deleteQFromDetail(quizId, qid){
   var at=_lastAttempt;
   if(at){ renderAttemptDetail(at, quiz); }
 }
-// ================================================================
-// QUESTION EDIT MODAL — Focused single-question editor
-// ================================================================
-var _qeState = {
-  quizId: null, qid: null, attempt: null,
-  activeTool: null, hlColor: 'hl-yellow',
-  // Per-question highlight data saved in localStorage
-  highlights: {}, // key: "quizId_qid" => html string of qeQDisplay
-  undoStack: [], redoStack: [],
-  editFormOpen: false, correctVal: 0
-};
-
-function openQEditModal(quizId, qid, attempt){
-  var quiz = STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
-  if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
-  var q = (quiz.questions||[]).find(function(x){ return String(x.id)===String(qid); });
-  if(!q){ showToast('Question nahi mila!','error'); return; }
-
-  _qeState.quizId = quizId;
-  _qeState.qid = qid;
-  _qeState.attempt = attempt || null;
-  _qeState.activeTool = null;
-  _qeState.undoStack = [];
-  _qeState.redoStack = [];
-  _qeState.editFormOpen = false;
-  _qeState.correctVal = q.correct;
-
-  // Find question index for display
-  var qIdx = (quiz.questions||[]).findIndex(function(x){ return String(x.id)===String(qid); });
-  var userAns = (attempt && attempt.answers) ? attempt.answers[qIdx] : undefined;
-
-  // Set header number
-  document.getElementById('qEditQNum').textContent = 'Q '+(qIdx+1);
-  document.getElementById('qeQNumLabel').textContent = 'Question '+(qIdx+1)+' of '+(quiz.questions||[]).length;
-
-  // Load highlight data from localStorage
-  var hlKey = 'qeHL_'+String(quizId)+'_'+String(qid);
-  var savedHL = localStorage.getItem(hlKey);
-
-  // Question text display
-  var qDisplay = document.getElementById('qeQDisplay');
-  if(savedHL){
-    qDisplay.innerHTML = savedHL;
-  } else {
-    qDisplay.textContent = q.q;
-  }
-
-  // Options display
-  var optContainer = document.getElementById('qeOptionsDisplay');
-  optContainer.innerHTML = (q.options||[]).map(function(opt, oi){
-    var isCorrOpt = oi === q.correct;
-    var isUserWrong = (userAns !== undefined && userAns !== null && oi === userAns && !isCorrOpt);
-    var cls = 'qedit-opt' + (isCorrOpt?' correct':'') + (isUserWrong?' user-wrong':'');
-    var letter = String.fromCharCode(65+oi);
-    var badge = isCorrOpt ? ' <span style="font-size:0.7rem;font-weight:900;color:var(--green);">✓ Sahi</span>' :
-                isUserWrong ? ' <span style="font-size:0.7rem;font-weight:900;color:var(--red);">✗ Tumhara jawab</span>' : '';
-    return '<div class="'+cls+'">'+
-      '<span class="qedit-opt-letter">'+letter+'.</span>'+
-      '<span style="flex:1;font-size:0.85rem;line-height:1.5;word-break:break-word;">'+escHtml(opt)+badge+'</span>'+
-    '</div>';
-  }).join('');
-
-  // Explanation display
-  var explBox = document.getElementById('qeExplBox');
-  var explDisplay = document.getElementById('qeExplDisplay');
-  if(q.explanation && q.explanation.trim()){
-    explDisplay.textContent = q.explanation;
-    explBox.style.display = '';
-  } else {
-    explBox.style.display = 'none';
-  }
-
-  // Pre-fill edit form
-  document.getElementById('qeQText').value = q.q;
-  [0,1,2,3].forEach(function(i){ document.getElementById('qeOpt'+i).value = (q.options||[])[i]||''; });
-  document.getElementById('qeExplText').value = q.explanation||'';
-  qeSetCorrect(q.correct);
-
-  // Reset form state
-  document.getElementById('qeEditFormBox').style.display = 'none';
-  document.getElementById('qeSaveBtn').style.display = 'none';
-  document.getElementById('qeEditToggleBtn').textContent = '✏️ Edit';
-  document.getElementById('qeSaveInfo').textContent = '📖 Read mode — Edit ya Highlight karo';
-  _qeState.editFormOpen = false;
-
-  // Reset toolbar
-  qeSetTool(null);
-
-  // Show modal
-  document.getElementById('qEditModal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeQEditModal(){
-  document.getElementById('qEditModal').classList.remove('open');
-  document.body.style.overflow = '';
-  _qeState.activeTool = null;
-}
-
-function qEditModalBgClick(e){
-  if(e.target === document.getElementById('qEditModal')) closeQEditModal();
-}
-
-// ---- Tool management ----
-function qeSetTool(tool){
-  _qeState.activeTool = tool;
-  var hlBtn = document.getElementById('qeTool_highlight');
-  var erBtn = document.getElementById('qeTool_eraser');
-  var colorRow = document.getElementById('qeColorRow');
-
-  if(tool === 'highlight'){
-    hlBtn.classList.add('active');
-    erBtn.classList.remove('active');
-    colorRow.style.display = 'flex';
-    document.getElementById('qeQDisplay').style.cursor = 'text';
-    document.getElementById('qeSaveInfo').textContent = '🖊 Text select karo — highlight lagega';
-  } else if(tool === 'eraser'){
-    erBtn.classList.add('active');
-    hlBtn.classList.remove('active');
-    colorRow.style.display = 'none';
-    document.getElementById('qeQDisplay').style.cursor = 'crosshair';
-    document.getElementById('qeSaveInfo').textContent = '🧹 Highlight par click karo — hatao';
-  } else {
-    hlBtn.classList.remove('active');
-    erBtn.classList.remove('active');
-    colorRow.style.display = 'none';
-    document.getElementById('qeQDisplay').style.cursor = '';
-    if(!_qeState.editFormOpen)
-      document.getElementById('qeSaveInfo').textContent = '📖 Read mode — Edit ya Highlight karo';
-  }
-}
-
-function qeToggleTool(tool){
-  if(_qeState.activeTool === tool) qeSetTool(null);
-  else qeSetTool(tool);
-}
-
-function qeSetHlColor(el){
-  _qeState.hlColor = el.getAttribute('data-hl');
-  document.querySelectorAll('.hl-dot').forEach(function(d){ d.classList.remove('selected'); });
-  el.classList.add('selected');
-}
-
-// ---- Highlight on text select ----
-function qeOnTextSelect(){
-  if(_qeState.activeTool !== 'highlight') return;
-  var sel = window.getSelection();
-  if(!sel || sel.isCollapsed || !sel.toString().trim()) return;
-
-  var range = sel.getRangeAt(0);
-  var container = document.getElementById('qeQDisplay');
-  if(!container.contains(range.commonAncestorContainer)) return;
-
-  // Check selection is within qeQDisplay
-  // Push undo before changing
-  qePushUndo();
-
-  var mark = document.createElement('mark');
-  mark.className = _qeState.hlColor;
-  mark.onclick = function(e){ if(_qeState.activeTool==='eraser'){ qePushUndo(); var txt=document.createTextNode(mark.textContent); mark.parentNode.replaceChild(txt,mark); qeSaveHL(); e.stopPropagation(); } };
-  try{
-    range.surroundContents(mark);
-  } catch(err){
-    // Partial selection across elements — extract and wrap
-    var frag = range.extractContents();
-    mark.appendChild(frag);
-    range.insertNode(mark);
-  }
-  sel.removeAllRanges();
-  qeSaveHL();
-}
-
-// Save highlight HTML to localStorage
-function qeSaveHL(){
-  var hlKey = 'qeHL_'+String(_qeState.quizId)+'_'+String(_qeState.qid);
-  var html = document.getElementById('qeQDisplay').innerHTML;
-  localStorage.setItem(hlKey, html);
-  _qeState.redoStack = [];
-}
-
-// ---- Undo / Redo ----
-function qePushUndo(){
-  _qeState.undoStack.push(document.getElementById('qeQDisplay').innerHTML);
-  if(_qeState.undoStack.length > 30) _qeState.undoStack.shift();
-  _qeState.redoStack = [];
-}
-function qeUndo(){
-  if(!_qeState.undoStack.length){ showToast('Kuch nahi undo karne ko!','info'); return; }
-  _qeState.redoStack.push(document.getElementById('qeQDisplay').innerHTML);
-  document.getElementById('qeQDisplay').innerHTML = _qeState.undoStack.pop();
-  // Re-attach eraser listeners to marks
-  qeReattachEraserListeners();
-  qeSaveHL();
-}
-function qeRedo(){
-  if(!_qeState.redoStack.length){ showToast('Kuch nahi redo karne ko!','info'); return; }
-  _qeState.undoStack.push(document.getElementById('qeQDisplay').innerHTML);
-  document.getElementById('qeQDisplay').innerHTML = _qeState.redoStack.pop();
-  qeReattachEraserListeners();
-  qeSaveHL();
-}
-function qeReattachEraserListeners(){
-  var container = document.getElementById('qeQDisplay');
-  container.querySelectorAll('mark').forEach(function(mark){
-    mark.onclick = function(e){
-      if(_qeState.activeTool==='eraser'){
-        qePushUndo();
-        var txt=document.createTextNode(mark.textContent);
-        mark.parentNode.replaceChild(txt, mark);
-        qeSaveHL();
-        e.stopPropagation();
-      }
-    };
-  });
-}
-
-// ---- Edit form toggle ----
-function qeToggleEditForm(){
-  _qeState.editFormOpen = !_qeState.editFormOpen;
-  var formBox = document.getElementById('qeEditFormBox');
-  var saveBtn = document.getElementById('qeSaveBtn');
-  var editBtn = document.getElementById('qeEditToggleBtn');
-  var info = document.getElementById('qeSaveInfo');
-  if(_qeState.editFormOpen){
-    formBox.style.display = '';
-    saveBtn.style.display = '';
-    editBtn.textContent = '✕ Cancel';
-    editBtn.style.color = 'var(--red)';
-    info.textContent = '✏️ Changes karo aur Save dabao';
-    formBox.scrollIntoView({behavior:'smooth',block:'start'});
-  } else {
-    formBox.style.display = 'none';
-    saveBtn.style.display = 'none';
-    editBtn.textContent = '✏️ Edit';
-    editBtn.style.color = 'var(--accent)';
-    info.textContent = '📖 Read mode — Edit ya Highlight karo';
-  }
-}
-
-function qeSetCorrect(val){
-  _qeState.correctVal = val;
-  document.querySelectorAll('.qedit-correct-btn').forEach(function(btn){
-    if(parseInt(btn.getAttribute('data-val'))===val) btn.classList.add('selected');
-    else btn.classList.remove('selected');
-  });
-}
-
-// ---- Save question to Firebase ----
-function qeSaveQuestion(){
-  var quizId = _qeState.quizId;
-  var qid = _qeState.qid;
-  var quiz = STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
-  if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
-
-  var qText = (document.getElementById('qeQText').value||'').trim();
-  if(!qText){ showToast('Question likhao!','error'); return; }
-
-  var opts = [0,1,2,3].map(function(i){ return (document.getElementById('qeOpt'+i).value||'').trim(); });
-  if(opts.some(function(o){ return !o; })){ showToast('Saare 4 options daalo!','error'); return; }
-
-  var expl = (document.getElementById('qeExplText').value||'').trim();
-  var correct = _qeState.correctVal;
-
-  var idx = (quiz.questions||[]).findIndex(function(x){ return String(x.id)===String(qid); });
-  if(idx < 0){ showToast('Question nahi mila!','error'); return; }
-
-  quiz.questions[idx] = Object.assign({}, quiz.questions[idx], {
-    q: qText, options: opts, correct: correct, explanation: expl
-  });
-
-  cloudSaveQuiz(quiz);
-  showToast('✅ Question save ho gaya! Firebase sync ho raha hai...','success');
-
-  // Refresh the display in modal
-  document.getElementById('qeQDisplay').innerHTML = '';
-  document.getElementById('qeQDisplay').textContent = qText;
-
-  // Clear highlight cache since question text changed
-  var hlKey = 'qeHL_'+String(quizId)+'_'+String(qid);
-  localStorage.removeItem(hlKey);
-  _qeState.undoStack = [];
-  _qeState.redoStack = [];
-
-  // Update options display
-  var optContainer = document.getElementById('qeOptionsDisplay');
-  optContainer.innerHTML = opts.map(function(opt, oi){
-    var isCorrOpt = oi === correct;
-    var cls = 'qedit-opt' + (isCorrOpt?' correct':'');
-    var letter = String.fromCharCode(65+oi);
-    var badge = isCorrOpt ? ' <span style="font-size:0.7rem;font-weight:900;color:var(--green);">✓ Sahi</span>' : '';
-    return '<div class="'+cls+'"><span class="qedit-opt-letter">'+letter+'.</span><span style="flex:1;font-size:0.85rem;line-height:1.5;word-break:break-word;">'+escHtml(opt)+badge+'</span></div>';
-  }).join('');
-
-  // Update explanation display
-  var explBox = document.getElementById('qeExplBox');
-  var explDisplay = document.getElementById('qeExplDisplay');
-  if(expl){
-    explDisplay.textContent = expl;
-    explBox.style.display = '';
-  } else {
-    explBox.style.display = 'none';
-  }
-
-  // Re-render the attempt detail so updated data shows
-  if(_lastAttempt && _lastQuiz){
-    // Update _lastQuiz questions too
-    var lqIdx = (_lastQuiz.questions||[]).findIndex(function(x){ return String(x.id)===String(qid); });
-    if(lqIdx > -1) _lastQuiz.questions[lqIdx] = quiz.questions[idx];
-    renderAttemptDetail(_lastAttempt, _lastQuiz);
-  }
-
-  // Close edit form
-  qeToggleEditForm();
-}
-
 function reattemptFromHistory(quizId){
   var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
   if(!quiz){ showToast('Quiz nahi mili — shayad delete ho gayi!','error'); return; }
@@ -2713,7 +2278,7 @@ function showFullAnalysis(){
       '<div style="display:flex;gap:8px;align-items:flex-start;">'+
         '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
         '<div style="flex:1;">'+
-          '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
+        '<div class="hl-zone" id="rsQ_'+i+'" data-hlzone="rs_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
           '<div style="display:flex;flex-direction:column;gap:4px;">'+
             q.options.map(function(opt,oi){
               var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
@@ -2733,6 +2298,8 @@ function showFullAnalysis(){
       '</div>'+
     '</div>';
   }).join('');
+  hlRestoreAll('rs');
+  hlAttachListeners('rs', acContent);
   ac.scrollIntoView({behavior:'smooth'});
 }
 function reattempt(){
@@ -2879,6 +2446,305 @@ self.addEventListener('fetch', function(e){
 })();
 
 // ================================================================
+// HIGHLIGHTER ENGINE — Bade app jaisa (Highlight / Eraser / Undo / Redo / Save)
+// ================================================================
+var _hlState = {
+  ad: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
+  rs: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] }
+};
+
+// Local storage key builder
+function _hlKey(ns) {
+  var uid = (typeof _uid !== 'undefined' && _uid) ? _uid : 'local';
+  return 'hl_v2_' + uid + '_' + ns;
+}
+
+// Save highlights for a namespace to localStorage
+function _hlPersist(ns) {
+  var zones = document.querySelectorAll('[data-hlzone^="'+ns+'_"]');
+  var data = {};
+  zones.forEach(function(el) {
+    data[el.getAttribute('data-hlzone')] = el.innerHTML;
+  });
+  try { localStorage.setItem(_hlKey(ns), JSON.stringify(data)); } catch(e){}
+}
+
+// Restore highlights from localStorage
+function hlRestoreAll(ns) {
+  try {
+    var raw = localStorage.getItem(_hlKey(ns));
+    if(!raw) return;
+    var data = JSON.parse(raw);
+    Object.keys(data).forEach(function(zoneId) {
+      var el = document.querySelector('[data-hlzone="'+zoneId+'"]');
+      if(el) el.innerHTML = data[zoneId];
+    });
+  } catch(e){}
+  hlSyncUndoRedoBtns(ns);
+}
+
+// Attach mouseup/touchend selection listeners on the container
+function hlAttachListeners(ns, container) {
+  if(!container) return;
+  container._hlNS = ns;
+  // Remove old listener if any
+  if(container._hlMouseUp) container.removeEventListener('mouseup', container._hlMouseUp);
+  if(container._hlTouchEnd) container.removeEventListener('touchend', container._hlTouchEnd);
+  container._hlMouseUp = function(e) { hlHandleSelection(ns); };
+  container._hlTouchEnd = function(e) { setTimeout(function(){ hlHandleSelection(ns); }, 80); };
+  container.addEventListener('mouseup', container._hlMouseUp);
+  container.addEventListener('touchend', container._hlTouchEnd);
+}
+
+// Handle text selection — apply highlight or erase
+function hlHandleSelection(ns) {
+  var st = _hlState[ns];
+  if(!st || !st.mode) return;
+  var sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return;
+  var range = sel.getRangeAt(0);
+  if(!range || range.collapsed) return;
+
+  // Find the hl-zone ancestor
+  var zone = _hlZoneFromRange(range, ns);
+  if(!zone) { sel.removeAllRanges(); return; }
+
+  if(st.mode === 'highlight') {
+    hlSnapshot(ns, zone);
+    _hlApplyRange(range, zone, st.color);
+    sel.removeAllRanges();
+    _hlPersist(ns);
+    hlSyncUndoRedoBtns(ns);
+    showToast('✨ Highlighted!', 'success');
+  } else if(st.mode === 'eraser') {
+    sel.removeAllRanges();
+  }
+}
+
+// Find the hl-zone element that contains the selection
+function _hlZoneFromRange(range, ns) {
+  var el = range.commonAncestorContainer;
+  while(el && el.nodeType !== 1) el = el.parentNode;
+  while(el) {
+    if(el.getAttribute && el.getAttribute('data-hlzone') && el.getAttribute('data-hlzone').indexOf(ns+'_') === 0) return el;
+    el = el.parentNode;
+  }
+  return null;
+}
+
+// Apply highlight mark to selected range
+function _hlApplyRange(range, zone, color) {
+  try {
+    var mark = document.createElement('mark');
+    mark.className = 'q-hl-mark';
+    mark.style.background = color + 'aa';
+    mark.style.borderRadius = '3px';
+    mark.style.padding = '0 2px';
+    mark.setAttribute('data-hlc', color);
+    // Restrict range to within zone
+    if(!zone.contains(range.startContainer)) return;
+    if(!zone.contains(range.endContainer)) return;
+    range.surroundContents(mark);
+  } catch(e) {
+    // If surroundContents fails (cross-node), use extractContents
+    try {
+      var frag = range.extractContents();
+      var mark2 = document.createElement('mark');
+      mark2.className = 'q-hl-mark';
+      mark2.style.background = color + 'aa';
+      mark2.style.borderRadius = '3px';
+      mark2.style.padding = '0 2px';
+      mark2.setAttribute('data-hlc', color);
+      mark2.appendChild(frag);
+      range.insertNode(mark2);
+    } catch(e2){}
+  }
+}
+
+// Eraser: click on mark to remove
+function hlEraserClickMark(mark, ns) {
+  var zone = mark;
+  while(zone && !(zone.getAttribute && zone.getAttribute('data-hlzone'))) zone = zone.parentNode;
+  if(zone) hlSnapshot(ns, zone);
+  // Unwrap mark
+  var parent = mark.parentNode;
+  while(mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+  parent.removeChild(mark);
+  parent.normalize();
+  if(zone) {
+    _hlPersist(ns);
+    hlSyncUndoRedoBtns(ns);
+    showToast('🧹 Highlight hata di!', 'success');
+  }
+}
+
+// Snapshot zone HTML for undo
+function hlSnapshot(ns, zone) {
+  var st = _hlState[ns];
+  if(!st) return;
+  var zoneId = zone.getAttribute('data-hlzone');
+  st.undoStack.push({ zoneId: zoneId, html: zone.innerHTML });
+  if(st.undoStack.length > 30) st.undoStack.shift();
+  st.redoStack = [];
+  hlSyncUndoRedoBtns(ns);
+}
+
+// Undo
+function hlUndo(ns) {
+  var st = _hlState[ns];
+  if(!st || !st.undoStack.length) { showToast('Kuch nahi undo karne ko!','error'); return; }
+  var snap = st.undoStack.pop();
+  var zone = document.querySelector('[data-hlzone="'+snap.zoneId+'"]');
+  if(zone) {
+    st.redoStack.push({ zoneId: snap.zoneId, html: zone.innerHTML });
+    zone.innerHTML = snap.html;
+    hlReattachEraserListeners(ns, zone);
+  }
+  _hlPersist(ns);
+  hlSyncUndoRedoBtns(ns);
+  showToast('↩ Undo', 'success');
+}
+
+// Redo
+function hlRedo(ns) {
+  var st = _hlState[ns];
+  if(!st || !st.redoStack.length) { showToast('Kuch nahi redo karne ko!','error'); return; }
+  var snap = st.redoStack.pop();
+  var zone = document.querySelector('[data-hlzone="'+snap.zoneId+'"]');
+  if(zone) {
+    st.undoStack.push({ zoneId: snap.zoneId, html: zone.innerHTML });
+    zone.innerHTML = snap.html;
+    hlReattachEraserListeners(ns, zone);
+  }
+  _hlPersist(ns);
+  hlSyncUndoRedoBtns(ns);
+  showToast('↪ Redo', 'success');
+}
+
+// Re-attach eraser click listeners after innerHTML update
+function hlReattachEraserListeners(ns, zone) {
+  var marks = zone.querySelectorAll('.q-hl-mark');
+  marks.forEach(function(m) {
+    m._hlEraserClick = function(e) {
+      if(_hlState[ns] && _hlState[ns].mode === 'eraser') {
+        e.preventDefault(); e.stopPropagation();
+        hlEraserClickMark(m, ns);
+      }
+    };
+    m.removeEventListener('click', m._hlEraserClick);
+    m.addEventListener('click', m._hlEraserClick);
+  });
+}
+
+// Toggle highlight / eraser mode
+function hlToggle(ns, mode) {
+  var st = _hlState[ns];
+  if(!st) return;
+  var hlBtn = document.getElementById(ns+'HlBtn');
+  var erBtn = document.getElementById(ns+'EraserBtn');
+  var colDiv = document.getElementById(ns+'HlColors');
+
+  if(st.mode === mode) {
+    // Toggle off
+    st.mode = null;
+    if(hlBtn) hlBtn.classList.remove('active');
+    if(erBtn) erBtn.classList.remove('active','eraser-active');
+    if(colDiv) colDiv.style.display = 'none';
+    _hlSetEraserCursor(ns, false);
+  } else {
+    st.mode = mode;
+    if(mode === 'highlight') {
+      if(hlBtn) hlBtn.classList.add('active');
+      if(erBtn) erBtn.classList.remove('active','eraser-active');
+      if(colDiv) colDiv.style.display = 'flex';
+      _hlSetEraserCursor(ns, false);
+      showToast('🖊 Text select karo → highlight hoga', 'info');
+    } else {
+      if(erBtn) erBtn.classList.add('active','eraser-active');
+      if(hlBtn) hlBtn.classList.remove('active');
+      if(colDiv) colDiv.style.display = 'none';
+      _hlSetEraserCursor(ns, true);
+      showToast('🧹 Kisi bhi highlight par tap karo → hata do', 'info');
+      _hlAttachEraserToAllMarks(ns);
+    }
+  }
+}
+
+function _hlSetEraserCursor(ns, on) {
+  var container = (ns==='ad') ? document.getElementById('adContent') : document.getElementById('analysisContent');
+  if(container) {
+    if(on) container.classList.add('hl-eraser-on');
+    else container.classList.remove('hl-eraser-on');
+  }
+}
+
+function _hlAttachEraserToAllMarks(ns) {
+  var container = (ns==='ad') ? document.getElementById('adContent') : document.getElementById('analysisContent');
+  if(!container) return;
+  var marks = container.querySelectorAll('.q-hl-mark');
+  marks.forEach(function(m) {
+    if(!m._hlEraserClick) {
+      m._hlEraserClick = function(e) {
+        if(_hlState[ns] && _hlState[ns].mode === 'eraser') {
+          e.preventDefault(); e.stopPropagation();
+          hlEraserClickMark(m, ns);
+        }
+      };
+    }
+    m.removeEventListener('click', m._hlEraserClick);
+    m.addEventListener('click', m._hlEraserClick);
+  });
+}
+
+// Set highlight color
+function hlSetColor(ns, color, dotEl) {
+  _hlState[ns].color = color;
+  var colDiv = document.getElementById(ns+'HlColors');
+  if(colDiv) {
+    colDiv.querySelectorAll('.hl-cdot').forEach(function(d){ d.classList.remove('sel'); });
+    if(dotEl) dotEl.classList.add('sel');
+  }
+  // If not in highlight mode, auto-switch
+  if(_hlState[ns].mode !== 'highlight') hlToggle(ns, 'highlight');
+}
+
+// Show/hide toolbar
+function hlToggleToolbar(ns) {
+  var tb = document.getElementById(ns+'HlToolbar');
+  if(!tb) return;
+  var showing = tb.style.display !== 'none' && tb.style.display !== '';
+  tb.style.display = showing ? 'none' : 'flex';
+  var toggleBtn = document.getElementById(ns+'HlToggleBar');
+  if(toggleBtn) {
+    toggleBtn.style.background = showing ? 'rgba(255,235,59,0.10)' : 'rgba(255,235,59,0.25)';
+  }
+}
+
+// Save highlights — show confirmation toast
+function hlSave(ns) {
+  _hlPersist(ns);
+  var btn = document.getElementById(ns+'SaveHlBtn');
+  if(btn) {
+    btn.classList.add('saved');
+    btn.textContent = '✅ Saved!';
+    setTimeout(function(){ btn.classList.remove('saved'); btn.textContent = '💾 Save'; }, 1800);
+  }
+  showToast('💾 Highlights save ho gayi!', 'success');
+}
+
+// Sync undo/redo button opacity
+function hlSyncUndoRedoBtns(ns) {
+  var st = _hlState[ns];
+  if(!st) return;
+  var ub = document.getElementById(ns+'UndoBtn');
+  var rb = document.getElementById(ns+'RedoBtn');
+  if(ub) ub.style.opacity = st.undoStack.length > 0 ? '1' : '0.35';
+  if(rb) rb.style.opacity = st.redoStack.length > 0 ? '1' : '0.35';
+}
+// ================================================================
+// END HIGHLIGHTER ENGINE
+// ================================================================
+
 // BOOT
 // ================================================================
 showPage('loading');
