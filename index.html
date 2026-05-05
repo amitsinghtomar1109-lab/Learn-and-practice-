@@ -2068,7 +2068,7 @@ function renderAttemptDetail(at, quiz){
             '<div class="hl-zone" id="adQ_'+i+'" data-hlzone="ad_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
             (hidden
               ? '<div style="padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:0.78rem;font-weight:700;text-align:center;border:1.5px dashed var(--border);">🙈 Answer chhupa hua hai — "Dikhao" button dabao</div>'
-              : '<div style="display:flex;flex-direction:column;gap:3px;">'+
+              : '<div class="hl-zone" id="adOpts_'+i+'" data-hlzone="ad_opts'+i+'" style="display:flex;flex-direction:column;gap:3px;">'+
                   q.options.map(function(opt,oi){
                     var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
                     var bg=isCOpt?'rgba(46,125,50,0.15)':(isUOpt&&!isCOpt)?'rgba(198,40,40,0.12)':'var(--surface2)';
@@ -2079,7 +2079,7 @@ function renderAttemptDetail(at, quiz){
                     '</div>';
                   }).join('')+
                 '</div>'+
-                (q.explanation&&!hidden?'<div style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
+                (q.explanation&&!hidden?'<div class="hl-zone" id="adExp_'+i+'" data-hlzone="ad_exp'+i+'" style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
                 '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'
             )+
           '</div>'+
