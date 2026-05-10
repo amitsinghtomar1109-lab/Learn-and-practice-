@@ -25,6 +25,21 @@
   --shadow:0 2px 12px rgba(21,101,192,0.10);
   --radius:14px;
 }
+/* ── Night / Dark Mode ── */
+body.dark{
+  --bg:#0d1519; --bg2:#0a1118;
+  --surface:#162231; --surface2:#1c2e3f;
+  --text:#daeef8; --text2:#7aaccf; --border:#243748;
+  --shadow:0 2px 12px rgba(0,0,0,0.45);
+}
+body.dark{background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);}
+body.dark .topbar{background:linear-gradient(135deg,#0f2035,#162a42);box-shadow:0 4px 16px rgba(0,0,0,0.50);}
+body.dark .card{background:var(--surface);}
+body.dark .inp,body.dark textarea.inp,body.dark select.inp{background:var(--surface2);color:var(--text);border-color:var(--border);}
+body.dark #floatHlPanel,body.dark #hlReviewBox{background:var(--surface);}
+body.dark #debugConsole{background:#060e16;border-color:#243748;}
+body.dark option{background:var(--surface2);color:var(--text);}
+
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
 html{scroll-behavior:smooth;}
@@ -33,6 +48,7 @@ body{
   background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
   color:var(--text); min-height:100vh; font-size:14px; line-height:1.5;
   -webkit-overflow-scrolling:touch;
+  transition:background 0.3s,color 0.3s;
 }
 
 /* Topbar */
@@ -339,6 +355,7 @@ textarea.inp{resize:vertical; min-height:64px;}
 <header class="topbar">
   <h1 id="topbarTitle">📝 Test Series</h1>
   <div style="display:flex;gap:6px;align-items:center;">
+    <div onclick="toggleNightMode()" id="nightModeBtn" title="Night Mode" style="cursor:pointer;background:rgba(255,255,255,0.15);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:0.88rem;transition:background 0.15s;-webkit-tap-highlight-color:transparent;">🌙</div>
     <div onclick="toggleDebugConsole()" title="Debug Console" style="cursor:pointer;background:rgba(255,255,255,0.15);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;" id="debugBtn">🛠</div>
     <div class="user-chip" id="userChip" onclick="doSignOut()" style="display:none;">
       <span id="userName">Guest</span> · 🚪
@@ -1275,6 +1292,7 @@ function attachListeners(){
   if(!_db||!_uid) return;
   dbg('Listeners attach ho rahe hain...','info');
   loadSavedQ();
+  _hlAttachFirebaseListeners();
 
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
@@ -1308,6 +1326,7 @@ function attachListeners(){
 function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
   if(_attemptListener){ try{_attemptListener();}catch(e){} _attemptListener=null; }
+  _hlDetachFirebaseListeners();
   STATE.quizzes=[]; STATE.attempts=[];
   // savedQuestions ko preserve karo — reload on next auth
 }
@@ -2986,13 +3005,14 @@ function hlToggleToolbar(ns) {
 // Save highlights — show confirmation toast
 function hlSave(ns) {
   _hlPersist(ns);
+  _hlFirebaseSave(ns);
   var btn = document.getElementById(ns+'SaveHlBtn');
   if(btn) {
     btn.classList.add('saved');
     btn.textContent = '✅ Saved!';
     setTimeout(function(){ btn.classList.remove('saved'); btn.textContent = '💾 Save'; }, 1800);
   }
-  showToast('💾 Highlights save ho gayi!', 'success');
+  showToast('💾 Highlights save ho gayi — cloud sync ho raha hai!', 'success');
 }
 
 // Sync undo/redo button opacity
@@ -3113,54 +3133,57 @@ function _hlExtractMarks(html) {
 
 // ── Build one quiz section HTML for the review modal ──
 function _hlBuildQuizSection(quizId, quizName, allData, quiz) {
-  var qFacts = {}; // key → [{text,color}]
+  // Collect: qIdx → { qText, marks[] }
+  var qMap = {}; // qIdx (number) → { qText, marks }
 
   ['qq','at','vt'].forEach(function(ns) {
     if(!allData[ns]) return;
     Object.keys(allData[ns]).forEach(function(zk) {
       var parts = zk.split('_');
-      // Format: ns_exp_quizId_qIdx  (4 parts minimum)
+      // Format: ns_exp_quizId_qIdx  (minimum 4 parts)
       if(parts.length < 4) return;
       if(String(parts[2]) !== String(quizId)) return;
-      var qIdx = parts[3];
+      var qIdx = parseInt(parts[3]);
+      if(isNaN(qIdx)) return;
       var marks = _hlExtractMarks(allData[ns][zk]);
       if(!marks.length) return;
-      var k = ns+'_'+qIdx;
-      qFacts[k] = (qFacts[k] || []).concat(marks);
+      if(!qMap[qIdx]) qMap[qIdx] = { qText: '', marks: [] };
+      // Resolve question text (try once)
+      if(!qMap[qIdx].qText && quiz && quiz.questions && quiz.questions[qIdx]) {
+        qMap[qIdx].qText = quiz.questions[qIdx].q || '';
+      }
+      // Merge marks, dedup by text
+      marks.forEach(function(m) {
+        var dup = qMap[qIdx].marks.some(function(x){ return x.text === m.text; });
+        if(!dup) qMap[qIdx].marks.push(m);
+      });
     });
   });
 
-  var keys = Object.keys(qFacts);
-  if(!keys.length) return '';
+  var idxList = Object.keys(qMap).map(Number).sort(function(a,b){return a-b;});
+  if(!idxList.length) return '';
 
   var html = '<div class="hl-rv-quiz-header">📚 '+escHtml(quizName)+'</div>';
-  var qNum = 1;
 
-  keys.forEach(function(k) {
-    var marks = qFacts[k];
-    if(!marks.length) return;
-
-    // Try to resolve question text from quiz data
-    var qLabel = 'Q'+qNum;
-    if(quiz && quiz.questions) {
-      var parts = k.split('_');
-      var idx   = parseInt(parts[1]);
-      if(!isNaN(idx) && quiz.questions[idx]) {
-        var qText = quiz.questions[idx].q || '';
-        if(qText) qLabel = 'Q'+qNum+': '+qText.substring(0,90)+(qText.length>90?'…':'');
-      }
-    }
+  idxList.forEach(function(qIdx, i) {
+    var entry = qMap[qIdx];
+    if(!entry.marks.length) return;
+    var qNum = i + 1;
+    var qText = entry.qText;
 
     html += '<div class="hl-rv-qblock">'+
-      '<div class="hl-rv-qlabel">'+escHtml(qLabel)+'</div>'+
-      marks.map(function(m) {
+      // Question heading — show full question text
+      '<div style="font-size:0.78rem;font-weight:800;color:var(--accent);background:rgba(21,101,192,0.07);border-left:3px solid var(--accent);padding:5px 8px;border-radius:0 7px 7px 0;margin-bottom:5px;">'+
+        'Q'+qNum+(qText ? ': '+escHtml(qText) : '')+
+      '</div>'+
+      // Highlighted facts as bullet points
+      entry.marks.map(function(m) {
         return '<div class="hl-rv-fact" style="background:'+m.color+'22;">'+
           '<span class="hl-rv-dot" style="background:'+m.color+';"></span>'+
           '<span>'+escHtml(m.text)+'</span>'+
         '</div>';
       }).join('')+
     '</div>';
-    qNum++;
   });
 
   return html;
@@ -3271,9 +3294,10 @@ function _hlModalShell(title, subtitle, bodyHtml) {
       '<div style="font-weight:900;font-size:1.05rem;color:var(--text);">'+title+'</div>'+
       '<div style="font-size:0.73rem;color:var(--text2);">'+subtitle+'</div>'+
     '</div>'+
-    '<div style="display:flex;gap:6px;flex-shrink:0;">'+
-      '<button onclick="hlReviewCopyAll()" style="padding:5px 10px;background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.3);border-radius:8px;font-size:0.74rem;font-weight:800;color:var(--accent);cursor:pointer;">📋 Copy</button>'+
-      '<button onclick="closeHlReview()" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;">✕</button>'+
+    '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'+
+      '<button onclick="hlReviewCopyAll()" style="padding:5px 9px;background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.3);border-radius:8px;font-size:0.72rem;font-weight:800;color:var(--accent);cursor:pointer;">📋 Copy</button>'+
+      '<button onclick="hlReviewDownload()" style="padding:5px 9px;background:rgba(46,125,50,0.08);border:1.5px solid rgba(46,125,50,0.3);border-radius:8px;font-size:0.72rem;font-weight:800;color:var(--green);cursor:pointer;">⬇ Download</button>'+
+      '<button onclick="closeHlReview()" style="padding:5px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;">✕</button>'+
     '</div>'+
   '</div>'+
   '<div id="hlReviewContent">'+bodyHtml+'</div>';
@@ -3301,8 +3325,158 @@ function hlReviewCopyAll() {
   }
 }
 
+function hlReviewDownload() {
+  var rc = document.getElementById('hlReviewContent');
+  if(!rc) { showToast('Kuch nahi hai download karne ko', 'error'); return; }
+  var text = rc.innerText || rc.textContent || '';
+  if(!text.trim()) { showToast('Kuch nahi hai download karne ko', 'error'); return; }
+  try {
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'highlights-' + new Date().toISOString().slice(0,10) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    showToast('⬇ Download shuru ho gaya!', 'success');
+  } catch(e) {
+    console.error('[HLReview] Download failed:', e);
+    showToast('Download failed: '+e.message, 'error');
+  }
+}
+
 // ================================================================
 // END FLOATING HL PANEL + HIGHLIGHT REVIEW
+// ================================================================
+
+// ================================================================
+// NIGHT MODE
+// ================================================================
+function toggleNightMode() {
+  var isDark = document.body.classList.toggle('dark');
+  var btn = document.getElementById('nightModeBtn');
+  if(btn) btn.textContent = isDark ? '☀️' : '🌙';
+  try { localStorage.setItem('nightMode', isDark ? '1' : '0'); } catch(e) {}
+  dbg('Night mode: ' + (isDark ? 'ON' : 'OFF'), 'info');
+}
+function _initNightMode() {
+  try {
+    var saved = localStorage.getItem('nightMode');
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var useDark = saved !== null ? saved === '1' : prefersDark;
+    if(useDark) {
+      document.body.classList.add('dark');
+      var btn = document.getElementById('nightModeBtn');
+      if(btn) btn.textContent = '☀️';
+    }
+  } catch(e) {}
+}
+_initNightMode();
+
+// ================================================================
+// FIREBASE HIGHLIGHT SYNC
+// ================================================================
+var _hlFirebaseListeners = {}; // ns → unsubscribe fn
+
+function _hlFirebasePath(ns) {
+  if(!_db || !_uid) return null;
+  return _db.collection('users').doc(_uid).collection('ts_highlights').doc(ns);
+}
+
+// Write current localStorage highlights for a namespace to Firestore
+function _hlFirebaseSave(ns) {
+  if(!_db || !_uid) return; // not logged in yet
+  var ref = _hlFirebasePath(ns);
+  if(!ref) return;
+  try {
+    var raw = localStorage.getItem(_hlKey(ns));
+    var data = raw ? JSON.parse(raw) : {};
+    data['_updatedAt'] = Date.now();
+    ref.set(data, { merge: false })
+      .then(function(){ dbg('HL sync OK: '+ns, 'success'); })
+      .catch(function(e){ console.error('[HL Firebase] Save error ('+ns+'):', e); });
+  } catch(e) {
+    console.error('[HL Firebase] Save parse error ('+ns+'):', e);
+  }
+}
+
+// Attach live Firestore listeners for all HL namespaces
+function _hlAttachFirebaseListeners() {
+  if(!_db || !_uid) return;
+  _hlDetachFirebaseListeners();
+  var nsList = ['at', 'qq', 'rs', 'ad', 'vt'];
+  nsList.forEach(function(ns) {
+    var ref = _hlFirebasePath(ns);
+    if(!ref) return;
+    _hlFirebaseListeners[ns] = ref.onSnapshot(function(snap) {
+      if(!snap.exists) return;
+      var data = snap.data();
+      if(!data) return;
+      // Remove internal field before storing
+      var zones = {};
+      Object.keys(data).forEach(function(k) {
+        if(k !== '_updatedAt') zones[k] = data[k];
+      });
+      try {
+        // Merge with local: keep local highlights not in Firestore, add Firestore ones
+        var localRaw = localStorage.getItem(_hlKey(ns));
+        var local = localRaw ? JSON.parse(localRaw) : {};
+        // Firestore wins on conflict (latest save wins)
+        var merged = Object.assign({}, local, zones);
+        localStorage.setItem(_hlKey(ns), JSON.stringify(merged));
+      } catch(e) { console.error('[HL Firebase] Merge error ('+ns+'):', e); return; }
+      // Refresh display if on a page that uses this namespace
+      var ap = getActivePage();
+      var nsPage = { at:'attempt', qq:'questions', rs:'result', ad:'attemptdetail', vt:'vault' };
+      if(ap === nsPage[ns]) {
+        hlRestoreAll(ns);
+        dbg('HL live sync applied: '+ns, 'success');
+      }
+    }, function(e) {
+      console.error('[HL Firebase] Listener error ('+ns+'):', e);
+    });
+  });
+  // Also load initial data from Firestore immediately (in case localStorage is stale)
+  _hlFirebaseLoadAll();
+}
+
+// Detach all HL Firebase listeners
+function _hlDetachFirebaseListeners() {
+  Object.keys(_hlFirebaseListeners).forEach(function(ns) {
+    try { _hlFirebaseListeners[ns](); } catch(e) {}
+  });
+  _hlFirebaseListeners = {};
+}
+
+// One-time load of all namespaces from Firestore into localStorage
+function _hlFirebaseLoadAll() {
+  if(!_db || !_uid) return;
+  var nsList = ['at', 'qq', 'rs', 'ad', 'vt'];
+  nsList.forEach(function(ns) {
+    var ref = _hlFirebasePath(ns);
+    if(!ref) return;
+    ref.get().then(function(snap) {
+      if(!snap.exists) return;
+      var data = snap.data();
+      if(!data) return;
+      var zones = {};
+      Object.keys(data).forEach(function(k) {
+        if(k !== '_updatedAt') zones[k] = data[k];
+      });
+      try {
+        var localRaw = localStorage.getItem(_hlKey(ns));
+        var local = localRaw ? JSON.parse(localRaw) : {};
+        var merged = Object.assign({}, local, zones);
+        localStorage.setItem(_hlKey(ns), JSON.stringify(merged));
+      } catch(e) { console.error('[HL Firebase] Load merge error ('+ns+'):', e); }
+    }).catch(function(e) {
+      console.error('[HL Firebase] Load error ('+ns+'):', e);
+    });
+  });
+}
+// ================================================================
+// END FIREBASE HIGHLIGHT SYNC
 // ================================================================
 
 // BOOT
