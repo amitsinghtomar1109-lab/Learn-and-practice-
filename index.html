@@ -206,11 +206,15 @@ textarea.inp{resize:vertical; min-height:64px;}
 .hl-cdot.sel, .hl-cdot:active {
   transform:scale(1.25); box-shadow:0 0 0 2.5px rgba(0,0,0,0.35);
 }
-/* HL Zone — text must be selectable everywhere */
+/* Highlight zones — ensure text is selectable */
 .hl-zone {
-  -webkit-user-select: text !important;
-  user-select: text !important;
+  -webkit-user-select: text;
+  user-select: text;
   cursor: text;
+}
+/* When highlighter is active, show a subtle cursor hint */
+.hl-eraser-on .hl-zone {
+  cursor: default;
 }
 /* Highlighted text mark */
 .q-hl-mark {
@@ -425,6 +429,27 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-subtitle" id="qqSubtitle">Add/Manage Questions</div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="shuffleAllQ()" title="Shuffle">🔀 Shuffle</button>
+      <button class="btn btn-outline btn-sm" id="qqHlToggleBar" onclick="hlToggleToolbar('qq')" style="color:#f57f17;border-color:rgba(255,193,7,0.5);background:rgba(255,235,59,0.10);">🖊 HL</button>
+    </div>
+    <!-- Highlighter Toolbar for Questions Page -->
+    <div id="qqHlToolbar" class="hl-toolbar" style="display:none;">
+      <span class="hl-label">✨ ANNOTATE:</span>
+      <button class="hl-tbtn" id="qqHlBtn" onclick="hlToggle('qq','highlight')" title="Highlight karo">🖊</button>
+      <button class="hl-tbtn" id="qqEraserBtn" onclick="hlToggle('qq','eraser')" title="Highlight hatao">🧹</button>
+      <div class="hl-sep"></div>
+      <div id="qqHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;">
+        <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('qq','#ffe000',this)" title="Yellow"></div>
+        <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('qq','#ff6f00',this)" title="Orange"></div>
+        <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('qq','#e91e63',this)" title="Pink"></div>
+        <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('qq','#00c853',this)" title="Green"></div>
+        <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('qq','#29b6f6',this)" title="Blue"></div>
+        <div class="hl-cdot" data-c="#ce93d8" style="background:#ce93d8;" onclick="hlSetColor('qq','#ce93d8',this)" title="Purple"></div>
+      </div>
+      <div class="hl-sep"></div>
+      <button class="hl-tbtn" id="qqUndoBtn" onclick="hlUndo('qq')" title="Undo" style="opacity:0.35;">↩</button>
+      <button class="hl-tbtn" id="qqRedoBtn" onclick="hlRedo('qq')" title="Redo" style="opacity:0.35;">↪</button>
+      <div class="hl-sep"></div>
+      <button class="hl-save-btn" id="qqSaveHlBtn" onclick="hlSave('qq')" title="Highlights save karo">💾 Save</button>
     </div>
 
     <!-- Quiz Info Bar -->
@@ -474,25 +499,6 @@ textarea.inp{resize:vertical; min-height:64px;}
       </div>
     </div>
 
-    <!-- Highlighter Toolbar for Questions Page -->
-    <div id="crHlToolbar" class="hl-toolbar" style="display:none;margin-bottom:8px;">
-      <span class="hl-label">✨ HIGHLIGHT:</span>
-      <button class="hl-tbtn" id="crHlBtn" onclick="hlToggle('cr','highlight')" title="Highlight karo">🖊</button>
-      <button class="hl-tbtn" id="crEraserBtn" onclick="hlToggle('cr','eraser')" title="Highlight hatao">🧹</button>
-      <div class="hl-sep"></div>
-      <div id="crHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;">
-        <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('cr','#ffe000',this)" title="Yellow"></div>
-        <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('cr','#ff6f00',this)" title="Orange"></div>
-        <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('cr','#e91e63',this)" title="Pink"></div>
-        <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('cr','#00c853',this)" title="Green"></div>
-        <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('cr','#29b6f6',this)" title="Blue"></div>
-      </div>
-      <div class="hl-sep"></div>
-      <button class="hl-tbtn" id="crUndoBtn" onclick="hlUndo('cr')" title="Undo" style="opacity:0.35;">↩</button>
-      <button class="hl-tbtn" id="crRedoBtn" onclick="hlRedo('cr')" title="Redo" style="opacity:0.35;">↪</button>
-      <div class="hl-sep"></div>
-      <button class="hl-save-btn" id="crSaveHlBtn" onclick="hlSave('cr')" title="Highlights save karo">💾 Save</button>
-    </div>
     <!-- Questions List -->
     <div id="questionsList"></div>
   </div>
@@ -573,29 +579,33 @@ textarea.inp{resize:vertical; min-height:64px;}
         <button class="btn btn-xs" id="vf_saved" onclick="setVaultFilter('saved')" style="border:1.5px solid var(--border);color:var(--text2);">📌 Saved</button>
         <button class="btn btn-xs" id="vf_tough" onclick="setVaultFilter('tough')" style="border:1.5px solid var(--border);color:var(--text2);">😓 Tough</button>
         <button class="btn btn-xs" id="vf_doubt" onclick="setVaultFilter('doubt')" style="border:1.5px solid var(--border);color:var(--text2);">🤔 Doubtful</button>
+        <button class="btn btn-xs" id="vtHlToggleBar" onclick="hlToggleToolbar('vt')" style="color:#f57f17;border-color:rgba(255,193,7,0.5);background:rgba(255,235,59,0.10);margin-left:auto;">🖊 HL</button>
       </div>
-    </div>
-    <!-- Highlighter Toolbar for Vault Page -->
-    <div id="vtHlToolbar" class="hl-toolbar" style="display:none;margin-bottom:8px;">
-      <span class="hl-label">✨ HIGHLIGHT:</span>
-      <button class="hl-tbtn" id="vtHlBtn" onclick="hlToggle('vt','highlight')" title="Highlight karo">🖊</button>
-      <button class="hl-tbtn" id="vtEraserBtn" onclick="hlToggle('vt','eraser')" title="Highlight hatao">🧹</button>
-      <div class="hl-sep"></div>
-      <div id="vtHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;">
-        <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('vt','#ffe000',this)" title="Yellow"></div>
-        <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('vt','#ff6f00',this)" title="Orange"></div>
-        <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('vt','#e91e63',this)" title="Pink"></div>
-        <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('vt','#00c853',this)" title="Green"></div>
-        <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('vt','#29b6f6',this)" title="Blue"></div>
+      <!-- Highlighter Toolbar for Vault Page -->
+      <div id="vtHlToolbar" class="hl-toolbar" style="display:none;margin-top:8px;">
+        <span class="hl-label">✨ ANNOTATE:</span>
+        <button class="hl-tbtn" id="vtHlBtn" onclick="hlToggle('vt','highlight')" title="Highlight karo">🖊</button>
+        <button class="hl-tbtn" id="vtEraserBtn" onclick="hlToggle('vt','eraser')" title="Highlight hatao">🧹</button>
+        <div class="hl-sep"></div>
+        <div id="vtHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;">
+          <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('vt','#ffe000',this)" title="Yellow"></div>
+          <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('vt','#ff6f00',this)" title="Orange"></div>
+          <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('vt','#e91e63',this)" title="Pink"></div>
+          <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('vt','#00c853',this)" title="Green"></div>
+          <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('vt','#29b6f6',this)" title="Blue"></div>
+          <div class="hl-cdot" data-c="#ce93d8" style="background:#ce93d8;" onclick="hlSetColor('vt','#ce93d8',this)" title="Purple"></div>
+        </div>
+        <div class="hl-sep"></div>
+        <button class="hl-tbtn" id="vtUndoBtn" onclick="hlUndo('vt')" title="Undo" style="opacity:0.35;">↩</button>
+        <button class="hl-tbtn" id="vtRedoBtn" onclick="hlRedo('vt')" title="Redo" style="opacity:0.35;">↪</button>
+        <div class="hl-sep"></div>
+        <button class="hl-save-btn" id="vtSaveHlBtn" onclick="hlSave('vt')" title="Highlights save karo">💾 Save</button>
       </div>
-      <div class="hl-sep"></div>
-      <button class="hl-tbtn" id="vtUndoBtn" onclick="hlUndo('vt')" title="Undo" style="opacity:0.35;">↩</button>
-      <button class="hl-tbtn" id="vtRedoBtn" onclick="hlRedo('vt')" title="Redo" style="opacity:0.35;">↪</button>
-      <div class="hl-sep"></div>
-      <button class="hl-save-btn" id="vtSaveHlBtn" onclick="hlSave('vt')" title="Highlights save karo">💾 Save</button>
     </div>
     <div id="vaultPageContent"></div>
   </div>
+
+  <!-- ===== ATTEMPT DETAIL PAGE ===== -->
   <div id="page-attemptdetail" class="page">
     <div class="page-header">
       <div>
@@ -656,28 +666,26 @@ textarea.inp{resize:vertical; min-height:64px;}
         </div>
         <div style="font-size:0.92rem;font-weight:700;color:var(--text);line-height:1.65;margin-bottom:14px;flex-shrink:0;word-break:break-word;" id="atQBody"></div>
         <div id="atOptions" style="display:flex;flex-direction:column;gap:8px;flex:1;"></div>
-        <!-- Attempt Explanation + Highlighter -->
-        <div id="atExplanationWrap">
-          <!-- Highlighter Toolbar for Attempt Page -->
-          <div id="attHlToolbar" class="hl-toolbar" style="display:none;margin-top:8px;">
-            <span class="hl-label">✨ HIGHLIGHT:</span>
-            <button class="hl-tbtn" id="attHlBtn" onclick="hlToggle('att','highlight')" title="Highlight karo">🖊</button>
-            <button class="hl-tbtn" id="attEraserBtn" onclick="hlToggle('att','eraser')" title="Highlight hatao">🧹</button>
-            <div class="hl-sep"></div>
-            <div id="attHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;display:none;">
-              <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('att','#ffe000',this)" title="Yellow"></div>
-              <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('att','#ff6f00',this)" title="Orange"></div>
-              <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('att','#e91e63',this)" title="Pink"></div>
-              <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('att','#00c853',this)" title="Green"></div>
-              <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('att','#29b6f6',this)" title="Blue"></div>
-            </div>
-            <div class="hl-sep"></div>
-            <button class="hl-tbtn" id="attUndoBtn" onclick="hlUndo('att')" title="Undo" style="opacity:0.35;">↩</button>
-            <button class="hl-tbtn" id="attRedoBtn" onclick="hlRedo('att')" title="Redo" style="opacity:0.35;">↪</button>
-            <div class="hl-sep"></div>
-            <button class="hl-save-btn" id="attSaveHlBtn" onclick="hlSave('att')" title="Highlights save karo">💾 Save</button>
+        <div id="atExplanation"></div>
+        <!-- Highlighter toolbar for attempt explanation -->
+        <div id="atHlToolbar" class="hl-toolbar" style="display:none;margin-top:6px;">
+          <span class="hl-label">✨ HL:</span>
+          <button class="hl-tbtn" id="atHlBtn" onclick="hlToggle('at','highlight')" title="Highlight karo">🖊</button>
+          <button class="hl-tbtn" id="atEraserBtn" onclick="hlToggle('at','eraser')" title="Highlight hatao">🧹</button>
+          <div class="hl-sep"></div>
+          <div id="atHlColors" style="display:none;align-items:center;gap:3px;flex-shrink:0;">
+            <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('at','#ffe000',this)"></div>
+            <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('at','#ff6f00',this)"></div>
+            <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('at','#e91e63',this)"></div>
+            <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('at','#00c853',this)"></div>
+            <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('at','#29b6f6',this)"></div>
+            <div class="hl-cdot" data-c="#ce93d8" style="background:#ce93d8;" onclick="hlSetColor('at','#ce93d8',this)"></div>
           </div>
-          <div id="atExplanation"></div>
+          <div class="hl-sep"></div>
+          <button class="hl-tbtn" id="atUndoBtn" onclick="hlUndo('at')" title="Undo" style="opacity:0.35;">↩</button>
+          <button class="hl-tbtn" id="atRedoBtn" onclick="hlRedo('at')" title="Redo" style="opacity:0.35;">↪</button>
+          <div class="hl-sep"></div>
+          <button class="hl-save-btn" id="atSaveHlBtn" onclick="hlSave('at')">💾 Save</button>
         </div>
         <div id="atPerQTimer" style="display:none;margin-top:10px;text-align:center;font-size:0.82rem;font-weight:800;color:#e65100;flex-shrink:0;">⏱ <span id="atPerQVal">30</span>s bache hain</div>
       </div>
@@ -1384,7 +1392,8 @@ function renderQuestionsList(quiz){
     return;
   }
   container.innerHTML = '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div class="card-title" style="margin:0;">📋 Questions ('+qs.length+')</div></div>'+
-    qs.map(function(q,i){      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);" id="qItem_'+q.id+'">'+
+    qs.map(function(q,i){
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);" id="qItem_'+q.id+'">'+
         '<div style="display:flex;align-items:flex-start;gap:8px;">'+
           '<div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;margin-top:2px;">'+(i+1)+'</div>'+
           '<div style="flex:1;min-width:0;">'+
@@ -1397,7 +1406,7 @@ function renderQuestionsList(quiz){
                 '</div>';
               }).join('')+
             '</div>'+
-            (q.explanation?'<div class="hl-zone" id="crExp_'+q.id+'" data-hlzone="cr_exp'+q.id+'" style="font-size:0.72rem;color:#1565c0;margin-top:4px;font-style:italic;padding:3px 6px;border-radius:5px;background:rgba(21,101,192,0.06);">💡 '+escHtml(q.explanation)+'</div>':'')+
+            (q.explanation?'<div class="hl-zone" id="qq_exp_'+quiz.id+'_'+q.id+'" data-hlzone="qq_exp_'+quiz.id+'_'+q.id+'" style="font-size:0.72rem;color:#1565c0;margin-top:4px;font-style:italic;">💡 '+escHtml(q.explanation)+'</div>':'')+
           '</div>'+
           '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">'+
             '<button onclick="editQ('+q.id+')" style="background:rgba(21,101,192,0.1);border:1px solid rgba(21,101,192,0.25);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:0.72rem;cursor:pointer;font-weight:700;">✏️</button>'+
@@ -1408,14 +1417,9 @@ function renderQuestionsList(quiz){
         '</div>'+
       '</div>';
     }).join('')+'</div>';
-  // Show HL toolbar if any question has explanation
-  var hasExp = qs.some(function(q){ return q.explanation; });
-  var crTb = document.getElementById('crHlToolbar');
-  if(crTb) crTb.style.display = hasExp ? 'flex' : 'none';
-  if(hasExp){
-    hlRestoreAll('cr');
-    hlAttachListeners('cr', container);
-  }
+  // Restore saved highlights and attach listeners
+  hlRestoreAll('qq');
+  hlAttachListeners('qq', container);
 }
 function clearQForm(){
   document.getElementById('qText').value='';
@@ -1813,21 +1817,20 @@ function renderCurrentQ(){
   // Update reveal button text
   var revBtn=document.getElementById('atRevealBtn');
   if(revBtn){ revBtn.textContent=revealed?'🙈 Answer Chhupao':'👁 Answer Dikhao'; revBtn.style.background=revealed?'rgba(106,27,154,0.16)':'rgba(106,27,154,0.08)'; }
-  // Show explanation if revealed — with hl-zone for highlighting
+  // Show explanation if revealed
   var explEl=document.getElementById('atExplanation');
-  var attToolbar=document.getElementById('attHlToolbar');
   if(explEl){
     if(revealed&&q.explanation){
-      var zoneId='att_exp_'+st.currentQ;
-      explEl.innerHTML='<div class="hl-zone" id="attExp_'+st.currentQ+'" data-hlzone="'+zoneId+'" style="font-size:0.75rem;color:#1565c0;margin-top:8px;padding:7px 10px;background:rgba(21,101,192,0.08);border-radius:8px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>';
-      if(attToolbar) attToolbar.style.display='flex';
-      // Restore saved highlights for this zone and attach listeners
-      hlRestoreAll('att');
-      var wrap=document.getElementById('atExplanationWrap');
-      if(wrap) hlAttachListeners('att', wrap);
+      var atZoneKey = 'at_exp_'+String(st.quizId)+'_'+st.currentQ;
+      explEl.innerHTML='<div class="hl-zone" id="'+atZoneKey+'" data-hlzone="'+atZoneKey+'" style="font-size:0.75rem;color:#1565c0;margin-top:8px;padding:7px 10px;background:rgba(21,101,192,0.08);border-radius:8px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>';
+      var atHlTb = document.getElementById('atHlToolbar');
+      if(atHlTb) atHlTb.style.display='flex';
+      hlRestoreAll('at');
+      hlAttachListeners('at', explEl);
     } else {
       explEl.innerHTML='';
-      if(attToolbar) attToolbar.style.display='none';
+      var atHlTb2 = document.getElementById('atHlToolbar');
+      if(atHlTb2) atHlTb2.style.display='none';
     }
   }
 
@@ -2296,17 +2299,12 @@ function renderVaultPage(){
             '</div>';
           }).join('')+
         '</div>'+
-        (item.q.explanation?'<div class="hl-zone" id="vtExp_'+item.key+'" data-hlzone="vt_exp'+item.key.replace(/[^a-zA-Z0-9]/g,'_')+'" style="font-size:0.71rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(item.q.explanation)+'</div>':'')+
+        (item.q.explanation?'<div class="hl-zone" id="vt_exp_'+item.key+'" data-hlzone="vt_exp_'+item.key+'" style="font-size:0.71rem;color:#1565c0;margin-top:6px;padding:5px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(item.q.explanation)+'</div>':'')+
       '</div>';
     }).join('');
-  // Show HL toolbar and restore highlights
-  var hasExp = items.some(function(x){ return x.q.explanation; });
-  var vtTb = document.getElementById('vtHlToolbar');
-  if(vtTb) vtTb.style.display = hasExp ? 'flex' : 'none';
-  if(hasExp){
-    hlRestoreAll('vt');
-    hlAttachListeners('vt', container);
-  }
+  // Restore saved highlights and attach listeners
+  hlRestoreAll('vt');
+  hlAttachListeners('vt', container);
 }
 
 function showResult(attempt, quiz){
@@ -2381,7 +2379,7 @@ function showFullAnalysis(){
             }).join('')+
           '</div>'+
           (isSkipped?'<div style="font-size:0.72rem;color:#9e9e9e;margin-top:4px;">⏭ Skipped</div>':'')+
-          (q.explanation?'<div style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
+          (q.explanation?'<div class="hl-zone" id="rs_exp_'+i+'" data-hlzone="rs_exp_'+i+'" style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
           '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'+
         '</div>'+
       '</div>'+
@@ -2538,12 +2536,18 @@ self.addEventListener('fetch', function(e){
 // HIGHLIGHTER ENGINE — Bade app jaisa (Highlight / Eraser / Undo / Redo / Save)
 // ================================================================
 var _hlState = {
-  ad:  { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
-  rs:  { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
-  att: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] }, // attempt page
-  cr:  { mode: null, color: '#ffe000', undoStack: [], redoStack: [] }, // create/questions page
-  vt:  { mode: null, color: '#ffe000', undoStack: [], redoStack: [] }  // vault page
+  ad: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
+  rs: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
+  at: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
+  qq: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] },
+  vt: { mode: null, color: '#ffe000', undoStack: [], redoStack: [] }
 };
+
+// Map namespace to its container element
+function _hlContainer(ns) {
+  var idMap = { ad: 'adContent', rs: 'analysisContent', at: 'atExplanation', qq: 'questionsList', vt: 'vaultPageContent' };
+  return document.getElementById(idMap[ns] || '');
+}
 
 // Local storage key builder
 function _hlKey(ns) {
@@ -2618,11 +2622,7 @@ function _hlZoneFromRange(range, ns) {
   var el = range.commonAncestorContainer;
   while(el && el.nodeType !== 1) el = el.parentNode;
   while(el) {
-    if(el.getAttribute && el.getAttribute('data-hlzone')) {
-      var zid = el.getAttribute('data-hlzone');
-      // Match: zone id starts with ns+'_' (e.g. 'ad_', 'rs_', 'att_', 'cr_', 'vt_')
-      if(zid.indexOf(ns+'_') === 0) return el;
-    }
+    if(el.getAttribute && el.getAttribute('data-hlzone') && el.getAttribute('data-hlzone').indexOf(ns+'_') === 0) return el;
     el = el.parentNode;
   }
   return null;
@@ -2767,15 +2767,7 @@ function hlToggle(ns, mode) {
 }
 
 function _hlSetEraserCursor(ns, on) {
-  var containerMap = {
-    ad:  'adContent',
-    rs:  'analysisContent',
-    att: 'atExplanationWrap',
-    cr:  'questionsList',
-    vt:  'vaultPageContent'
-  };
-  var cid = containerMap[ns];
-  var container = cid ? document.getElementById(cid) : null;
+  var container = _hlContainer(ns);
   if(container) {
     if(on) container.classList.add('hl-eraser-on');
     else container.classList.remove('hl-eraser-on');
@@ -2783,15 +2775,7 @@ function _hlSetEraserCursor(ns, on) {
 }
 
 function _hlAttachEraserToAllMarks(ns) {
-  var containerMap = {
-    ad:  'adContent',
-    rs:  'analysisContent',
-    att: 'atExplanationWrap',
-    cr:  'questionsList',
-    vt:  'vaultPageContent'
-  };
-  var cid = containerMap[ns];
-  var container = cid ? document.getElementById(cid) : null;
+  var container = _hlContainer(ns);
   if(!container) return;
   var marks = container.querySelectorAll('.q-hl-mark');
   marks.forEach(function(m) {
