@@ -212,6 +212,11 @@ textarea.inp{resize:vertical; min-height:64px;}
   user-select: text;
   cursor: text;
 }
+/* When container is in active HL mode: suppress iOS callout & Android long-press popup */
+.hl-mode-active .hl-zone,
+.hl-mode-active {
+  -webkit-touch-callout: none;
+}
 /* When highlighter is active, show a subtle cursor hint */
 .hl-eraser-on .hl-zone {
   cursor: default;
@@ -2579,42 +2584,82 @@ function hlRestoreAll(ns) {
   hlSyncUndoRedoBtns(ns);
 }
 
-// Attach mouseup/touchend selection listeners on the container
+// Attach mouseup/touchend/contextmenu selection listeners on the container
 function hlAttachListeners(ns, container) {
   if(!container) return;
   container._hlNS = ns;
-  // Remove old listener if any
-  if(container._hlMouseUp) container.removeEventListener('mouseup', container._hlMouseUp);
-  if(container._hlTouchEnd) container.removeEventListener('touchend', container._hlTouchEnd);
-  container._hlMouseUp = function(e) { hlHandleSelection(ns); };
-  container._hlTouchEnd = function(e) { setTimeout(function(){ hlHandleSelection(ns); }, 80); };
+
+  // Remove old listeners
+  if(container._hlMouseUp)     container.removeEventListener('mouseup',      container._hlMouseUp);
+  if(container._hlTouchEnd)    container.removeEventListener('touchend',     container._hlTouchEnd);
+  if(container._hlContextMenu) container.removeEventListener('contextmenu',  container._hlContextMenu, true);
+
+  // Block Android/browser context menu (Google Search / Translate popup) when HL active
+  container._hlContextMenu = function(e) {
+    var st = _hlState[ns];
+    if(st && st.mode === 'highlight') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  container.addEventListener('contextmenu', container._hlContextMenu, true);
+
+  // Desktop: apply on mouse release
+  container._hlMouseUp = function(e) {
+    var st = _hlState[ns];
+    if(!st || st.mode !== 'highlight') return;
+    hlHandleSelection(ns, e);
+  };
   container.addEventListener('mouseup', container._hlMouseUp);
+
+  // Mobile: apply SYNCHRONOUSLY on touch release (no setTimeout!)
+  // Clearing selection immediately prevents Android floating action bar from appearing
+  container._hlTouchEnd = function(e) {
+    var st = _hlState[ns];
+    if(!st || st.mode !== 'highlight') return;
+    var applied = hlHandleSelection(ns, e);
+    if(applied) {
+      // Suppress native selection popup (Translate/Copy/Google Search)
+      e.preventDefault();
+    }
+  };
   container.addEventListener('touchend', container._hlTouchEnd);
 }
 
-// Handle text selection — apply highlight or erase
-function hlHandleSelection(ns) {
+// Handle text selection — apply highlight or erase.
+// Returns true if a highlight was applied (so caller can preventDefault).
+function hlHandleSelection(ns, e) {
   var st = _hlState[ns];
-  if(!st || !st.mode) return;
+  if(!st || !st.mode) return false;
+
   var sel = window.getSelection();
-  if(!sel || sel.isCollapsed || !sel.rangeCount) return;
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return false;
   var range = sel.getRangeAt(0);
-  if(!range || range.collapsed) return;
+  if(!range || range.collapsed) return false;
 
   // Find the hl-zone ancestor
   var zone = _hlZoneFromRange(range, ns);
-  if(!zone) { sel.removeAllRanges(); return; }
+  if(!zone) {
+    sel.removeAllRanges();
+    return false;
+  }
 
   if(st.mode === 'highlight') {
     hlSnapshot(ns, zone);
-    _hlApplyRange(range, zone, st.color);
+    var ok = _hlApplyRange(range, zone, st.color);
+    // Clear selection immediately — prevents browser floating bar on Android
     sel.removeAllRanges();
-    _hlPersist(ns);
-    hlSyncUndoRedoBtns(ns);
-    showToast('✨ Highlighted!', 'success');
+    if(ok) {
+      _hlPersist(ns);
+      hlSyncUndoRedoBtns(ns);
+      showToast('✨ Highlighted!', 'success');
+    }
+    return ok;
   } else if(st.mode === 'eraser') {
     sel.removeAllRanges();
+    return false;
   }
+  return false;
 }
 
 // Find the hl-zone element that contains the selection
@@ -2628,32 +2673,51 @@ function _hlZoneFromRange(range, ns) {
   return null;
 }
 
-// Apply highlight mark to selected range
+// Apply highlight mark to selected range.
+// Returns true on success, false on failure.
 function _hlApplyRange(range, zone, color) {
+  // Clamp range endpoints to stay within the zone
+  if(!zone.contains(range.startContainer)) {
+    console.error('[HL] startContainer outside zone');
+    return false;
+  }
+  if(!zone.contains(range.endContainer)) {
+    // Clamp end to zone boundary
+    try { range.setEndBefore(zone.nextSibling || zone); } catch(ex) { console.error('[HL] clamp end failed', ex); return false; }
+  }
+  if(range.collapsed) return false;
+
+  function makeMark() {
+    var m = document.createElement('mark');
+    m.className = 'q-hl-mark';
+    m.style.background = color + 'aa';
+    m.style.borderRadius = '3px';
+    m.style.padding = '0 2px';
+    m.setAttribute('data-hlc', color);
+    return m;
+  }
+
+  // Strategy 1: surroundContents (works when selection doesn't cross element boundaries)
   try {
-    var mark = document.createElement('mark');
-    mark.className = 'q-hl-mark';
-    mark.style.background = color + 'aa';
-    mark.style.borderRadius = '3px';
-    mark.style.padding = '0 2px';
-    mark.setAttribute('data-hlc', color);
-    // Restrict range to within zone
-    if(!zone.contains(range.startContainer)) return;
-    if(!zone.contains(range.endContainer)) return;
+    var mark = makeMark();
     range.surroundContents(mark);
+    return true;
   } catch(e) {
-    // If surroundContents fails (cross-node), use extractContents
-    try {
-      var frag = range.extractContents();
-      var mark2 = document.createElement('mark');
-      mark2.className = 'q-hl-mark';
-      mark2.style.background = color + 'aa';
-      mark2.style.borderRadius = '3px';
-      mark2.style.padding = '0 2px';
-      mark2.setAttribute('data-hlc', color);
-      mark2.appendChild(frag);
-      range.insertNode(mark2);
-    } catch(e2){}
+    // HierarchyRequestError: selection crosses element nodes — use extractContents
+  }
+
+  // Strategy 2: extractContents (handles cross-node / multi-line selections)
+  try {
+    var frag = range.extractContents();
+    var mark2 = makeMark();
+    mark2.appendChild(frag);
+    range.insertNode(mark2);
+    // Collapse range to avoid leftover selection artefacts
+    range.collapse(false);
+    return true;
+  } catch(e2) {
+    console.error('[HL] _hlApplyRange failed:', e2);
+    return false;
   }
 }
 
@@ -2740,6 +2804,7 @@ function hlToggle(ns, mode) {
   var erBtn = document.getElementById(ns+'EraserBtn');
   var colDiv = document.getElementById(ns+'HlColors');
 
+  var cont = _hlContainer(ns);
   if(st.mode === mode) {
     // Toggle off
     st.mode = null;
@@ -2747,6 +2812,7 @@ function hlToggle(ns, mode) {
     if(erBtn) erBtn.classList.remove('active','eraser-active');
     if(colDiv) colDiv.style.display = 'none';
     _hlSetEraserCursor(ns, false);
+    if(cont) cont.classList.remove('hl-mode-active');
   } else {
     st.mode = mode;
     if(mode === 'highlight') {
@@ -2754,12 +2820,14 @@ function hlToggle(ns, mode) {
       if(erBtn) erBtn.classList.remove('active','eraser-active');
       if(colDiv) colDiv.style.display = 'flex';
       _hlSetEraserCursor(ns, false);
-      showToast('🖊 Text select karo → highlight hoga', 'info');
+      if(cont) cont.classList.add('hl-mode-active');
+      showToast('🖊 Text select/drag karo → highlight hoga', 'info');
     } else {
       if(erBtn) erBtn.classList.add('active','eraser-active');
       if(hlBtn) hlBtn.classList.remove('active');
       if(colDiv) colDiv.style.display = 'none';
       _hlSetEraserCursor(ns, true);
+      if(cont) cont.classList.remove('hl-mode-active');
       showToast('🧹 Kisi bhi highlight par tap karo → hata do', 'info');
       _hlAttachEraserToAllMarks(ns);
     }
