@@ -221,6 +221,84 @@ textarea.inp{resize:vertical; min-height:64px;}
 .hl-eraser-on .hl-zone {
   cursor: default;
 }
+/* ── Floating HL Sidebar Button ── */
+#floatHlBtn {
+  position:fixed; left:0; top:38%; z-index:1200;
+  width:30px; height:52px;
+  background:linear-gradient(160deg,#f57f17,#ff8f00);
+  color:#fff; border:none; border-radius:0 12px 12px 0;
+  cursor:pointer; display:none; align-items:center;
+  justify-content:center; font-size:1.05rem;
+  box-shadow:3px 2px 12px rgba(245,127,23,0.40);
+  -webkit-tap-highlight-color:transparent;
+  transition:box-shadow 0.15s, transform 0.15s;
+  writing-mode:vertical-rl; letter-spacing:2px;
+}
+#floatHlBtn.visible { display:flex; }
+#floatHlBtn:active { transform:scale(0.93); }
+/* ── Floating HL Panel (slides out from left) ── */
+#floatHlPanel {
+  position:fixed; left:-220px; top:38%; transform:translateY(-12px);
+  z-index:1199; width:196px;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:0 16px 16px 0;
+  box-shadow:6px 0 24px rgba(0,0,0,0.18);
+  padding:12px 10px; transition:left 0.26s cubic-bezier(.4,0,.2,1);
+  max-height:80vh; overflow-y:auto;
+}
+#floatHlPanel.open { left:30px; }
+/* ── Highlights Review Modal ── */
+#hlReviewModal {
+  position:fixed; inset:0; z-index:3000;
+  background:rgba(0,0,0,0.52);
+  display:none; align-items:flex-start;
+  justify-content:center; overflow-y:auto;
+  padding:16px 10px 40px;
+}
+#hlReviewModal.open { display:flex; }
+#hlReviewBox {
+  background:var(--surface); border-radius:18px;
+  width:100%; max-width:620px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.22);
+  padding:18px 16px; position:relative;
+  animation:fadeIn 0.22s ease;
+}
+.hl-rv-qblock { margin-bottom:14px; }
+.hl-rv-qlabel {
+  font-size:0.7rem; font-weight:800; color:var(--text2);
+  margin-bottom:4px; line-height:1.4;
+}
+.hl-rv-fact {
+  display:flex; align-items:flex-start; gap:7px;
+  margin-bottom:5px; padding:5px 8px; border-radius:7px;
+  font-size:0.83rem; line-height:1.52;
+}
+.hl-rv-dot {
+  width:9px; height:9px; border-radius:50%;
+  flex-shrink:0; margin-top:5px;
+}
+.hl-rv-quiz-header {
+  font-weight:900; font-size:0.95rem; color:var(--accent);
+  margin:0 0 10px; padding-bottom:6px;
+  border-bottom:2px solid rgba(21,101,192,0.18);
+}
+.hl-rv-quiz-block {
+  margin-bottom:22px; padding-bottom:16px;
+  border-bottom:1.5px solid var(--border);
+}
+.flt-mini-btn {
+  width:100%; padding:7px 8px; border-radius:9px;
+  font-size:0.78rem; font-weight:800; cursor:pointer;
+  border:1.5px solid; margin-bottom:5px; text-align:left;
+  -webkit-tap-highlight-color:transparent;
+}
+.flt-color-row { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0 8px; }
+.flt-color-dot {
+  width:22px; height:22px; border-radius:50%; cursor:pointer;
+  border:2.5px solid transparent; transition:border-color 0.12s, transform 0.12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.flt-color-dot.sel { border-color:#333; transform:scale(1.22); }
 /* Highlighted text mark */
 .q-hl-mark {
   border-radius:3px; padding:0 2px; cursor:pointer;
@@ -802,6 +880,23 @@ textarea.inp{resize:vertical; min-height:64px;}
 </div>
 
 <div id="toast"></div>
+
+<!-- ── Floating HL Sidebar Button ── -->
+<button id="floatHlBtn" onclick="hlToggleFloatPanel()" title="Highlight Tools">🖊</button>
+
+<!-- ── Floating HL Panel ── -->
+<div id="floatHlPanel">
+  <div style="font-size:0.68rem;font-weight:800;color:var(--text2);margin-bottom:8px;letter-spacing:.5px;">✨ HIGHLIGHT TOOLS</div>
+  <div id="floatHlPanelBody"></div>
+</div>
+
+<!-- ── Highlights Review Modal ── -->
+<div id="hlReviewModal" onclick="if(event.target===this)closeHlReview()">
+  <div id="hlReviewBox">
+    <!-- filled by showHlReview() -->
+  </div>
+</div>
+
 <!-- Floating Back Button — bottom left -->
 <button id="floatingBack" onclick="appGoBack()" data-label="Back" aria-label="Go back">←</button>
 <div id="offlineBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c62828;color:#fff;text-align:center;font-size:0.78rem;font-weight:700;padding:7px;animation:fadeIn 0.3s;">📵 Aap offline hain — Cached data se kaam kar raha hai</div>
@@ -926,6 +1021,10 @@ function _rawShowPage(name){
   var el = document.getElementById('page-'+name);
   if(el) el.classList.add('active');
   window.scrollTo({top:0, behavior:'instant'});
+  // Close float panel on page change, then update button visibility
+  var fp = document.getElementById('floatHlPanel');
+  if(fp) fp.classList.remove('open');
+  setTimeout(_hlUpdateFloatBtn, 30);
 }
 
 // Main nav function — call this for every page transition
@@ -2907,6 +3006,303 @@ function hlSyncUndoRedoBtns(ns) {
 }
 // ================================================================
 // END HIGHLIGHTER ENGINE
+// ================================================================
+
+// ================================================================
+// FLOATING HL PANEL + HIGHLIGHT REVIEW (Features 1, 2, 3)
+// ================================================================
+
+var _pageNsMap = { attempt:'at', questions:'qq', result:'rs', attemptdetail:'ad', vault:'vt' };
+var _hlColors  = ['#ffe000','#ff6f00','#e91e63','#00c853','#29b6f6','#ce93d8'];
+
+function _hlActiveNs() { return _pageNsMap[getActivePage()] || null; }
+
+function _hlUpdateFloatBtn() {
+  var btn = document.getElementById('floatHlBtn');
+  if(!btn) return;
+  var ns = _hlActiveNs();
+  if(ns) btn.classList.add('visible');
+  else btn.classList.remove('visible');
+}
+
+function hlToggleFloatPanel() {
+  var panel = document.getElementById('floatHlPanel');
+  if(!panel) return;
+  var ns = _hlActiveNs();
+  if(!ns) { panel.classList.remove('open'); return; }
+  var opening = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  if(opening) _hlRenderFloatPanel(ns);
+}
+
+function _hlRenderFloatPanel(ns) {
+  var body = document.getElementById('floatHlPanelBody');
+  if(!body) return;
+  var st = _hlState[ns] || {};
+  var curColor = (st && st.color) || '#ffe000';
+
+  var colorDots = _hlColors.map(function(c) {
+    var isSel = c === curColor;
+    return '<div class="flt-color-dot'+(isSel?' sel':'')+'" style="background:'+c+';border-color:'+(isSel?'#333':'transparent')+';" '+
+      'onclick="hlSetColor(\''+ns+'\',\''+c+'\',this);_hlSyncFloatColors(\''+ns+'\')" data-c="'+c+'"></div>';
+  }).join('');
+
+  var hlActive  = st.mode === 'highlight';
+  var erActive  = st.mode === 'eraser';
+
+  body.innerHTML =
+    // HL / Erase buttons
+    '<button class="flt-mini-btn" id="fltHl_'+ns+'" '+
+      'style="background:'+(hlActive?'rgba(255,193,7,0.18)':'rgba(255,193,7,0.06)')+';border-color:rgba(255,193,7,0.6);color:#f57f17;" '+
+      'onclick="hlToggle(\''+ns+'\',\'highlight\');_hlSyncFloatPanel(\''+ns+'\')">🖊 Highlight</button>'+
+    '<button class="flt-mini-btn" id="fltEr_'+ns+'" '+
+      'style="background:'+(erActive?'rgba(198,40,40,0.14)':'rgba(198,40,40,0.05)')+';border-color:rgba(198,40,40,0.4);color:#c62828;" '+
+      'onclick="hlToggle(\''+ns+'\',\'eraser\');_hlSyncFloatPanel(\''+ns+'\')">🧹 Erase</button>'+
+    // Color row
+    '<div class="flt-color-row" id="fltColors_'+ns+'">'+colorDots+'</div>'+
+    // Undo / Redo
+    '<div style="display:flex;gap:4px;margin-bottom:6px;">'+
+      '<button style="flex:1;padding:5px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);font-size:0.78rem;cursor:pointer;" onclick="hlUndo(\''+ns+'\')">↩</button>'+
+      '<button style="flex:1;padding:5px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);font-size:0.78rem;cursor:pointer;" onclick="hlRedo(\''+ns+'\')">↪</button>'+
+      '<button style="flex:1;padding:5px;border-radius:7px;background:rgba(46,125,50,0.1);border:1px solid rgba(46,125,50,0.4);color:var(--green);font-size:0.78rem;cursor:pointer;font-weight:800;" onclick="hlSave(\''+ns+'\')">💾</button>'+
+    '</div>'+
+    '<div style="border-top:1px solid var(--border);margin:4px 0 8px;"></div>'+
+    // Extraction buttons
+    '<button class="flt-mini-btn" style="background:rgba(21,101,192,0.08);border-color:rgba(21,101,192,0.35);color:var(--accent);" '+
+      'onclick="closeFloatPanel();showHlReview(\'quiz\')">📋 Is Quiz ke Highlights</button>'+
+    '<button class="flt-mini-btn" style="background:rgba(106,27,154,0.07);border-color:rgba(106,27,154,0.3);color:#6a1b9a;margin-bottom:0;" '+
+      'onclick="closeFloatPanel();showHlReview(\'all\')">📚 Saari Quizzes Ki Kitaab</button>';
+}
+
+function _hlSyncFloatPanel(ns) {
+  // Re-render after toggle to reflect new mode
+  _hlRenderFloatPanel(ns);
+}
+
+function _hlSyncFloatColors(ns) {
+  // Already re-rendered via hlSetColor callback — nothing extra needed
+}
+
+function closeFloatPanel() {
+  var panel = document.getElementById('floatHlPanel');
+  if(panel) panel.classList.remove('open');
+}
+
+// Close float panel when tapping outside it
+document.addEventListener('click', function(e) {
+  var panel = document.getElementById('floatHlPanel');
+  var btn   = document.getElementById('floatHlBtn');
+  if(!panel || !panel.classList.contains('open')) return;
+  if(!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+}, true);
+
+// ── Highlight Extraction: extract <mark> text from stored innerHTML ──
+function _hlExtractMarks(html) {
+  if(!html) return [];
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  var out = [];
+  tmp.querySelectorAll('.q-hl-mark').forEach(function(m) {
+    var txt = m.textContent.trim();
+    if(txt) out.push({ text: txt, color: m.getAttribute('data-hlc') || '#ffe000' });
+  });
+  return out;
+}
+
+// ── Build one quiz section HTML for the review modal ──
+function _hlBuildQuizSection(quizId, quizName, allData, quiz) {
+  var qFacts = {}; // key → [{text,color}]
+
+  ['qq','at','vt'].forEach(function(ns) {
+    if(!allData[ns]) return;
+    Object.keys(allData[ns]).forEach(function(zk) {
+      var parts = zk.split('_');
+      // Format: ns_exp_quizId_qIdx  (4 parts minimum)
+      if(parts.length < 4) return;
+      if(String(parts[2]) !== String(quizId)) return;
+      var qIdx = parts[3];
+      var marks = _hlExtractMarks(allData[ns][zk]);
+      if(!marks.length) return;
+      var k = ns+'_'+qIdx;
+      qFacts[k] = (qFacts[k] || []).concat(marks);
+    });
+  });
+
+  var keys = Object.keys(qFacts);
+  if(!keys.length) return '';
+
+  var html = '<div class="hl-rv-quiz-header">📚 '+escHtml(quizName)+'</div>';
+  var qNum = 1;
+
+  keys.forEach(function(k) {
+    var marks = qFacts[k];
+    if(!marks.length) return;
+
+    // Try to resolve question text from quiz data
+    var qLabel = 'Q'+qNum;
+    if(quiz && quiz.questions) {
+      var parts = k.split('_');
+      var idx   = parseInt(parts[1]);
+      if(!isNaN(idx) && quiz.questions[idx]) {
+        var qText = quiz.questions[idx].q || '';
+        if(qText) qLabel = 'Q'+qNum+': '+qText.substring(0,90)+(qText.length>90?'…':'');
+      }
+    }
+
+    html += '<div class="hl-rv-qblock">'+
+      '<div class="hl-rv-qlabel">'+escHtml(qLabel)+'</div>'+
+      marks.map(function(m) {
+        return '<div class="hl-rv-fact" style="background:'+m.color+'22;">'+
+          '<span class="hl-rv-dot" style="background:'+m.color+';"></span>'+
+          '<span>'+escHtml(m.text)+'</span>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+    qNum++;
+  });
+
+  return html;
+}
+
+// ── Show the Highlight Review Modal ──
+// scope: 'quiz'  → current quiz highlights
+//        'all'   → all quizzes book
+function showHlReview(scope) {
+  var modal = document.getElementById('hlReviewModal');
+  var box   = document.getElementById('hlReviewBox');
+  if(!modal || !box) return;
+
+  var uid = (typeof _uid !== 'undefined' && _uid) ? _uid : 'local';
+
+  // Read all namespace data from localStorage
+  var allData = {};
+  ['qq','at','vt','rs','ad'].forEach(function(ns) {
+    try {
+      var raw = localStorage.getItem('hl_v2_'+uid+'_'+ns);
+      if(raw) allData[ns] = JSON.parse(raw);
+    } catch(e) { console.error('[HLReview] localStorage read error:', e); }
+  });
+
+  var bodyHtml = '';
+
+  if(scope === 'quiz') {
+    var quizId   = _currentQuizId || (_lastQuiz && _lastQuiz.id);
+    var quiz     = (STATE.quizzes && STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); })) || _lastQuiz;
+    var quizName = quiz ? quiz.name : (quizId ? 'Quiz #'+quizId : 'Current Quiz');
+
+    bodyHtml = _hlBuildQuizSection(quizId, quizName, allData, quiz);
+    if(!bodyHtml) {
+      bodyHtml = '<div style="text-align:center;color:var(--text2);padding:28px 10px;">'+
+        '<div style="font-size:2.2rem;margin-bottom:8px;">📭</div>'+
+        '<div style="font-weight:700;">Is quiz mein koi highlight nahi mili.</div>'+
+        '<div style="font-size:0.78rem;margin-top:5px;">Explanations mein text select karke highlight karo!</div>'+
+      '</div>';
+    }
+
+    box.innerHTML = _hlModalShell('📋 Highlights — '+escHtml(quizName), 'Is quiz ke highlighted facts', bodyHtml);
+
+  } else {
+    // All quizzes book — collect all unique quizIds from qq/at/vt keys
+    var quizIdSet = {};
+    ['qq','at','vt'].forEach(function(ns) {
+      if(!allData[ns]) return;
+      Object.keys(allData[ns]).forEach(function(zk) {
+        var parts = zk.split('_');
+        if(parts.length >= 4) quizIdSet[parts[2]] = true;
+      });
+    });
+    // Also include all loaded quizzes so known names appear
+    if(STATE.quizzes) STATE.quizzes.forEach(function(q){ quizIdSet[String(q.id)] = true; });
+
+    var allBookHtml = '';
+    var hasAny = false;
+
+    Object.keys(quizIdSet).forEach(function(qid) {
+      var quiz     = STATE.quizzes && STATE.quizzes.find(function(q){ return String(q.id)===String(qid); });
+      var quizName = quiz ? quiz.name : 'Quiz #'+qid;
+      var sec = _hlBuildQuizSection(qid, quizName, allData, quiz);
+      if(sec) {
+        allBookHtml += '<div class="hl-rv-quiz-block">'+sec+'</div>';
+        hasAny = true;
+      }
+    });
+
+    // rs/ad namespaces — no quizId, show as "Revision Notes"
+    var miscHtml = '';
+    ['rs','ad'].forEach(function(ns) {
+      if(!allData[ns]) return;
+      Object.keys(allData[ns]).forEach(function(zk) {
+        var marks = _hlExtractMarks(allData[ns][zk]);
+        if(!marks.length) return;
+        marks.forEach(function(m) {
+          miscHtml += '<div class="hl-rv-fact" style="background:'+m.color+'22;">'+
+            '<span class="hl-rv-dot" style="background:'+m.color+';"></span>'+
+            '<span>'+escHtml(m.text)+'</span>'+
+          '</div>';
+        });
+      });
+    });
+    if(miscHtml) {
+      allBookHtml += '<div class="hl-rv-quiz-block">'+
+        '<div class="hl-rv-quiz-header">📝 Revision Notes</div>'+miscHtml+
+      '</div>';
+      hasAny = true;
+    }
+
+    if(!hasAny) {
+      allBookHtml = '<div style="text-align:center;color:var(--text2);padding:28px 10px;">'+
+        '<div style="font-size:2.2rem;margin-bottom:8px;">📭</div>'+
+        '<div style="font-weight:700;">Abhi tak koi highlight nahi ki gayi.</div>'+
+        '<div style="font-size:0.78rem;margin-top:5px;">Quiz explanations mein highlight karo — sab yahan collect honge!</div>'+
+      '</div>';
+    }
+
+    box.innerHTML = _hlModalShell('📚 Highlights Ki Kitaab', 'Saari quizzes ke highlighted facts', allBookHtml);
+  }
+
+  modal.classList.add('open');
+}
+
+function _hlModalShell(title, subtitle, bodyHtml) {
+  return '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:14px;flex-wrap:wrap;">'+
+    '<div>'+
+      '<div style="font-weight:900;font-size:1.05rem;color:var(--text);">'+title+'</div>'+
+      '<div style="font-size:0.73rem;color:var(--text2);">'+subtitle+'</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;flex-shrink:0;">'+
+      '<button onclick="hlReviewCopyAll()" style="padding:5px 10px;background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.3);border-radius:8px;font-size:0.74rem;font-weight:800;color:var(--accent);cursor:pointer;">📋 Copy</button>'+
+      '<button onclick="closeHlReview()" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;">✕</button>'+
+    '</div>'+
+  '</div>'+
+  '<div id="hlReviewContent">'+bodyHtml+'</div>';
+}
+
+function closeHlReview() {
+  var modal = document.getElementById('hlReviewModal');
+  if(modal) modal.classList.remove('open');
+}
+
+function hlReviewCopyAll() {
+  var rc = document.getElementById('hlReviewContent');
+  if(!rc) return;
+  var text = rc.innerText || rc.textContent || '';
+  if(!text.trim()) { showToast('Copy karne ko kuch nahi hai', 'error'); return; }
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){
+      showToast('📋 Highlights copy ho gayi!', 'success');
+    }).catch(function(e){
+      console.error('[HLReview] Copy failed:', e);
+      showToast('Copy nahi hua — manually select karke copy karo', 'info');
+    });
+  } else {
+    showToast('Copy supported nahi — manually select karke copy karo', 'info');
+  }
+}
+
+// ================================================================
+// END FLOATING HL PANEL + HIGHLIGHT REVIEW
 // ================================================================
 
 // BOOT
