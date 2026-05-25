@@ -315,6 +315,34 @@ textarea.inp{resize:vertical; min-height:64px;}
   -webkit-tap-highlight-color:transparent;
 }
 .flt-color-dot.sel { border-color:#333; transform:scale(1.22); }
+/* ===== SHARE FEATURE ===== */
+.share-link-box {
+  display:flex; align-items:center; gap:8px;
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:10px; padding:8px 12px; margin-top:10px;
+  font-size:0.78rem; word-break:break-all;
+}
+.share-link-box span { flex:1; color:var(--text2); font-family:monospace; font-size:0.72rem; }
+.share-modal-overlay {
+  position:fixed; inset:0; z-index:5000;
+  background:rgba(0,0,0,0.55); display:none;
+  align-items:center; justify-content:center; padding:20px;
+}
+.share-modal-overlay.open { display:flex; }
+.share-modal-box {
+  background:var(--surface); border-radius:18px;
+  width:100%; max-width:480px; padding:22px 18px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.25);
+  animation:fadeIn 0.2s ease;
+}
+/* Shared quiz badge */
+.shared-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  background:rgba(21,101,192,0.12); color:var(--accent);
+  border:1px solid rgba(21,101,192,0.25); border-radius:20px;
+  padding:2px 10px; font-size:0.68rem; font-weight:800;
+}
+
 /* Highlighted text mark */
 .q-hl-mark {
   border-radius:3px; padding:0 2px; cursor:pointer;
@@ -429,6 +457,12 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div style="font-weight:800;font-size:0.95rem;color:#00695c;margin-bottom:4px;">Quiz Vault</div>
         <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Wrong/Saved/Tough questions filter karo</div>
         <div style="margin-top:10px;"><span class="btn btn-xs" style="background:linear-gradient(135deg,#00695c,#00897b);color:#fff;">🗄️ Vault</span></div>
+      </div>
+      <div class="card" style="cursor:pointer;background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(21,101,192,0.02));border:1.5px solid rgba(21,101,192,0.2);" onclick="showSection('shared-history')">
+        <div style="font-size:2rem;margin-bottom:8px;">🔗</div>
+        <div style="font-weight:800;font-size:0.95rem;color:var(--accent);margin-bottom:4px;">Shared Attempts</div>
+        <div style="font-size:0.74rem;color:var(--text2);line-height:1.5;">Share kiye quizzes par attempt history</div>
+        <div style="margin-top:10px;"><span class="btn btn-primary btn-xs">🔗 Shared</span></div>
       </div>
     </div>
 
@@ -941,6 +975,41 @@ textarea.inp{resize:vertical; min-height:64px;}
     <div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Loading...</div></div>
   </div>
 
+  <!-- ===== SHARED QUIZ LANDING PAGE ===== -->
+  <div id="page-shared" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🔗 Shared Quiz</div>
+        <div class="page-subtitle">Yeh quiz aapke saath share ki gayi hai</div>
+      </div>
+    </div>
+    <div id="sharedQuizContent">
+      <div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Quiz load ho rahi hai...</div></div>
+    </div>
+  </div>
+
+  <!-- ===== SHARED ATTEMPTS HISTORY PAGE ===== -->
+  <div id="page-shared-history" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🔗 Shared Quiz Attempts</div>
+        <div class="page-subtitle">Dusron ke share kiye quizzes par aapke attempts</div>
+      </div>
+    </div>
+    <div id="sharedHistoryList"></div>
+  </div>
+
+</div>
+
+<!-- ===== SHARE QUIZ MODAL ===== -->
+<div class="share-modal-overlay" id="shareModalOverlay" onclick="if(event.target===this)closeShareModal()">
+  <div class="share-modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-weight:900;font-size:1.05rem;color:var(--accent);">🔗 Quiz Share Karo</div>
+      <button onclick="closeShareModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text2);">✕</button>
+    </div>
+    <div id="shareModalBody"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -1169,6 +1238,11 @@ function _doNavigateTo(pageName, pushBrowser){
     renderHistory();
   } else if(pageName === 'attemptdetail'){
     document.getElementById('topbarTitle').textContent = '📊 Attempt Detail';
+  } else if(pageName === 'shared'){
+    document.getElementById('topbarTitle').textContent = '🔗 Shared Quiz';
+  } else if(pageName === 'shared-history'){
+    document.getElementById('topbarTitle').textContent = '🔗 Shared Attempts';
+    renderSharedHistory();
   }
 }
 
@@ -1228,6 +1302,8 @@ function showSection(sec){
     navTo('history', {title:'📜 Attempt History', render: function(){ initHistoryFilters(); renderHistory(); }});
   } else if(sec==='vault'){
     navTo('vault', {title:'🗄️ Quiz Vault', render: function(){ initVaultFilters(); renderVaultPage(); }});
+  } else if(sec==='shared-history'){
+    navTo('shared-history', {title:'🔗 Shared Attempts', render: renderSharedHistory});
   }
 }
 
@@ -1300,13 +1376,60 @@ function onAuth(user){
     document.getElementById('userChip').style.display = 'flex';
     document.getElementById('userName').textContent = user.displayName || (user.isAnonymous ? 'Guest' : 'User');
     attachListeners();
-    goHome();
+    // Check if there's a pending shared quiz from URL
+    if(_pendingShareId){
+      handlePendingShare();
+    } else {
+      goHome();
+    }
   } else {
     dbg('Auth: No user — login page','info');
     _uid = null;
     document.getElementById('userChip').style.display = 'none';
     detachListeners();
-    showPage('login');
+    // If there's a pending share, show login with share context
+    if(_pendingShareId){
+      showSharedLoginPage();
+    } else {
+      showPage('login');
+    }
+  }
+}
+
+function showSharedLoginPage(){
+  // Override login page to show share context
+  var loginCard = document.querySelector('#page-login .login-card');
+  if(loginCard){
+    loginCard.innerHTML =
+      '<div class="logo">🔗</div>'+
+      '<h2 style="color:var(--accent);">Shared Quiz</h2>'+
+      '<p>Kisi ne aapke saath ek quiz share ki hai. Attempt karne ke liye login karo!</p>'+
+      '<div style="background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:0.78rem;color:var(--accent);font-weight:700;text-align:left;">'+
+        '🎯 Login hone ke baad quiz automatically khulegi.'+
+      '</div>'+
+      '<button class="btn btn-primary" style="width:100%;" onclick="signInGoogle()">🔐 Google se Login Karo & Attempt Karo</button>'+
+      '<div style="font-size:0.7rem;color:var(--text2);margin-top:10px;">Aapka attempt alag document mein save hoga.</div>'+
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:0.75rem;" onclick="goHomeFromLogin()">← Bina Login Ke Home</button>';
+  }
+  showPage('login');
+}
+
+function goHomeFromLogin(){
+  _pendingShareId = null;
+  showPage('login');
+  var loginCard = document.querySelector('#page-login .login-card');
+  if(loginCard){
+    loginCard.innerHTML =
+      '<div class="logo">📝</div>'+
+      '<h2>Test Series</h2>'+
+      '<p>Quiz banao, practice karo, progress track karo — sab cloud me live sync.</p>'+
+      '<button class="btn btn-primary" style="width:100%;" onclick="signInGoogle()">🔐 Sign in with Google</button>'+
+      '<div style="background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:0.75rem;color:var(--accent);font-weight:700;text-align:left;">'+
+        '✅ <b>Google se login karo</b> — tab saari devices par data live sync hoga.<br>'+
+        '<span style="color:var(--red);">⚠️ Guest login alag device par kaam nahi karta (alag UID banta hai).</span>'+
+      '</div>'+
+      '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:0.75rem;color:var(--text2);" onclick="signInAnon()">👤 Continue as Guest (sirf is device)</button>'+
+      '<div style="font-size:0.7rem;color:var(--text2);margin-top:10px;">Aapka data sirf aapke account me save hota hai.</div>';
   }
 }
 function signInAnon(){
@@ -1335,9 +1458,11 @@ function attachListeners(){
   detachListeners();
   if(!_db||!_uid) return;
   dbg('Listeners attach ho rahe hain...','info');
+  if(!STATE.sharedAttempts) STATE.sharedAttempts = [];
   loadSavedQ();
   _smLoadFromCloud();
   _hlAttachFirebaseListeners();
+  attachSharedAttemptListener();
 
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
@@ -1371,8 +1496,9 @@ function attachListeners(){
 function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
   if(_attemptListener){ try{_attemptListener();}catch(e){} _attemptListener=null; }
+  if(_sharedAttemptListener){ try{_sharedAttemptListener();}catch(e){} _sharedAttemptListener=null; }
   _hlDetachFirebaseListeners();
-  STATE.quizzes=[]; STATE.attempts=[];
+  STATE.quizzes=[]; STATE.attempts=[]; STATE.sharedAttempts=[];
   // savedQuestions ko preserve karo — reload on next auth
 }
 
@@ -1410,6 +1536,355 @@ function cloudSaveAttempt(a){
     _db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a)
       .catch(function(e){ console.warn('saveAttempt err:',e); });
   });
+}
+
+// ================================================================
+// SHARED QUIZ — State & Functions
+// ================================================================
+var _sharedQuizData = null; // currently loaded shared quiz
+var _sharedAttemptListener = null;
+
+// Save a shared quiz attempt (separate collection from own quizzes)
+function cloudSaveSharedAttempt(a){
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('ts_shared_attempts').doc(String(a.id)).set(a)
+    .catch(function(e){ console.warn('saveSharedAttempt err:',e); });
+  // Also save a summary to the public quiz so quiz owner can see who attempted
+  if(a.sharedQuizId){
+    var summary = {
+      uid: _uid,
+      displayName: (_user&&_user.displayName)||'Unknown',
+      email: (_user&&_user.email)||'',
+      photoURL: (_user&&_user.photoURL)||'',
+      score: a.score, total: a.total,
+      pct: a.total>0?Math.round(a.score/a.total*100):0,
+      timeTaken: a.timeTaken, timeStr: a.timeStr,
+      completedAt: a.completedAt, attemptId: a.id
+    };
+    _db.collection('public_quizzes').doc(String(a.sharedQuizId))
+      .collection('responses').doc(_uid).set(summary, {merge:true})
+      .catch(function(e){ console.warn('saveSharedResponse err:',e); });
+  }
+}
+
+// Attach live listener for shared attempts
+function attachSharedAttemptListener(){
+  if(!_db||!_uid) return;
+  if(_sharedAttemptListener){ try{_sharedAttemptListener();}catch(e){} }
+  _sharedAttemptListener = _db.collection('users').doc(_uid).collection('ts_shared_attempts')
+    .onSnapshot(function(snap){
+      STATE.sharedAttempts = [];
+      snap.forEach(function(d){ if(d.exists) STATE.sharedAttempts.push(d.data()); });
+      STATE.sharedAttempts.sort(function(a,b){ return (b.id||0)-(a.id||0); });
+      dbg('Shared attempts loaded: '+STATE.sharedAttempts.length,'success');
+      var ap = getActivePage();
+      if(ap==='shared-history') renderSharedHistory();
+      if(ap==='home') renderHome();
+    }, function(err){ dbg('SharedAttempts listener err: '+err.message,'error'); });
+}
+
+// Make a quiz public and show a shareable link
+function shareQuiz(quizId){
+  var quiz = STATE.quizzes.find(function(q){ return q.id===quizId; });
+  if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
+  if(!(quiz.questions||[]).length){ showToast('Pehle questions add karo!','error'); return; }
+
+  var overlay = document.getElementById('shareModalOverlay');
+  var body = document.getElementById('shareModalBody');
+  if(!overlay||!body) return;
+
+  // Show loading state
+  body.innerHTML = '<div class="center-loader"><div class="loader"></div><div style="margin-top:8px;font-size:0.82rem;color:var(--text2);">Share link bana raha hai...</div></div>';
+  overlay.classList.add('open');
+
+  // Save to public_quizzes collection
+  var publicData = {
+    id: quiz.id,
+    name: quiz.name,
+    subjectName: quiz.subjectName||'',
+    sectionName: quiz.sectionName||'',
+    topicName: quiz.topicName||'',
+    timer: quiz.timer||{type:'none'},
+    questions: (quiz.questions||[]).map(function(q){
+      return { id:q.id, q:q.q, options:q.options, correct:q.correct, explanation:q.explanation||'' };
+    }),
+    sharedBy: _uid,
+    sharedByName: (_user&&_user.displayName)||'Unknown',
+    sharedByEmail: (_user&&_user.email)||'',
+    questionCount: (quiz.questions||[]).length,
+    sharedAt: Date.now(),
+    sharedAtStr: new Date().toLocaleDateString('hi-IN')+' '+new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})
+  };
+
+  _db.collection('public_quizzes').doc(String(quiz.id)).set(publicData)
+    .then(function(){
+      var baseUrl = window.location.href.split('?')[0].split('#')[0];
+      var shareUrl = baseUrl + '?share=' + quiz.id;
+      body.innerHTML =
+        '<div style="text-align:center;margin-bottom:14px;">'+
+          '<div style="font-size:2.5rem;margin-bottom:6px;">🎉</div>'+
+          '<div style="font-weight:800;font-size:0.95rem;color:var(--green);">Quiz share ho gayi!</div>'+
+          '<div style="font-size:0.78rem;color:var(--text2);margin-top:4px;">Neeche link copy karo aur kisi ko bhi bhejo</div>'+
+        '</div>'+
+        '<div style="background:rgba(21,101,192,0.07);border:1.5px solid rgba(21,101,192,0.2);border-radius:12px;padding:12px 14px;margin-bottom:12px;">'+
+          '<div style="font-weight:800;font-size:0.85rem;color:var(--text);margin-bottom:4px;">'+escHtml(quiz.name)+'</div>'+
+          '<div style="font-size:0.72rem;color:var(--text2);">❓ '+(quiz.questions||[]).length+' questions</div>'+
+        '</div>'+
+        '<div class="share-link-box">'+
+          '<span id="shareLinkText">'+escHtml(shareUrl)+'</span>'+
+          '<button onclick="copyShareLink()" style="background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:800;cursor:pointer;flex-shrink:0;">📋 Copy</button>'+
+        '</div>'+
+        '<div style="font-size:0.72rem;color:var(--text2);margin-top:10px;padding:8px 10px;background:rgba(46,125,50,0.07);border-radius:8px;border-left:3px solid var(--green);">'+
+          '✅ <b>Yeh link kisi ko bhi bhejo</b> — woh Google se login karke quiz attempt kar sakte hain.<br>'+
+          '📊 Unka attempt alag document mein save hoga.'+
+        '</div>'+
+        '<button onclick="closeShareModal()" style="width:100%;margin-top:14px;padding:10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;">Done ✓</button>';
+      showToast('🔗 Share link ready!','success');
+    })
+    .catch(function(e){
+      body.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px;">Share failed: '+escHtml(e.message)+'</div>'+
+        '<button onclick="closeShareModal()" style="width:100%;margin-top:10px;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;">Close</button>';
+      dbg('Share error: '+e.message,'error');
+    });
+}
+
+function copyShareLink(){
+  var el = document.getElementById('shareLinkText');
+  if(!el) return;
+  var txt = el.textContent;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ showToast('📋 Link copy ho gaya!','success'); }).catch(function(){ _fallbackCopy(txt); });
+  } else { _fallbackCopy(txt); }
+}
+function _fallbackCopy(txt){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); showToast('📋 Link copy ho gaya!','success'); }catch(e){ showToast('Copy nahi hua — manually copy karo','info'); }
+  document.body.removeChild(ta);
+}
+function closeShareModal(){
+  var overlay = document.getElementById('shareModalOverlay');
+  if(overlay) overlay.classList.remove('open');
+}
+
+// ================================================================
+// SHARED QUIZ LANDING — Load & Display from URL param
+// ================================================================
+
+// Check URL for ?share= param on page load
+function checkSharedQuizUrl(){
+  var params = new URLSearchParams(window.location.search);
+  var shareId = params.get('share');
+  if(!shareId) return false;
+  dbg('Share param found: '+shareId,'info');
+  _pendingShareId = shareId;
+  return true;
+}
+var _pendingShareId = null;
+
+// Called after auth resolves — if pending share ID exists, load it
+function handlePendingShare(){
+  if(!_pendingShareId) return;
+  var sid = _pendingShareId;
+  _pendingShareId = null;
+  loadSharedQuiz(sid);
+}
+
+function loadSharedQuiz(shareId){
+  if(!_db){ showToast('Firebase ready nahi','error'); return; }
+  navTo('shared', {title:'🔗 Shared Quiz'}, false);
+  document.getElementById('topbarTitle').textContent = '🔗 Shared Quiz';
+  var contentEl = document.getElementById('sharedQuizContent');
+  if(contentEl) contentEl.innerHTML = '<div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Quiz load ho rahi hai...</div></div>';
+
+  _db.collection('public_quizzes').doc(String(shareId)).get()
+    .then(function(doc){
+      if(!doc.exists){
+        if(contentEl) contentEl.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:var(--text2);"><div style="font-size:2.5rem;margin-bottom:8px;">😕</div><div style="font-weight:800;">Quiz nahi mili</div><div style="font-size:0.8rem;margin-top:6px;">Yeh link expired ho sakta hai ya quiz delete ho gayi hogi.</div><div style="margin-top:14px;"><button class="btn btn-primary btn-sm" onclick="goHome()">🏠 Ghar Jao</button></div></div>';
+        return;
+      }
+      _sharedQuizData = doc.data();
+      renderSharedQuizLanding(_sharedQuizData);
+    })
+    .catch(function(e){
+      dbg('loadSharedQuiz err: '+e.message,'error');
+      if(contentEl) contentEl.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:var(--red);"><div style="font-size:2rem;margin-bottom:8px;">⚠️</div><div>Load failed: '+escHtml(e.message)+'</div><div style="margin-top:14px;"><button class="btn btn-primary btn-sm" onclick="goHome()">🏠 Ghar Jao</button></div></div>';
+    });
+}
+
+function renderSharedQuizLanding(quiz){
+  var el = document.getElementById('sharedQuizContent');
+  if(!el) return;
+  var tags = [quiz.subjectName, quiz.sectionName, quiz.topicName].filter(Boolean).join(' › ');
+  var timerLabel = quiz.timer&&quiz.timer.type!=='none'?(quiz.timer.type==='full'?quiz.timer.value+' min':quiz.timer.value+'s/Q'):'No Timer';
+  var isLoggedIn = !!_uid && !(_user&&_user.isAnonymous);
+
+  el.innerHTML =
+    '<div class="card" style="background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(21,101,192,0.02));border:1.5px solid rgba(21,101,192,0.2);margin-bottom:14px;">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'+
+        '<span class="shared-badge">🔗 Shared Quiz</span>'+
+        '<span style="font-size:0.7rem;color:var(--text2);">by '+escHtml(quiz.sharedByName||'Someone')+'</span>'+
+      '</div>'+
+      '<div style="font-weight:900;font-size:1.1rem;color:var(--text);margin-bottom:8px;">'+escHtml(quiz.name)+'</div>'+
+      (tags?'<div style="font-size:0.72rem;color:var(--accent);margin-bottom:8px;">'+escHtml(tags)+'</div>':'')+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+
+        '<span style="font-size:0.78rem;background:rgba(21,101,192,0.1);color:var(--accent);border-radius:20px;padding:3px 10px;font-weight:700;">❓ '+(quiz.questionCount||0)+' Questions</span>'+
+        '<span style="font-size:0.78rem;background:var(--surface2);border-radius:20px;padding:3px 10px;font-weight:700;color:var(--text2);">⏱ '+timerLabel+'</span>'+
+        '<span style="font-size:0.78rem;background:var(--surface2);border-radius:20px;padding:3px 10px;font-weight:700;color:var(--text2);">📅 '+escHtml(quiz.sharedAtStr||'')+'</span>'+
+      '</div>'+
+    '</div>'+
+    (isLoggedIn ?
+      '<div class="card">'+
+        '<div style="font-weight:800;font-size:0.92rem;color:var(--green);margin-bottom:8px;">✅ Aap login hain — attempt karo!</div>'+
+        '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:14px;">Aapka result alag document mein save hoga. Aap apni attempt history "🔗 Shared Attempts" mein dekh sakte hain.</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+          '<button class="btn btn-primary" style="flex:1;" onclick="startSharedAttempt(false)">▶ Attempt Start Karo</button>'+
+          '<button class="btn btn-outline" style="flex:1;" onclick="startSharedAttempt(true)">🔀 Shuffled</button>'+
+        '</div>'+
+      '</div>'
+    :
+      '<div class="card" style="text-align:center;padding:24px 16px;">'+
+        '<div style="font-size:2.5rem;margin-bottom:8px;">🔐</div>'+
+        '<div style="font-weight:800;font-size:0.95rem;color:var(--accent);margin-bottom:6px;">Google se Login Karo</div>'+
+        '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:16px;">Quiz attempt karne ke liye Google account se login karna zaroori hai. Aapka attempt history separately save hoga.</div>'+
+        '<button class="btn btn-primary" style="width:100%;" onclick="signInGoogleForShared()">🔐 Sign in with Google</button>'+
+      '</div>'
+    );
+}
+
+function signInGoogleForShared(){
+  if(!_auth){ showToast('Firebase setup pending','error'); return; }
+  var provider = new firebase.auth.GoogleAuthProvider();
+  showToast('Google login khul raha hai...','info');
+  _auth.signInWithPopup(provider)
+    .then(function(result){
+      // After login, refresh the page to handle the shared quiz
+      if(_sharedQuizData) renderSharedQuizLanding(_sharedQuizData);
+    })
+    .catch(function(e){
+      dbg('Google popup error: '+e.message,'error');
+      showToast('Google failed: '+e.message,'error');
+    });
+}
+
+function startSharedAttempt(shuffleQs){
+  if(!_sharedQuizData){ showToast('Quiz data nahi mila!','error'); return; }
+  if(!_uid||(_user&&_user.isAnonymous)){ showToast('Pehle Google se login karo!','error'); return; }
+
+  var quiz = JSON.parse(JSON.stringify(_sharedQuizData));
+  if(shuffleQs){
+    quiz.questions = shuffle(quiz.questions);
+    quiz.questions.forEach(function(q){
+      var ct = q.options[q.correct];
+      q.options = shuffle(q.options);
+      q.correct = q.options.indexOf(ct);
+    });
+  }
+
+  // Set up attempt state using existing _att, mark as shared
+  if(_att.timer) clearInterval(_att.timer);
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+
+  _att = {
+    quizId: quiz.id,
+    quiz: quiz,
+    answers: quiz.questions.map(function(){ return null; }),
+    marked: quiz.questions.map(function(){ return false; }),
+    skipped: quiz.questions.map(function(){ return false; }),
+    difficulty: quiz.questions.map(function(){ return null; }),
+    currentQ: 0, timer: null, timeLeft: 0, perQTimer: null,
+    startTime: Date.now(), submitted: false, answerRevealed: false,
+    isShared: true, sharedQuizId: quiz.id
+  };
+
+  navTo('attempt', {title:'📝 '+quiz.name}, true);
+  document.getElementById('topbarTitle').textContent = '📝 '+quiz.name;
+
+  if(quiz.timer&&quiz.timer.type==='full'){
+    _att.timeLeft = quiz.timer.value*60;
+    document.getElementById('atTimer').style.display='inline-flex';
+    updateTimerDisplay();
+    _att.timer = setInterval(function(){
+      if(_att.submitted){ clearInterval(_att.timer); return; }
+      _att.timeLeft--;
+      updateTimerDisplay();
+      if(_att.timeLeft<=0){
+        clearInterval(_att.timer);
+        showToast('⏱ Time Up! Auto-submitting...','error');
+        setTimeout(function(){ submitAttempt(true); },1000);
+      }
+    },1000);
+  } else {
+    document.getElementById('atTimer').style.display='none';
+  }
+  renderCurrentQ();
+}
+
+
+// ================================================================
+// SHARED HISTORY RENDER
+// ================================================================
+function renderSharedHistory(){
+  var container = document.getElementById('sharedHistoryList');
+  if(!container) return;
+  var attempts = (STATE.sharedAttempts||[]).slice();
+  if(!attempts.length){
+    container.innerHTML =
+      '<div class="card" style="text-align:center;padding:30px;color:var(--text2);">'+
+        '<div style="font-size:2.5rem;margin-bottom:8px;">📭</div>'+
+        '<div style="font-weight:800;margin-bottom:6px;">Koi shared quiz attempt nahi</div>'+
+        '<div style="font-size:0.78rem;">Jab koi aapko quiz share kare aur aap attempt karo, yahan history aayegi.</div>'+
+      '</div>';
+    return;
+  }
+  container.innerHTML = attempts.map(function(at){
+    var pct = at.total>0?Math.round(at.score/at.total*100):0;
+    var color = pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
+    var badge = pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅';
+    return '<div class="card" style="margin-bottom:10px;">'+
+      '<div style="display:flex;align-items:flex-start;gap:10px;">'+
+        '<div style="font-size:2rem;line-height:1;">'+badge+'</div>'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-weight:800;font-size:0.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(at.quizName)+'</div>'+
+          '<div style="font-size:0.7rem;color:var(--accent);margin-top:1px;">🔗 Shared by: '+escHtml(at.sharedByName||at.sharedByEmail||'Unknown')+'</div>'+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:2px;">'+escHtml(at.completedAt||'')+'&nbsp;·&nbsp;⏱ '+(at.timeStr||'--')+'</div>'+
+          '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+
+            '<span style="font-size:0.7rem;background:rgba(46,125,50,0.1);color:var(--green);border-radius:10px;padding:2px 8px;font-weight:700;">✅ '+at.score+'/'+at.total+'</span>'+
+            (at.toughCount?'<span style="font-size:0.65rem;background:rgba(198,40,40,0.1);color:var(--red);border-radius:10px;padding:2px 7px;font-weight:700;">😓 '+at.toughCount+' Tough</span>':'')+
+            (at.doubtCount?'<span style="font-size:0.65rem;background:rgba(230,81,0,0.1);color:var(--orange);border-radius:10px;padding:2px 7px;font-weight:700;">🤔 '+at.doubtCount+' Doubt</span>':'')+
+          '</div>'+
+          '<div style="height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:6px;">'+
+            '<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:4px;transition:width 0.5s;"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'+
+          '<div style="font-weight:900;font-size:1.1rem;color:'+color+';">'+pct+'%</div>'+
+          '<button class="btn btn-outline btn-xs" onclick="viewSharedAttemptDetail(\''+at.id+'\')">👁 Detail</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function viewSharedAttemptDetail(attemptId){
+  var at = (STATE.sharedAttempts||[]).find(function(a){ return String(a.id)===String(attemptId); });
+  if(!at){ showToast('Attempt nahi mili!','error'); return; }
+  // Load quiz from public collection for question details
+  _db.collection('public_quizzes').doc(String(at.sharedQuizId||at.quizId)).get()
+    .then(function(doc){
+      var quiz = doc.exists ? doc.data() : null;
+      _lastAttempt = at;
+      if(quiz) _lastQuiz = JSON.parse(JSON.stringify(quiz));
+      _detailAnswersHidden = false;
+      _adFilter = 'all';
+      navTo('attemptdetail', {title:'📊 Detail'}, true);
+      document.getElementById('topbarTitle').textContent = '📊 Shared Attempt';
+      document.getElementById('adSubtitle').textContent = escHtml(at.quizName);
+      var btn = document.getElementById('adToggleBtn'); if(btn) btn.textContent='👁 Chhupao';
+      renderAttemptDetail(at, quiz||{name:at.quizName, questions:[]});
+    })
+    .catch(function(e){ showToast('Load failed: '+e.message,'error'); });
 }
 
 // ================================================================
@@ -1716,6 +2191,7 @@ function renderCreateList(){
           '<button class="btn btn-primary btn-xs" onclick="openQuizQuestions('+q.id+')">✏️ Edit</button>'+
           '<button class="btn btn-green btn-xs" onclick="startAttempt('+q.id+',false)">▶ Attempt</button>'+
           '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" style="font-size:0.7rem;">🔀 Shuffled</button>'+
+          '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
           '<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>'+
         '</div>'+
       '</div>'+
@@ -2064,6 +2540,7 @@ function renderPracticeList(){
           '<button class="btn btn-primary btn-sm" onclick="startAttempt('+q.id+',false)" '+(!(q.questions||[]).length?'disabled style="opacity:0.5;"':'')+'>▶ Start</button>'+
           '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
           (attempts.length?'<button class="btn btn-outline btn-xs" onclick="viewLastResult('+q.id+')">📊 Results</button>':'')+
+          '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -2372,7 +2849,15 @@ function submitAttempt(auto){
     completedAt: new Date().toLocaleDateString('hi-IN')+' '+new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})
   };
 
-  cloudSaveAttempt(attempt);
+  if(st.isShared){
+    attempt.isShared = true;
+    attempt.sharedQuizId = st.sharedQuizId;
+    attempt.sharedByName = (st.quiz.sharedByName||'');
+    attempt.sharedByEmail = (st.quiz.sharedByEmail||'');
+    cloudSaveSharedAttempt(attempt);
+  } else {
+    cloudSaveAttempt(attempt);
+  }
   _lastAttempt=attempt;
   _lastQuiz=JSON.parse(JSON.stringify(st.quiz));
   showResult(attempt, st.quiz);
@@ -3882,6 +4367,8 @@ function _hlFirebaseLoadAll() {
 showPage('loading');
 // Push initial state so popstate fires on first back press
 history.replaceState({appPage:'loading'}, '', '');
+// Check for shared quiz URL before Firebase loads
+checkSharedQuizUrl();
 dbg('App script ready — Firebase SDK load ho raha hai...','info');
 
 // Save quiz state on page refresh or tab close
