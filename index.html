@@ -477,25 +477,72 @@ textarea.inp{resize:vertical; min-height:64px;}
         <div class="page-title">🏗️ Create Test Series</div>
         <div class="page-subtitle">Naya quiz banao ya existing manage karo</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openNewQuizForm()">➕ New Quiz</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="openSubjectManager()" style="font-size:0.75rem;">📚 Manage</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewQuizForm()">➕ New Quiz</button>
+      </div>
+    </div>
+
+    <!-- Subject/Section/Topic Manager Modal -->
+    <div id="subjectManagerOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9000;padding:16px;overflow-y:auto;" onclick="if(event.target===this)closeSubjectManager()">
+      <div style="background:var(--surface);border-radius:16px;max-width:500px;margin:0 auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-weight:800;font-size:1rem;color:var(--accent);">📚 Subject / Section / Topic Manager</div>
+          <button onclick="closeSubjectManager()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text2);">✕</button>
+        </div>
+        <!-- Add new -->
+        <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:14px;">
+          <div style="font-weight:700;font-size:0.82rem;color:var(--text2);margin-bottom:10px;">➕ Naya Add Karo</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">Subject:</label>
+              <input type="text" class="inp" id="smSubjectInput" placeholder="e.g. GK, Math..." style="font-size:0.82rem;" />
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">Section:</label>
+              <input type="text" class="inp" id="smSectionInput" placeholder="e.g. Paper-1, Set-A..." style="font-size:0.82rem;" />
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:0.75rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">Topic:</label>
+            <input type="text" class="inp" id="smTopicInput" placeholder="e.g. History, Geography..." style="font-size:0.82rem;" />
+          </div>
+          <button class="btn btn-primary" style="width:100%;" onclick="smAddEntry()">✅ Add Karo</button>
+        </div>
+        <!-- List -->
+        <div id="smEntryList"></div>
+      </div>
     </div>
 
     <!-- New Quiz Form -->
     <div class="card" id="newQuizForm" style="display:none;">
       <div class="card-title">➕ Naya Quiz Banao</div>
+      <div style="background:rgba(21,101,192,0.06);border-radius:10px;padding:10px;margin-bottom:12px;font-size:0.76rem;color:var(--accent);">
+        💡 Pehle <b>📚 Manage</b> button se Subject/Section/Topic add karo, phir yahan select karo.
+      </div>
       <div class="field-group">
         <label class="field-label">Quiz Naam:</label>
         <input type="text" class="inp" id="nqName" placeholder="Jaise: UP GK Mock Test 1..." />
       </div>
       <div class="card-grid">
         <div class="field-group">
-          <label class="field-label">Subject (optional):</label>
-          <input type="text" class="inp" id="nqSubject" placeholder="GK, Math, Reasoning..." />
+          <label class="field-label">Subject:</label>
+          <select class="inp" id="nqSubject" onchange="nqOnSubjectChange()">
+            <option value="">-- Select Subject --</option>
+          </select>
         </div>
         <div class="field-group">
-          <label class="field-label">Topic (optional):</label>
-          <input type="text" class="inp" id="nqTopic" placeholder="History, Geography..." />
+          <label class="field-label">Section:</label>
+          <select class="inp" id="nqSection" onchange="nqOnSectionChange()">
+            <option value="">-- Select Section --</option>
+          </select>
         </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Topic:</label>
+        <select class="inp" id="nqTopic">
+          <option value="">-- Select Topic --</option>
+        </select>
       </div>
       <div class="card-grid">
         <div class="field-group">
@@ -1142,18 +1189,15 @@ window.addEventListener('popstate', function(e){
   }
 });
 
-// Intercept attempt page hardware back — confirm before leaving quiz
+// Intercept attempt page hardware back — auto pause on leaving quiz
 function _handleAttemptBack(){
   if(getActivePage() === 'attempt'){
     if(!_att.submitted){
-      if(!confirm('Quiz chhod dena chahte ho? Progress kho jayegi!')){ 
-        // Re-push state so back button still works next time
-        history.pushState({appPage:'attempt'}, '', '');
-        return false; 
-      }
+      attSavePauseState();
+      if(_att.timer) clearInterval(_att.timer);
+      if(_att.perQTimer) clearInterval(_att.perQTimer);
+      showToast('⏸ Quiz pause ho gayi — resume kar sakte ho!','info');
     }
-    if(_att.timer) clearInterval(_att.timer);
-    if(_att.perQTimer) clearInterval(_att.perQTimer);
   }
   return true;
 }
@@ -1292,6 +1336,7 @@ function attachListeners(){
   if(!_db||!_uid) return;
   dbg('Listeners attach ho rahe hain...','info');
   loadSavedQ();
+  _smLoadFromCloud();
   _hlAttachFirebaseListeners();
 
   // Quiz listener
@@ -1399,15 +1444,212 @@ function renderHome(){
 }
 
 // ================================================================
+// SUBJECT / SECTION / TOPIC MANAGER
+// ================================================================
+var _smEntriesKey = 'ts_sm_entries'; // localStorage key
+
+function _smGetEntries(){
+  try{ return JSON.parse(localStorage.getItem(_smEntriesKey)||'[]'); }catch(e){ return []; }
+}
+function _smSaveEntries(arr){
+  localStorage.setItem(_smEntriesKey, JSON.stringify(arr));
+  // Also sync to Firebase so cross-device kaam kare
+  if(_db&&_uid){
+    _db.collection('users').doc(_uid).collection('ts_meta').doc('subjectEntries')
+      .set({entries:arr}).catch(function(){});
+  }
+}
+function _smLoadFromCloud(){
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('ts_meta').doc('subjectEntries').get()
+    .then(function(d){
+      if(d.exists&&d.data().entries){
+        localStorage.setItem(_smEntriesKey, JSON.stringify(d.data().entries));
+      }
+    }).catch(function(){});
+}
+function openSubjectManager(){
+  _smLoadFromCloud();
+  document.getElementById('subjectManagerOverlay').style.display='block';
+  renderSmList();
+}
+function closeSubjectManager(){
+  document.getElementById('subjectManagerOverlay').style.display='none';
+}
+function renderSmList(){
+  var entries=_smGetEntries();
+  var el=document.getElementById('smEntryList');
+  if(!el) return;
+  if(!entries.length){
+    el.innerHTML='<div style="text-align:center;color:var(--text2);font-size:0.8rem;padding:16px;">Abhi koi entry nahi hai. Upar se add karo.</div>';
+    return;
+  }
+  // Group by subject > section > topic
+  var grouped={};
+  entries.forEach(function(e,i){
+    var s=e.subject||'(No Subject)';
+    var sec=e.section||'(No Section)';
+    if(!grouped[s]) grouped[s]={};
+    if(!grouped[s][sec]) grouped[s][sec]=[];
+    grouped[s][sec].push({topic:e.topic,idx:i});
+  });
+  var html='';
+  Object.keys(grouped).forEach(function(sub){
+    html+='<div style="margin-bottom:12px;">';
+    html+='<div style="font-weight:800;font-size:0.85rem;color:var(--accent);padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:6px;">📚 '+escHtml(sub)+'</div>';
+    Object.keys(grouped[sub]).forEach(function(sec){
+      html+='<div style="margin-left:10px;margin-bottom:6px;">';
+      html+='<div style="font-weight:700;font-size:0.78rem;color:var(--orange);margin-bottom:4px;">📂 '+escHtml(sec)+'</div>';
+      grouped[sub][sec].forEach(function(t){
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-left:16px;margin-bottom:3px;">';
+        html+='<span style="font-size:0.78rem;flex:1;color:var(--text);">📖 '+escHtml(t.topic||'(No Topic)')+'</span>';
+        html+='<button onclick="smDeleteEntry('+t.idx+')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.85rem;padding:2px 6px;" title="Delete">🗑</button>';
+        html+='</div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+function smAddEntry(){
+  var sub=(document.getElementById('smSubjectInput').value||'').trim();
+  var sec=(document.getElementById('smSectionInput').value||'').trim();
+  var top=(document.getElementById('smTopicInput').value||'').trim();
+  if(!sub&&!sec&&!top){ showToast('Kuch toh daalo!','error'); return; }
+  var entries=_smGetEntries();
+  // Check duplicate
+  var exists=entries.some(function(e){
+    return e.subject===sub&&e.section===sec&&e.topic===top;
+  });
+  if(exists){ showToast('Yah entry pehle se hai!','error'); return; }
+  entries.push({subject:sub,section:sec,topic:top});
+  _smSaveEntries(entries);
+  document.getElementById('smSubjectInput').value='';
+  document.getElementById('smSectionInput').value='';
+  document.getElementById('smTopicInput').value='';
+  renderSmList();
+  showToast('✅ Entry add ho gayi!','success');
+}
+function smDeleteEntry(idx){
+  if(!confirm('Is entry ko delete karna hai?')) return;
+  var entries=_smGetEntries();
+  entries.splice(idx,1);
+  _smSaveEntries(entries);
+  renderSmList();
+  showToast('Entry delete ho gayi','info');
+}
+
+// ================================================================
+// AUTO PAUSE & RESUME (quiz state + timer save on back/refresh)
+// ================================================================
+var _attPauseKey = 'ts_att_paused';
+
+function attSavePauseState(){
+  if(!_att||!_att.quizId||_att.submitted) return;
+  var state={
+    quizId: _att.quizId,
+    quiz: _att.quiz,
+    answers: _att.answers,
+    marked: _att.marked,
+    skipped: _att.skipped,
+    difficulty: _att.difficulty,
+    currentQ: _att.currentQ,
+    timeLeft: _att.timeLeft,
+    startTime: _att.startTime,
+    savedAt: Date.now()
+  };
+  try{ localStorage.setItem(_attPauseKey, JSON.stringify(state)); }catch(e){}
+}
+function attClearPauseState(){
+  localStorage.removeItem(_attPauseKey);
+}
+function attHasPausedState(quizId){
+  try{
+    var s=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
+    if(!s||!s.quizId) return null;
+    // Expire after 24 hours
+    if(Date.now()-s.savedAt > 24*60*60*1000){ attClearPauseState(); return null; }
+    if(quizId&&s.quizId!==quizId) return null;
+    return s;
+  }catch(e){ return null; }
+}
+function attResumeFromPause(saved){
+  var quiz=STATE.quizzes.find(function(q){return q.id===saved.quizId;});
+  if(!quiz){ attClearPauseState(); return false; }
+  if(_att.timer) clearInterval(_att.timer);
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+  _att={
+    quizId:saved.quizId, quiz:saved.quiz,
+    answers:saved.answers, marked:saved.marked,
+    skipped:saved.skipped, difficulty:saved.difficulty,
+    currentQ:saved.currentQ, timer:null,
+    timeLeft:saved.timeLeft||0, perQTimer:null,
+    startTime:saved.startTime||Date.now(),
+    submitted:false, answerRevealed:false
+  };
+  navTo('attempt',{title:'📝 '+saved.quiz.name},true);
+  document.getElementById('topbarTitle').textContent='📝 '+saved.quiz.name;
+  // Restart full timer from where it was paused
+  if(saved.quiz.timer&&saved.quiz.timer.type==='full'&&saved.timeLeft>0){
+    document.getElementById('atTimer').style.display='inline-flex';
+    updateTimerDisplay();
+    _att.timer=setInterval(function(){
+      if(_att.submitted){clearInterval(_att.timer);return;}
+      _att.timeLeft--;
+      updateTimerDisplay();
+      if(_att.timeLeft<=0){
+        clearInterval(_att.timer);
+        showToast('⏱ Time Up! Auto-submitting...','error');
+        setTimeout(function(){submitAttempt(true);},1000);
+      }
+    },1000);
+  } else if(saved.quiz.timer&&saved.quiz.timer.type==='full'){
+    document.getElementById('atTimer').style.display='none';
+  } else {
+    document.getElementById('atTimer').style.display='none';
+  }
+  renderCurrentQ();
+  showToast('▶ Quiz resume ho gayi — wahin se jahan chhodi thi!','success');
+  return true;
+}
+
+// ================================================================
 // CREATE FLOW
 // ================================================================
 function openNewQuizForm(){
   var f=document.getElementById('newQuizForm');
-  ['nqName','nqSubject','nqTopic'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('nqName').value='';
   document.getElementById('nqTimerType').value='none';
   document.getElementById('nqTimerValRow').style.display='none';
+  nqPopulateSubjects();
   f.style.display='block';
   f.scrollIntoView({behavior:'smooth'});
+}
+function nqPopulateSubjects(){
+  var entries=_smGetEntries();
+  var subjects=[...new Set(entries.map(function(e){return e.subject;}).filter(Boolean))];
+  var sel=document.getElementById('nqSubject');
+  sel.innerHTML='<option value="">-- Select Subject --</option>'+subjects.map(function(s){return '<option value="'+escHtml(s)+'">'+escHtml(s)+'</option>';}).join('');
+  nqOnSubjectChange();
+}
+function nqOnSubjectChange(){
+  var sub=document.getElementById('nqSubject').value;
+  var entries=_smGetEntries();
+  var sections=[...new Set(entries.filter(function(e){return !sub||e.subject===sub;}).map(function(e){return e.section;}).filter(Boolean))];
+  var sel=document.getElementById('nqSection');
+  sel.innerHTML='<option value="">-- Select Section --</option>'+sections.map(function(s){return '<option value="'+escHtml(s)+'">'+escHtml(s)+'</option>';}).join('');
+  nqOnSectionChange();
+}
+function nqOnSectionChange(){
+  var sub=document.getElementById('nqSubject').value;
+  var sec=document.getElementById('nqSection').value;
+  var entries=_smGetEntries();
+  var topics=[...new Set(entries.filter(function(e){
+    return (!sub||e.subject===sub)&&(!sec||e.section===sec);
+  }).map(function(e){return e.topic;}).filter(Boolean))];
+  var sel=document.getElementById('nqTopic');
+  sel.innerHTML='<option value="">-- Select Topic --</option>'+topics.map(function(t){return '<option value="'+escHtml(t)+'">'+escHtml(t)+'</option>';}).join('');
 }
 function onTimerTypeChange(){
   var t=document.getElementById('nqTimerType').value;
@@ -1421,13 +1663,19 @@ function onTimerTypeChange(){
 function saveNewQuiz(){
   var name=(document.getElementById('nqName').value||'').trim();
   if(!name){ showToast('Quiz naam daalo!','error'); return; }
+  var subject=(document.getElementById('nqSubject').value||'').trim();
+  var section=(document.getElementById('nqSection').value||'').trim();
+  var topic=(document.getElementById('nqTopic').value||'').trim();
   var timerType=document.getElementById('nqTimerType').value;
   var timerVal=parseInt(document.getElementById('nqTimerVal').value)||60;
+  var quizDocId='quiz_'+Date.now(); // unique doc ID for Firebase
   var quiz={
     id: Date.now(),
+    docId: quizDocId,
     name: name,
-    subjectName: (document.getElementById('nqSubject').value||'').trim(),
-    topicName: (document.getElementById('nqTopic').value||'').trim(),
+    subjectName: subject,
+    sectionName: section,
+    topicName: topic,
     timer: {type:timerType, value:timerVal},
     questions: [],
     createdAt: new Date().toLocaleDateString('hi-IN'),
@@ -1449,7 +1697,7 @@ function renderCreateList(){
   container.innerHTML = quizzes.map(function(q){
     var attempts=STATE.attempts.filter(function(a){ return a.quizId===q.id; });
     var bestPct=attempts.length?Math.max.apply(null,attempts.map(function(a){ return a.total>0?Math.round(a.score/a.total*100):0; })):null;
-    var tags=[q.subjectName,q.topicName].filter(Boolean).join(' › ');
+    var tags=[q.subjectName,q.sectionName,q.topicName].filter(Boolean).join(' › ');
     var timerLabel=q.timer&&q.timer.type!=='none'?(q.timer.type==='full'?q.timer.value+' min':q.timer.value+'s/Q'):'No Timer';
     return '<div class="card" style="margin-bottom:10px;">' +
       '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
@@ -1801,6 +2049,7 @@ function renderPracticeList(){
           '<div style="font-weight:800;font-size:0.92rem;">'+escHtml(q.name)+'</div>'+
           (tags?'<div style="font-size:0.7rem;color:var(--accent);margin-top:2px;display:flex;gap:4px;flex-wrap:wrap;">'+
             (q.subjectName?'<span style="background:rgba(21,101,192,0.1);border-radius:20px;padding:1px 8px;">📚 '+escHtml(q.subjectName)+'</span>':'')+
+            (q.sectionName?'<span style="background:rgba(230,81,0,0.1);border-radius:20px;padding:1px 8px;color:var(--orange);">📂 '+escHtml(q.sectionName)+'</span>':'')+
             (q.topicName?'<span style="background:rgba(46,125,50,0.1);border-radius:20px;padding:1px 8px;color:var(--green);">📖 '+escHtml(q.topicName)+'</span>':'')+
           '</div>':'')+
           '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">'+
@@ -1837,6 +2086,17 @@ function startAttempt(quizId, shuffleQs){
   var quiz=STATE.quizzes.find(function(q){ return q.id===quizId; });
   if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
   if(!(quiz.questions||[]).length){ showToast('Is quiz mein koi question nahi!','error'); return; }
+
+  // Check paused state for THIS quiz
+  var paused=attHasPausedState(quizId);
+  if(paused){
+    if(confirm('Is quiz ki paused progress mili hai!\n\nQ'+(paused.currentQ+1)+' par ruke the, '+(paused.answers.filter(function(a){return a!==null;}).length)+' answers diye the.\n\nResume karo? (Cancel = Fresh start)')){
+      attResumeFromPause(paused);
+      return;
+    } else {
+      attClearPauseState();
+    }
+  }
 
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
@@ -2086,6 +2346,7 @@ function confirmSubmit(){
 function submitAttempt(auto){
   if(_att.submitted) return;
   _att.submitted=true;
+  attClearPauseState(); // clear saved pause on submit
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
 
@@ -3486,15 +3747,25 @@ showPage('loading');
 history.replaceState({appPage:'loading'}, '', '');
 dbg('App script ready — Firebase SDK load ho raha hai...','info');
 
+// Save quiz state on page refresh or tab close
+window.addEventListener('beforeunload', function(){
+  if(getActivePage()==='attempt'&&_att&&!_att.submitted){
+    attSavePauseState();
+  }
+});
+// Save quiz state when app goes to background on mobile
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden&&getActivePage()==='attempt'&&_att&&!_att.submitted){
+    attSavePauseState();
+  }
+});
+
 // Override popstate to intercept attempt page confirm
 window.addEventListener('popstate', function(e){
-  // If on attempt page and not submitted, confirm first
+  // If on attempt page and not submitted, auto-pause and save
   if(getActivePage() === 'attempt' && _att && !_att.submitted){
-    if(!confirm('Quiz chhod dena chahte ho? Progress kho jayegi!')){
-      // Put the state back
-      history.pushState({appPage:'attempt'}, '', '');
-      return;
-    }
+    attSavePauseState();
+    showToast('⏸ Quiz pause ho gayi — resume kar sakte ho!','info');
     if(_att.timer) clearInterval(_att.timer);
     if(_att.perQTimer) clearInterval(_att.perQTimer);
   }
