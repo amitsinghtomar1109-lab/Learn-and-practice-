@@ -5478,6 +5478,11 @@ function fcResetAndReplay(){
 
 // BOOT
 // ================================================================
+// Force-clear any leftover "active" page classes from a previous stale
+// DOM state (e.g. browser restored the tab from background without a
+// full reload) so the app always visibly starts from the loading screen.
+document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+_navStack = [];
 showPage('loading');
 // Push initial state so popstate fires on first back press
 history.replaceState({appPage:'loading'}, '', '');
@@ -5491,10 +5496,28 @@ window.addEventListener('beforeunload', function(){
     attSavePauseState();
   }
 });
-// Save quiz state when app goes to background on mobile
+// Save quiz state when app goes to background on mobile.
+// Also: if the tab is restored to foreground and we're stuck on the
+// flashcard play page with no session ever loaded (or Firebase auth
+// lost), pause/exit that session and send the user back to a fresh Home
+// instead of leaving them staring at a dead "Loading..." screen.
 document.addEventListener('visibilitychange', function(){
-  if(document.hidden&&getActivePage()==='attempt'&&_att&&!_att.submitted){
-    attSavePauseState();
+  if(document.hidden){
+    if(getActivePage()==='attempt'&&_att&&!_att.submitted){
+      attSavePauseState();
+    }
+    return;
+  }
+  // Tab just became visible again
+  if(getActivePage()==='fc-play' && !_fcSession){
+    dbg('Tab resumed stuck on flashcard loading — recovering to Home','warn');
+    _navStack = [];
+    if(_uid){
+      goHome();
+    } else {
+      showPage('loading');
+      if(_auth) _auth.onAuthStateChanged(onAuth);
+    }
   }
 });
 
