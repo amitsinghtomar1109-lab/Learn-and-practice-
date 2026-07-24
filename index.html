@@ -580,6 +580,20 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
 .fc-saved-eye-btn{flex:0 0 auto;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:3px 8px;font-size:0.82rem;color:var(--text2);cursor:pointer;}
 .fc-saved-blur{color:var(--text2);font-style:italic;opacity:0.55;font-weight:500;}
 .fc-saved-card .fc-saved-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.fc-mark-btn{
+  position:relative;flex-shrink:0;width:32px;height:30px;border:none;border-radius:8px;
+  background:rgba(198,40,40,0.1);color:#c62828;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:all 0.15s;
+}
+.fc-mark-btn:active{transform:scale(0.9);}
+.fc-mark-btn:hover{background:rgba(198,40,40,0.18);}
+.fc-mark-count{
+  position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;
+  background:#c62828;color:#fff;font-size:0.6rem;font-weight:800;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  line-height:1;
+}
 .fc-saved-tag{font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(21,101,192,0.1);color:var(--accent);}
 .fc-saved-tag.tag-hard{background:rgba(198,40,40,0.12);color:#c62828;}
 .fc-saved-tag.tag-mod{background:rgba(249,168,37,0.16);color:#a3763f;}
@@ -1356,6 +1370,7 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
       <div style="display:flex;gap:8px;margin-bottom:10px;">
         <button class="btn btn-sm fc-saved-viewtab active" id="fcSavedTabTopic" onclick="fcSetSavedView('topic')" style="flex:1;">&#127991; Subject / Topic</button>
         <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabResponse" onclick="fcSetSavedView('response')" style="flex:1;">&#128202; Response Wise</button>
+        <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabMarked" onclick="fcSetSavedView('marked')" style="flex:1;">&#9888; Marked</button>
       </div>
       <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;margin-bottom:10px;">
         <option value="">Sab dikhaiye</option>
@@ -4836,13 +4851,33 @@ function fcSaveCardToFolder(deckId, cardId, front, back, reason, toughType){
     savedAt: existing ? existing.savedAt : Date.now(),
     manual: reason==='manual' ? true : !!(existing && existing.manual),
     autoTough: reason==='auto' ? true : !!(existing && existing.autoTough),
-    toughType: (reason==='auto' ? toughType : (existing ? existing.toughType : null)) || null
+    toughType: (reason==='auto' ? toughType : (existing ? existing.toughType : null)) || null,
+    notRememberedCount: existing ? (existing.notRememberedCount||0) : 0
   };
   return _db.collection('users').doc(_uid).collection('fc_saved').doc(docId).set(entry);
 }
 function fcRemoveSavedCard(docId){
   if(!_db||!_uid) return;
   _db.collection('users').doc(_uid).collection('fc_saved').doc(docId).delete().catch(function(){});
+}
+// Mark a saved card as "still didn't remember it" during revision. Each tap
+// bumps the count (1, 2, 3...) so the person can see how many revision
+// passes this particular card has survived without sticking.
+function fcMarkStillNotRemembered(docId){
+  if(!_db||!_uid) return;
+  var entry = _fcSavedCards.find(function(s){ return s.id===docId; });
+  if(!entry) return;
+  var newCount = (entry.notRememberedCount||0) + 1;
+  // Optimistic local update so the badge count updates instantly.
+  entry.notRememberedCount = newCount;
+  renderFcSavedPage();
+  _db.collection('users').doc(_uid).collection('fc_saved').doc(docId)
+    .update({ notRememberedCount: newCount })
+    .catch(function(e){
+      entry.notRememberedCount = newCount - 1; // rollback on failure
+      renderFcSavedPage();
+      showToast('Mark karne me error: '+e.message,'error');
+    });
 }
 function fcIsCardSaved(deckId, cardId){
   var docId = fcSavedDocId(deckId, cardId);
@@ -4907,8 +4942,10 @@ function fcSetSavedView(mode){
   _fcSavedView = mode;
   var tTopic = document.getElementById('fcSavedTabTopic');
   var tResp  = document.getElementById('fcSavedTabResponse');
+  var tMarked = document.getElementById('fcSavedTabMarked');
   if(tTopic) tTopic.classList.toggle('active', mode==='topic');
   if(tResp)  tResp.classList.toggle('active', mode==='response');
+  if(tMarked) tMarked.classList.toggle('active', mode==='marked');
   fcPopulateSavedFilter();
   renderFcSavedPage();
 }
@@ -4925,10 +4962,12 @@ function fcPopulateSavedFilter(){
     Object.keys(groups).sort().forEach(function(g){
       opts.push('<option value="'+escHtml(g)+'">'+escHtml(g)+'</option>');
     });
-  } else {
+  } else if(_fcSavedView==='response'){
     opts.push('<option value="hard">Tough</option>');
     opts.push('<option value="moderate">Moderate</option>');
   }
+  // 'marked' view has no extra filter — it always shows all marked cards, sorted by count
+  sel.style.display = (_fcSavedView==='marked') ? 'none' : '';
   sel.innerHTML = opts.join('');
   if(opts.some(function(o){ return o.indexOf('value="'+curVal+'"')!==-1; })) sel.value = curVal;
 }
@@ -4995,7 +5034,7 @@ function renderFcSavedPage(){
       return '<div class="fc-saved-group-title">&#127991; '+escHtml(key)+'</div>'+
         groups[key].map(fcRenderSavedCardHtml).join('');
     }).join('');
-  } else {
+  } else if(_fcSavedView==='response'){
     var buckets = { hard: [], moderate: [] };
     list.forEach(function(c){
       if(!c.autoTough) return; // manual-only saves have no response bucket
@@ -5020,18 +5059,34 @@ function renderFcSavedPage(){
         '<div>Is response category me koi card nahi hai.</div></div>';
     }
     container.innerHTML = html;
+  } else {
+    // 'marked' view — cards the user has explicitly flagged during revision
+    // as "still didn't remember", separated out from the rest, worst first.
+    var marked = list.filter(function(c){ return (c.notRememberedCount||0) > 0; });
+    marked.sort(function(a,b){ return (b.notRememberedCount||0)-(a.notRememberedCount||0); });
+    if(!marked.length){
+      container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
+        '<div style="font-size:2rem;margin-bottom:6px;">&#9888;</div>'+
+        '<div>Abhi koi card mark nahi hui.</div>'+
+        '<div style="font-size:0.74rem;margin-top:4px;">Revision ke dauran jo card fir se yaad na aaye, uspar &#9888; button dabao — wo yahan alag se dikhega.</div></div>';
+    } else {
+      container.innerHTML = '<div class="fc-saved-group-title">&#9888; Baar-baar bhoola gaya</div>' + marked.map(fcRenderSavedCardHtml).join('');
+    }
   }
   container.onclick = function(e){
     var rmBtn = e.target.closest('.fc-saved-remove-btn');
     if(rmBtn) fcRemoveSavedCardConfirm(rmBtn.getAttribute('data-sid'));
     var eyeBtn = e.target.closest('.fc-saved-eye-btn');
     if(eyeBtn) fcToggleSavedPart(eyeBtn.getAttribute('data-sid'), eyeBtn.getAttribute('data-part'));
+    var markBtn = e.target.closest('.fc-saved-mark-btn');
+    if(markBtn) fcMarkStillNotRemembered(markBtn.getAttribute('data-sid'));
   };
 }
 function fcRenderSavedCardHtml(c){
   var tags = '';
   if(c.autoTough) tags += '<span class="fc-saved-tag '+(c.toughType==='moderate'?'tag-mod':'tag-hard')+'">'+(c.toughType==='moderate'?'Moderate':'Tough')+' 3x+</span>';
   if(c.manual) tags += '<span class="fc-saved-tag tag-manual">&#128278; Manual Save</span>';
+  if((c.notRememberedCount||0) > 0) tags += '<span class="fc-saved-tag tag-hard">&#9888; Phir bhi yaad nahi: '+c.notRememberedCount+'x</span>';
   var qHidden = _fcSavedHiddenQ[c.id];
   var aHidden = _fcSavedHiddenA[c.id];
   return '<div class="fc-saved-card">'+
@@ -5044,8 +5099,12 @@ function fcRenderSavedCardHtml(c){
       '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="a" title="'+(aHidden?'Jawab dikhao':'Jawab chhupao')+'">'+(aHidden?'&#128065;':'&#128064;')+'</button>'+
     '</div>'+
     '<div class="fc-saved-meta">'+tags+'</div>'+
-    '<div style="display:flex;gap:6px;margin-top:8px;">'+
+    '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">'+
       '<button class="btn btn-xs btn-danger fc-saved-remove-btn" data-sid="'+escHtml(c.id)+'">&#128465; Remove</button>'+
+      '<button class="fc-mark-btn fc-saved-mark-btn" data-sid="'+escHtml(c.id)+'" title="Abhi bhi yaad nahi &#8212; mark karo">'+
+        '<svg viewBox="0 0 22 20" width="18" height="17"><polygon points="11,19 0.5,1 21.5,1" fill="currentColor"/><circle cx="11" cy="6.3" r="1.35" fill="#fff"/><rect x="9.9" y="9" width="2.2" height="6.2" rx="1.1" fill="#fff"/></svg>'+
+        ((c.notRememberedCount||0) > 1 ? '<span class="fc-mark-count">'+c.notRememberedCount+'</span>' : '')+
+      '</button>'+
     '</div>'+
   '</div>';
 }
