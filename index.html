@@ -565,15 +565,20 @@ body.fc-immersive{overflow:hidden;}
 .fc-nav-btn.fc-del-btn:not(:disabled):hover{background:rgba(198,40,40,0.18);border-color:var(--red);}
 #fcSaveCardBtn{
   flex:0 0 auto;width:46px;background:rgba(255,179,0,0.1);color:#e6a100;
-  border-color:rgba(255,179,0,0.3);font-size:1rem;
+  border-color:rgba(255,179,0,0.3);font-size:1rem;gap:4px;
+  transition:all 0.15s;white-space:nowrap;overflow:hidden;
 }
-#fcSaveCardBtn.active{background:#ffb300;color:#fff;border-color:#ffb300;}
+#fcSaveCardBtn.active{background:#ffb300;color:#fff;border-color:#ffb300;width:auto;padding:11px 14px;font-size:0.8rem;font-weight:800;}
 body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
 .fc-saved-viewtab{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);font-weight:700;}
 .fc-saved-viewtab.active{background:#ffb300;color:#fff;border-color:#ffb300;}
 .fc-saved-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
 .fc-saved-card .fc-saved-q{font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:3px;}
 .fc-saved-card .fc-saved-a{font-size:0.78rem;color:#2e7d32;font-weight:600;}
+.fc-saved-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:3px;}
+.fc-saved-row > div{flex:1;min-width:0;}
+.fc-saved-eye-btn{flex:0 0 auto;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:3px 8px;font-size:0.82rem;color:var(--text2);cursor:pointer;}
+.fc-saved-blur{color:var(--text2);font-style:italic;opacity:0.55;font-weight:500;}
 .fc-saved-card .fc-saved-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .fc-saved-tag{font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(21,101,192,0.1);color:var(--accent);}
 .fc-saved-tag.tag-hard{background:rgba(198,40,40,0.12);color:#c62828;}
@@ -1352,9 +1357,17 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
         <button class="btn btn-sm fc-saved-viewtab active" id="fcSavedTabTopic" onclick="fcSetSavedView('topic')" style="flex:1;">&#127991; Subject / Topic</button>
         <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabResponse" onclick="fcSetSavedView('response')" style="flex:1;">&#128202; Response Wise</button>
       </div>
-      <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;">
+      <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;margin-bottom:10px;">
         <option value="">Sab dikhaiye</option>
       </select>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllAnswers()">&#128064; Sab Jawab Chhupao</button>
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllAnswers()">&#128065; Sab Jawab Dikhao</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllQuestions()">&#128064; Sab Sawaal Chhupao</button>
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllQuestions()">&#128065; Sab Sawaal Dikhao</button>
+      </div>
     </div>
     <div id="fcSavedList"></div>
   </div>
@@ -4841,15 +4854,34 @@ function fcToggleSaveCurrentCard(){
   if(!st.queue||st.pos>=st.queue.length) return;
   var card = st.queue[st.pos];
   var docId = fcSavedDocId(st.deckId, card.cardId);
-  if(fcIsCardSaved(st.deckId, card.cardId)){
-    fcRemoveSavedCard(docId);
+  var wasSaved = fcIsCardSaved(st.deckId, card.cardId);
+  if(wasSaved){
+    // Optimistically remove from local list right away so the button
+    // un-highlights instantly, instead of waiting for the Firestore
+    // snapshot listener to come back.
+    _fcSavedCards = _fcSavedCards.filter(function(s){ return s.id!==docId; });
+    fcUpdateSaveBtnUI();
     showToast('Card saved folder se hata diya','info');
+    fcRemoveSavedCard(docId);
   } else {
-    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'manual').then(function(){
-      showToast('🔖 Card save ho gaya!','success');
-    }).catch(function(e){ showToast('Save error: '+e.message,'error'); });
+    // Optimistically add a local placeholder entry so the button turns
+    // dark/active the instant the user taps it.
+    _fcSavedCards.push({
+      id: docId, deckId: String(st.deckId), cardId: String(card.cardId),
+      front: card.front, back: card.back,
+      deckName: (function(){ var d=_fcDecks.find(function(x){return String(x.id)===String(st.deckId);})||_fcTempPlayDeck; return d?d.name:'(Unknown Deck)'; })(),
+      topic: (function(){ var d=_fcDecks.find(function(x){return String(x.id)===String(st.deckId);})||_fcTempPlayDeck; return d?(d.topic||''):''; })(),
+      savedAt: Date.now(), manual: true, autoTough: false, toughType: null
+    });
+    fcUpdateSaveBtnUI();
+    showToast('✅ Card save ho gaya!','success');
+    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'manual').catch(function(e){
+      // Roll back the optimistic add if the write actually failed.
+      _fcSavedCards = _fcSavedCards.filter(function(s){ return s.id!==docId; });
+      fcUpdateSaveBtnUI();
+      showToast('Save error: '+e.message,'error');
+    });
   }
-  fcUpdateSaveBtnUI();
 }
 function fcUpdateSaveBtnUI(){
   var st = _fcSession;
@@ -4859,10 +4891,18 @@ function fcUpdateSaveBtnUI(){
   var saved = fcIsCardSaved(st.deckId, card.cardId);
   btn.classList.toggle('active', saved);
   btn.title = saved ? 'Saved (tap to remove)' : 'Save this card';
+  var icon = document.getElementById('fcSaveCardBtnIcon');
+  var label = document.getElementById('fcSaveCardBtnLabel');
+  if(icon) icon.style.display = saved ? 'none' : '';
+  if(label) label.style.display = saved ? '' : 'none';
 }
 
 // ---- Saved Cards Page ----
 var _fcSavedView = 'topic'; // 'topic' | 'response'
+// Per-card visibility state, keyed by saved-card doc id. true = hidden.
+// Not persisted — resets each time the page is opened, review session ki tarah.
+var _fcSavedHiddenQ = {};
+var _fcSavedHiddenA = {};
 function fcSetSavedView(mode){
   _fcSavedView = mode;
   var tTopic = document.getElementById('fcSavedTabTopic');
@@ -4894,6 +4934,29 @@ function fcPopulateSavedFilter(){
 }
 function fcSavedCardGroupKey(c){
   return (c.deckName||'(Unknown)') + (c.topic ? ' — '+c.topic : '');
+}
+// ---- Per-card show/hide toggles ----
+function fcToggleSavedPart(docId, part){
+  if(part==='q') _fcSavedHiddenQ[docId] = !_fcSavedHiddenQ[docId];
+  else _fcSavedHiddenA[docId] = !_fcSavedHiddenA[docId];
+  renderFcSavedPage();
+}
+// ---- Global show/hide all (for whichever cards are currently listed) ----
+function fcHideAllAnswers(){
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenA[c.id] = true; _fcSavedHiddenQ[c.id] = false; });
+  renderFcSavedPage();
+}
+function fcShowAllAnswers(){
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenA[c.id] = false; });
+  renderFcSavedPage();
+}
+function fcHideAllQuestions(){
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenQ[c.id] = true; _fcSavedHiddenA[c.id] = false; });
+  renderFcSavedPage();
+}
+function fcShowAllQuestions(){
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenQ[c.id] = false; });
+  renderFcSavedPage();
 }
 function fcRemoveSavedCardConfirm(docId){
   var c = _fcSavedCards.find(function(s){ return s.id===docId; });
@@ -4961,15 +5024,25 @@ function renderFcSavedPage(){
   container.onclick = function(e){
     var rmBtn = e.target.closest('.fc-saved-remove-btn');
     if(rmBtn) fcRemoveSavedCardConfirm(rmBtn.getAttribute('data-sid'));
+    var eyeBtn = e.target.closest('.fc-saved-eye-btn');
+    if(eyeBtn) fcToggleSavedPart(eyeBtn.getAttribute('data-sid'), eyeBtn.getAttribute('data-part'));
   };
 }
 function fcRenderSavedCardHtml(c){
   var tags = '';
   if(c.autoTough) tags += '<span class="fc-saved-tag '+(c.toughType==='moderate'?'tag-mod':'tag-hard')+'">'+(c.toughType==='moderate'?'Moderate':'Tough')+' 3x+</span>';
   if(c.manual) tags += '<span class="fc-saved-tag tag-manual">&#128278; Manual Save</span>';
+  var qHidden = _fcSavedHiddenQ[c.id];
+  var aHidden = _fcSavedHiddenA[c.id];
   return '<div class="fc-saved-card">'+
-    '<div class="fc-saved-q">Q: '+escHtml(c.front)+'</div>'+
-    '<div class="fc-saved-a">A: '+escHtml(c.back)+'</div>'+
+    '<div class="fc-saved-row">'+
+      '<div class="fc-saved-q">Q: '+(qHidden ? '<span class="fc-saved-blur">Sawaal chhupa hai</span>' : escHtml(c.front))+'</div>'+
+      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="q" title="'+(qHidden?'Sawaal dikhao':'Sawaal chhupao')+'">'+(qHidden?'&#128065;':'&#128064;')+'</button>'+
+    '</div>'+
+    '<div class="fc-saved-row">'+
+      '<div class="fc-saved-a">A: '+(aHidden ? '<span class="fc-saved-blur">Jawab chhupa hai</span>' : escHtml(c.back))+'</div>'+
+      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="a" title="'+(aHidden?'Jawab dikhao':'Jawab chhupao')+'">'+(aHidden?'&#128065;':'&#128064;')+'</button>'+
+    '</div>'+
     '<div class="fc-saved-meta">'+tags+'</div>'+
     '<div style="display:flex;gap:6px;margin-top:8px;">'+
       '<button class="btn btn-xs btn-danger fc-saved-remove-btn" data-sid="'+escHtml(c.id)+'">&#128465; Remove</button>'+
@@ -5596,7 +5669,7 @@ function fcRenderCurrentCard(){
     '</div>'+
     '<div class="fc-nav-row">'+
       '<button class="fc-nav-btn" id="fcPrevBtn" onclick="fcPrevCard()"'+(st.pos<=0?' disabled':'')+'>&#8592; Previous</button>'+
-      '<button class="fc-nav-btn" id="fcSaveCardBtn" onclick="fcToggleSaveCurrentCard()" title="Save this card">&#128278;</button>'+
+      '<button class="fc-nav-btn" id="fcSaveCardBtn" onclick="fcToggleSaveCurrentCard()" title="Save this card"><span id="fcSaveCardBtnIcon">&#128278;</span><span id="fcSaveCardBtnLabel" style="display:none;">&#10003; Saved</span></button>'+
       '<button class="fc-nav-btn fc-del-btn" onclick="fcDeleteCurrentCard()" title="Is card ko delete karo">&#128465;</button>'+
       '<button class="fc-nav-btn" id="fcNextBtn" onclick="fcNextCard()"'+(st.pos>=st.queue.length-1?' disabled':'')+'>Next &#8594;</button>'+
     '</div>'+
