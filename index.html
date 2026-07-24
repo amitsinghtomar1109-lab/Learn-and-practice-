@@ -3721,64 +3721,25 @@ function viewLastResult(quizId){
     if(link) link.href = url;
   } catch(e){ dbg('PWA manifest error: '+e.message,'warn'); }
 
-  // 2. Service Worker for offline caching
+  // 2. Service Worker — DISABLED.
+  // Blob-URL service workers are blocked by the browser on GitHub Pages
+  // (confirmed via console: "URL protocol of the script (blob:...) is not
+  // supported"), so this never actually registered — it only produced a
+  // harmless-looking but confusing error on every load. A real SW would
+  // need its own separate sw.js file served from the same origin, which
+  // this single-file setup doesn't have, so we skip it entirely instead of
+  // pretending to try.
+  // Also: unregister any leftover SW from earlier versions of this app, and
+  // clear any caches they made, so no old device can be stuck on stale files.
   if('serviceWorker' in navigator){
-    // Inline SW via blob
-    // Cache name is versioned per-deploy so old caches always get cleared out
-    // automatically on the next visit — no more stuck-on-old-version bug.
-    var swCode = `
-const CACHE = 'test-series-v2-${Date.now()}';
-self.addEventListener('install', function(e){
-  self.skipWaiting();
-});
-self.addEventListener('activate', function(e){
-  e.waitUntil(
-    caches.keys().then(function(keys){
-      return Promise.all(keys.map(function(k){ return caches.delete(k); }));
-    })
-  );
-  self.clients.claim();
-});
-self.addEventListener('fetch', function(e){
-  if(e.request.method !== 'GET') return;
-  // NEVER cache or serve the HTML document (navigation requests) from cache —
-  // always go to network so a refresh always gets the latest deployed file.
-  // This is what was causing the app to always reopen on an old/stale page.
-  if(e.request.mode === 'navigate' || (e.request.headers.get('accept')||'').indexOf('text/html') !== -1){
-    e.respondWith(fetch(e.request).catch(function(){ return caches.match(e.request); }));
-    return;
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){ r.unregister(); });
+    }).catch(function(){});
   }
-  // Other assets (fonts, icons, etc) — cache-then-network as before.
-  e.respondWith(
-    fetch(e.request).then(function(r){
-      var rc = r.clone();
-      caches.open(CACHE).then(function(c){ c.put(e.request, rc); });
-      return r;
-    }).catch(function(){
-      return caches.match(e.request);
-    })
-  );
-});
-`;
-    try {
-      var swBlob = new Blob([swCode], {type:'application/javascript'});
-      var swUrl = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swUrl, {scope: './'})
-        .then(function(reg){
-          dbg('SW registered ✓','success');
-          reg.addEventListener('updatefound', function(){
-            var nw = reg.installing;
-            if(nw){
-              nw.addEventListener('statechange', function(){
-                if(nw.state === 'activated'){
-                  dbg('New SW activated — fresh version now serving','success');
-                }
-              });
-            }
-          });
-        })
-        .catch(function(e){ dbg('SW registration failed: '+e.message,'warn'); });
-    } catch(e){ dbg('SW error: '+e.message,'warn'); }
+  if('caches' in window){
+    caches.keys().then(function(keys){
+      keys.forEach(function(k){ caches.delete(k); });
+    }).catch(function(){});
   }
 
   // 3. Install prompt
@@ -5530,6 +5491,20 @@ try{
 history.replaceState({appPage:'loading'}, '', '');
 // Check for shared quiz URL before Firebase loads
 checkSharedQuizUrl();
+
+// CRITICAL FIX: mobile Chrome/Safari often restore this page from the
+// back-forward cache (bfcache) on "refresh"/tab-switch-back instead of doing
+// a real reload — when that happens NONE of our JS re-runs (no showPage,
+// no fresh Firebase auth check), so the DOM stays frozen exactly as it was
+// before (e.g. mid flashcard session, with a stray login card rendered on
+// top). This was the actual cause of "refresh shows old page and End does
+// nothing" — force a real reload whenever the page is served from bfcache.
+window.addEventListener('pageshow', function(e){
+  if(e.persisted){
+    dbg('Page restored from bfcache — forcing hard reload','warn');
+    location.reload();
+  }
+});
 
 // Tap 10 times anywhere on screen within 3 seconds to open the debug
 // console — works even if the small 🛠 topbar icon is hard to find/tap.
