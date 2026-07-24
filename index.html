@@ -529,9 +529,10 @@ body.fc-immersive{overflow:hidden;}
 .fc-card-stage{padding-top:clamp(2px,1vh,10px)!important;}
 .fc-card-badge{margin-bottom:8px!important;padding:3px 10px!important;}
 
-/* Card gets more room since header above is now compact */
-.fc-card-outer{height:min(50vh,420px)!important;}
-.fc-focus-on .fc-card-outer{height:min(54vh,460px)!important;}
+/* Card sized so it stays comfortably above screen centre with room for
+   rating buttons + nav row below, without needing a scroll */
+.fc-card-outer{height:min(34vh,320px)!important;}
+.fc-focus-on .fc-card-outer{height:min(38vh,360px)!important;}
 
 /* Rating row stays centred under the card */
 .fc-rating-row{margin-top:14px!important;}
@@ -1300,6 +1301,7 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
         <div style="font-weight:800;font-size:0.88rem;color:#e65100;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="fcPlayTitle">&#127183; Practice</div>
         <div style="font-size:0.7rem;color:var(--text2);" id="fcPlayMeta">Loading...</div>
       </div>
+      <button class="fc-focus-btn" id="fcShuffleBtn" onclick="fcShuffleQueue()" title="Shuffle karo">&#128256;</button>
       <button class="fc-focus-btn" id="fcFocusToggleBtn" onclick="fcToggleFocusMode()" title="Large Reading Mode">&#128269;</button>
       <button onclick="fcEndSession()" style="padding:6px 12px;background:rgba(198,40,40,0.08);color:var(--red);border:1.5px solid rgba(198,40,40,0.25);border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;flex-shrink:0;">&#10005; End</button>
     </div>
@@ -5197,6 +5199,26 @@ function fcBuildInitialQueue(cards){
     return { cardId:c.id, front:c.front, back:c.back };
   });
 }
+function fcShuffleArray(arr){
+  for(var i = arr.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+}
+// Shuffle the remaining (not-yet-seen) cards in the live session queue —
+// cards already passed (before st.pos) stay untouched so progress isn't lost.
+function fcShuffleQueue(){
+  var st = _fcSession;
+  if(!st || !st.queue || st.queue.length < 2){ showToast('Shuffle karne ke liye kaafi cards nahi hain','info'); return; }
+  var head = st.queue.slice(0, st.pos);
+  var tail = st.queue.slice(st.pos);
+  fcShuffleArray(tail);
+  st.queue = head.concat(tail);
+  if(!st.temp){ try{ fcSaveSession(JSON.parse(JSON.stringify(st))); }catch(e){} }
+  showToast('&#128256; Cards shuffle ho gaye!'.replace('&#128256;','🔀'),'success');
+  fcRenderCurrentCard();
+}
 function fcInsertWithGap(queue, pos, item, gap){
   var insertAt = Math.min(pos + gap, queue.length);
   queue.splice(insertAt, 0, item);
@@ -5241,7 +5263,7 @@ function startFcSession(){
     // Shared deck played directly — fresh session every time, nothing saved to cloud.
     _fcSession = {
       deckId: deckId,
-      queue: fcBuildInitialQueue(cards),
+      queue: fcShuffleArray(fcBuildInitialQueue(cards)),
       pos: 0, flipped: false,
       totalOriginal: cards.length,
       stats: { hard:0, moderate:0, easy:0, knew:0 },
@@ -5259,7 +5281,7 @@ function startFcSession(){
   fcClearSession(deckId);
   _fcSession = {
     deckId: deckId,
-    queue: fcBuildInitialQueue(cards),
+    queue: fcShuffleArray(fcBuildInitialQueue(cards)),
     pos: 0, flipped: false,
     totalOriginal: cards.length,
     stats: { hard:0, moderate:0, easy:0, knew:0 },
@@ -5328,7 +5350,7 @@ function fcRenderCurrentCard(){
         '</div>'+
       '</div>'+
     '</div>'+
-    '<div id="fcRatingRow" class="fc-rating-row" style="display:' + (st.flipped ? 'grid' : 'none') + ';">'+
+    '<div id="fcRatingRow" class="fc-rating-row" style="display:grid;">'+
       '<button class="fc-rate-btn fc-rate-hard" onclick="fcRateCard(\'hard\')">Hard<span class="fc-rate-count">1</span></button>'+
       '<button class="fc-rate-btn fc-rate-mod"  onclick="fcRateCard(\'moderate\')">Moderate<span class="fc-rate-count">3</span></button>'+
       '<button class="fc-rate-btn fc-rate-easy" onclick="fcRateCard(\'easy\')">Easy<span class="fc-rate-count">7</span></button>'+
@@ -5395,8 +5417,6 @@ function fcFlipCard(){
   _fcSession.flipped = !_fcSession.flipped;
   var outer = document.getElementById('fcCardOuter');
   if(outer) outer.classList.toggle('flipped', _fcSession.flipped);
-  var rr = document.getElementById('fcRatingRow');
-  if(rr) rr.style.display = _fcSession.flipped ? 'grid' : 'none';
 }
 
 function fcRateCard(rating){
