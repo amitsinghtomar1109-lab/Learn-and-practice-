@@ -4774,7 +4774,38 @@ function _hlFirebaseLoadAll() {
 var _fcDecks = [];
 var _fcDeckListener = null;
 var _fcCurrentDeckId = null;
-var FC_GAPS = { hard: 1, moderate: 3, easy: 7 };
+// ---- Spaced repetition tuning ----
+// Base "how soon does it come back" gaps for a first-time rating — Hard
+// comes back soonest, Moderate a bit later, Easy latest. These are queue
+// positions (how many cards later), not real time, since this is an
+// in-session practice loop.
+var FC_BASE_GAPS = { hard: 2, moderate: 5, easy: 10 };
+// Every time the SAME rating is repeated on a card, its gap for that rating
+// grows (so hammering "Hard" over and over doesn't loop it back every 2
+// cards forever — it gradually spaces out, same as a real SRS).
+var FC_REPEAT_GROWTH = 1.5;
+// Relative standing of each rating, used to detect improvement/regression
+// between consecutive ratings on the same card.
+var FC_RATING_RANK = { hard: 0, moderate: 1, easy: 2 };
+function fcComputeGap(rl, rating){
+  var timesThisRating = rl.counts[rating] || 1; // counts[rating] was already incremented before this is called
+  var base = FC_BASE_GAPS[rating];
+  // Progressive delay: 2nd+ time this rating is given, push it out further.
+  var gap = base * Math.pow(FC_REPEAT_GROWTH, timesThisRating - 1);
+  // Trend adjustment: compare to the rating given just before this one.
+  // Improving (hard→moderate→easy) earns extra spacing (reward); slipping
+  // back (easy→moderate→hard) pulls the gap in tighter (more frequent).
+  var prevRating = rl.secondLastRating;
+  if(prevRating && prevRating !== rating){
+    var prevRank = FC_RATING_RANK[prevRating];
+    var curRank = FC_RATING_RANK[rating];
+    if(typeof prevRank === 'number' && typeof curRank === 'number'){
+      if(curRank > prevRank) gap *= 1.35;      // improved since last time — space out more
+      else if(curRank < prevRank) gap *= 0.7;  // regressed since last time — bring it back sooner
+    }
+  }
+  return Math.max(1, Math.round(gap));
+}
 var FC_TOUGH_THRESHOLD = 3;
 var _fcSession = {
   deckId: null, queue: [], pos: 0, flipped: false,
@@ -5828,6 +5859,9 @@ function fcRateCard(rating){
   }
   var rl = st.ratingLog[card.cardId];
   rl.counts[rating] = (rl.counts[rating]||0) + 1;
+  // Keep the rating given just before this one (for trend detection),
+  // then update lastRating to the current one.
+  rl.secondLastRating = rl.lastRating;
   rl.lastRating = rating;
   rl.front = card.front; rl.back = card.back;
   // Auto-save to the bookmark folder the moment a card crosses the tough
@@ -5839,7 +5873,7 @@ function fcRateCard(rating){
   }
   st.queue.splice(st.pos, 1); // remove current
   if(rating !== 'knew'){
-    var gap = FC_GAPS[rating];
+    var gap = fcComputeGap(rl, rating);
     fcInsertWithGap(st.queue, st.pos, { cardId:card.cardId, front:card.front, back:card.back }, gap);
   }
   st.flipped = false;
