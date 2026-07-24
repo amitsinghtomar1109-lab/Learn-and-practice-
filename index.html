@@ -1356,6 +1356,7 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
         <div style="font-weight:800;font-size:0.88rem;color:#e65100;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="fcPlayTitle">&#127183; Practice</div>
         <div style="font-size:0.7rem;color:var(--text2);" id="fcPlayMeta">Loading...</div>
       </div>
+      <button class="fc-focus-btn" id="fcAddCardMidBtn" onclick="fcOpenCardEditor('add')" title="Naya card jodo">&#10133;</button>
       <button class="fc-focus-btn" id="fcShuffleBtn" onclick="fcShuffleQueue()" title="Shuffle karo">&#128256;</button>
       <button class="fc-focus-btn" id="fcFocusToggleBtn" onclick="fcToggleFocusMode()" title="Large Reading Mode">&#128269;</button>
       <button onclick="fcEndSession()" style="padding:6px 12px;background:rgba(198,40,40,0.08);color:var(--red);border:1.5px solid rgba(198,40,40,0.25);border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;flex-shrink:0;">&#10005; End</button>
@@ -5779,6 +5780,7 @@ function fcRenderCurrentCard(){
     '<div class="fc-nav-row">'+
       '<button class="fc-nav-btn" id="fcPrevBtn" onclick="fcPrevCard()"'+(st.pos<=0?' disabled':'')+'>&#8592; Previous</button>'+
       '<button class="fc-nav-btn" id="fcSaveCardBtn" onclick="fcToggleSaveCurrentCard()" title="Save this card"><span id="fcSaveCardBtnIcon">&#128278;</span><span id="fcSaveCardBtnLabel" style="display:none;">&#10003; Saved</span></button>'+
+      '<button class="fc-nav-btn" onclick="fcOpenCardEditor(\'edit\', \''+String(card.cardId).replace(/'/g,"\\'")+'\')" title="Is card ko edit karo">&#9998;</button>'+
       '<button class="fc-nav-btn fc-del-btn" onclick="fcDeleteCurrentCard()" title="Is card ko delete karo">&#128465;</button>'+
       '<button class="fc-nav-btn" id="fcNextBtn" onclick="fcNextCard()"'+(st.pos>=st.queue.length-1?' disabled':'')+'>Next &#8594;</button>'+
     '</div>'+
@@ -5904,6 +5906,104 @@ function appConfirm(message, onYes){
   document.getElementById('appConfirmCancel').onclick = function(){ dbg('appConfirm: Cancel tapped','info'); cleanup(); };
   document.getElementById('appConfirmOk').onclick = function(){ dbg('appConfirm: OK tapped','info'); cleanup(); onYes(); };
   ov.onclick = function(e){ if(e.target === ov){ dbg('appConfirm: dismissed (backdrop tap)','info'); cleanup(); } };
+}
+
+// ---- In-session Card Editor Modal ----
+// Lets the user edit the current card's front/back, or add a brand new card
+// to the deck, at any point during (or after) a practice session — without
+// leaving the play screen. Changes are written straight to the underlying
+// deck (or the temp/shared deck object) so they persist immediately.
+function fcOpenCardEditor(mode, cardId){
+  var st = _fcSession;
+  var isEdit = mode === 'edit';
+  var existingFront = '', existingBack = '';
+  if(isEdit){
+    var card = (st && st.queue) ? st.queue.find(function(c){ return c.cardId===cardId; }) : null;
+    if(!card){ showToast('Card nahi mili','error'); return; }
+    existingFront = card.front; existingBack = card.back;
+  }
+  var old = document.getElementById('fcCardEditorOverlay');
+  if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'fcCardEditorOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:var(--surface,#fff);border-radius:14px;padding:18px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:88vh;overflow-y:auto;">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--text);margin-bottom:14px;">'+(isEdit?'&#9998; Card Edit Karo':'&#10133; Naya Card Jodo')+'</div>'+
+      '<div class="field-group">'+
+        '<label class="field-label">Front &#8212; Sawaal / Term *</label>'+
+        '<textarea class="inp" id="fcEditorFront" rows="2" placeholder="Sawaal ya term...">'+escHtml(existingFront)+'</textarea>'+
+      '</div>'+
+      '<div class="field-group">'+
+        '<label class="field-label">Back &#8212; Jawab / Definition *</label>'+
+        '<textarea class="inp" id="fcEditorBack" rows="2" placeholder="Jawab ya definition...">'+escHtml(existingBack)+'</textarea>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:6px;">'+
+        '<button id="fcEditorCancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border,#bdd5ea);background:transparent;color:var(--text2,#37526d);font-weight:700;cursor:pointer;">Cancel</button>'+
+        '<button id="fcEditorSave" class="btn btn-orange" style="flex:1;">'+(isEdit?'&#10003; Update Karo':'&#10003; Add Karo')+'</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  function cleanup(){ ov.remove(); }
+  document.getElementById('fcEditorCancel').onclick = cleanup;
+  ov.onclick = function(e){ if(e.target === ov) cleanup(); };
+  document.getElementById('fcEditorSave').onclick = function(){
+    var front = (document.getElementById('fcEditorFront').value||'').trim();
+    var back  = (document.getElementById('fcEditorBack').value||'').trim();
+    if(!front || !back){ showToast('Front aur Back dono required hain!','error'); return; }
+    if(isEdit){
+      fcApplyCardEdit(cardId, front, back);
+      showToast('&#9998; Card update ho gaya!'.replace('&#9998;','✏️'),'success');
+    } else {
+      fcApplyNewCard(front, back);
+      showToast('➕ Naya card add ho gaya!','success');
+    }
+    cleanup();
+  };
+  setTimeout(function(){ var f=document.getElementById('fcEditorFront'); if(f) f.focus(); }, 50);
+}
+// Persist an edit to the current card's front/back — updates every copy of
+// this card sitting in the live queue (it may repeat later via spaced
+// repetition), the ratingLog entry, and the underlying deck/temp deck.
+function fcApplyCardEdit(cardId, front, back){
+  var st = _fcSession;
+  if(!st) return;
+  st.queue.forEach(function(c){ if(c.cardId===cardId){ c.front=front; c.back=back; } });
+  if(st.ratingLog && st.ratingLog[cardId]){ st.ratingLog[cardId].front=front; st.ratingLog[cardId].back=back; }
+  if(!st.temp){
+    var deck = _fcDecks.find(function(d){ return String(d.id)===String(st.deckId); });
+    if(deck){
+      var dc = (deck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
+      if(dc){ dc.front=front; dc.back=back; }
+      fcSaveDeck(deck).catch(function(e){ dbg('fcApplyCardEdit save err: '+e.message,'error'); });
+    }
+    try{ fcSaveSession(JSON.parse(JSON.stringify(st))); }catch(e){}
+  } else if(_fcTempPlayDeck){
+    var tc = (_fcTempPlayDeck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
+    if(tc){ tc.front=front; tc.back=back; }
+  }
+  fcRenderCurrentCard();
+}
+// Add a brand new card to the deck and drop it into the live queue a few
+// cards ahead so it shows up soon without disrupting the current card.
+function fcApplyNewCard(front, back){
+  var st = _fcSession;
+  if(!st) return;
+  var newId = Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  if(!st.temp){
+    var deck = _fcDecks.find(function(d){ return String(d.id)===String(st.deckId); });
+    if(deck){
+      deck.cards = (deck.cards||[]).concat([{ id:newId, front:front, back:back }]);
+      fcSaveDeck(deck).catch(function(e){ dbg('fcApplyNewCard save err: '+e.message,'error'); });
+    }
+  } else if(_fcTempPlayDeck){
+    _fcTempPlayDeck.cards = (_fcTempPlayDeck.cards||[]).concat([{ id:newId, front:front, back:back }]);
+  }
+  var insertAt = Math.min(st.pos + 3, st.queue.length);
+  st.queue.splice(insertAt, 0, { cardId:newId, front:front, back:back });
+  st.totalOriginal = (st.totalOriginal||0) + 1;
+  if(!st.temp){ try{ fcSaveSession(JSON.parse(JSON.stringify(st))); }catch(e){} }
+  fcRenderCurrentCard();
 }
 
 function fcEndSession(){
