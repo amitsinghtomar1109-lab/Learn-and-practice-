@@ -4680,13 +4680,9 @@ function fcSaveSession(session){
 }
 function fcLoadSession(deckId){
   if(!_db||!_uid) return Promise.resolve(null);
-  var fetchPromise = _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).get()
+  return _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).get()
     .then(function(d){ return d.exists ? d.data() : null; })
     .catch(function(){ return null; });
-  var timeoutPromise = new Promise(function(resolve){
-    setTimeout(function(){ resolve(null); }, 5000); // 5s max wait — never hang the UI
-  });
-  return Promise.race([fetchPromise, timeoutPromise]);
 }
 function fcClearSession(deckId){
   if(!_db||!_uid) return;
@@ -5182,7 +5178,7 @@ function startFcSession(){
   var deck = isTemp ? _fcTempPlayDeck : _fcDecks.find(function(d){ return String(d.id)===String(deckId); });
   if(!deck){ showToast('Deck nahi mili!','error'); return; }
   var cards = deck.cards||[];
-  if(!cards.length){ showToast('Pehle cards add karo!','error'); fcHardExitPlay(); return; }
+  if(!cards.length){ showToast('Pehle cards add karo!','error'); appGoBack(); return; }
 
   fcApplyFocusModeUI();
   var titleEl = document.getElementById('fcPlayTitle');
@@ -5190,8 +5186,7 @@ function startFcSession(){
   var areaEl = document.getElementById('fcPlayArea');
   if(areaEl) areaEl.innerHTML =
     '<div class="center-loader"><div class="loader"></div>'+
-    '<div style="margin-top:10px;color:var(--text2);">Progress load ho rahi hai...</div>'+
-    '<div style="margin-top:14px;font-size:0.72rem;color:var(--text2);">Zyada time lag raha hai? Upar "✕ End" dabao.</div></div>';
+    '<div style="margin-top:10px;color:var(--text2);">Progress load ho rahi hai...</div></div>';
 
   if(isTemp){
     // Shared deck played directly — fresh session every time, nothing saved to cloud.
@@ -5350,33 +5345,16 @@ function fcRateCard(rating){
 }
 
 function fcEndSession(){
-  // No active session yet (still loading / failed to load) — just exit, nothing to save.
-  if(!_fcSession){
-    fcHardExitPlay();
-    return;
-  }
-  var isTemp = _fcSession.temp;
+  var isTemp = _fcSession && _fcSession.temp;
   if(isTemp){
     if(!confirm('Shared deck ka session band karoge? (Progress save nahi hoti shared decks ke liye)')) return;
-    fcHardExitPlay();
+    appGoBack();
     return;
   }
   if(!confirm('Session pause karo? Progress save ho gayi hai.')) return;
   try{ fcSaveSession(JSON.parse(JSON.stringify(_fcSession))); }catch(e){}
   showToast('Session paused. Resume kar sakte ho!','info');
-  fcHardExitPlay();
-}
-
-// Reliable exit from the flashcard play page — falls back to deck list
-// even if the internal nav stack is somehow empty or stuck.
-function fcHardExitPlay(){
-  _fcSession = null;
-  _fcTempPlayDeck = null;
-  if(_navStack.length > 0){
-    appGoBack();
-  } else {
-    navTo('flashcards', {title:'🃏 Flashcards', render: renderFcDeckList});
-  }
+  appGoBack();
 }
 
 function fcShowDoneScreen(){
@@ -5411,7 +5389,7 @@ function fcShowDoneScreen(){
     '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">'+
       '<button class="btn btn-orange" onclick="fcResetAndReplay()">🔁 Fresh Round Karo</button>'+
       (st.temp ? '<button class="btn btn-primary" onclick="fcSaveTempDeckToMyDecks()">💾 Apni List Me Save Karo</button>' : '')+
-      '<button class="btn btn-outline" onclick="fcHardExitPlay()">📚 Deck List</button>'+
+      '<button class="btn btn-outline" onclick="appGoBack()">📚 Deck List</button>'+
     '</div>';
 }
 
@@ -5429,7 +5407,6 @@ function fcSaveTempDeckToMyDecks(){
   };
   fcSaveDeck(newDeck).then(function(){
     showToast('🎉 Deck apni list me save ho gayi!','success');
-    fcHardExitPlay();
   }).catch(function(e){ showToast('Save error: '+e.message,'error'); });
 }
 
@@ -5478,11 +5455,6 @@ function fcResetAndReplay(){
 
 // BOOT
 // ================================================================
-// Force-clear any leftover "active" page classes from a previous stale
-// DOM state (e.g. browser restored the tab from background without a
-// full reload) so the app always visibly starts from the loading screen.
-document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
-_navStack = [];
 showPage('loading');
 // Push initial state so popstate fires on first back press
 history.replaceState({appPage:'loading'}, '', '');
@@ -5496,28 +5468,10 @@ window.addEventListener('beforeunload', function(){
     attSavePauseState();
   }
 });
-// Save quiz state when app goes to background on mobile.
-// Also: if the tab is restored to foreground and we're stuck on the
-// flashcard play page with no session ever loaded (or Firebase auth
-// lost), pause/exit that session and send the user back to a fresh Home
-// instead of leaving them staring at a dead "Loading..." screen.
+// Save quiz state when app goes to background on mobile
 document.addEventListener('visibilitychange', function(){
-  if(document.hidden){
-    if(getActivePage()==='attempt'&&_att&&!_att.submitted){
-      attSavePauseState();
-    }
-    return;
-  }
-  // Tab just became visible again
-  if(getActivePage()==='fc-play' && !_fcSession){
-    dbg('Tab resumed stuck on flashcard loading — recovering to Home','warn');
-    _navStack = [];
-    if(_uid){
-      goHome();
-    } else {
-      showPage('loading');
-      if(_auth) _auth.onAuthStateChanged(onAuth);
-    }
+  if(document.hidden&&getActivePage()==='attempt'&&_att&&!_att.submitted){
+    attSavePauseState();
   }
 });
 
