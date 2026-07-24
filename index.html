@@ -435,18 +435,31 @@ textarea.inp{resize:vertical; min-height:64px;}
 .fc-card-outer.flipped .fc-card-inner{transform:rotateY(180deg);}
 .fc-card-face{
   position:absolute;inset:0;
-  border-radius:22px;padding:24px 26px;
+  border-radius:22px;padding:28px 30px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  box-shadow:0 10px 34px rgba(0,0,0,0.18),0 2px 8px rgba(0,0,0,0.10);
-  border:1px solid rgba(255,255,255,0.14);overflow-y:auto;
+  box-shadow:0 10px 30px rgba(20,30,45,0.10),0 2px 8px rgba(20,30,45,0.06);
+  border:1px solid rgba(20,40,70,0.06);overflow-y:auto;
 }
-.fc-card-front{background:linear-gradient(150deg,#1a3a8f 0%,#1565c0 55%,#0d47a1 100%);color:#fff;}
-.fc-card-back {background:linear-gradient(150deg,#00695c 0%,#00897b 55%,#00695c 100%);color:#fff;transform:rotateY(180deg);}
-.fc-face-label{font-size:0.66rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;opacity:0.7;margin-bottom:14px;}
-.fc-face-text{font-family:'Georgia','Noto Sans Devanagari',serif;font-size:1.08rem;font-weight:600;line-height:1.7;word-break:break-word;}
-.fc-focus-on .fc-face-text{font-size:1.35rem;line-height:1.75;}
-.fc-tap-hint{font-size:0.72rem;opacity:0.6;margin-top:16px;}
+/* Front (Question) — soft, low-glare, paper-like surface for easy reading */
+.fc-card-front{background:linear-gradient(165deg,#fbfcfe 0%,#f2f6fb 100%);color:#152232;}
+.fc-card-front .fc-face-label{color:#5b7fa6;}
+.fc-card-front .fc-face-icon{opacity:0.55;}
+/* Back (Answer) — gentle warm-neutral surface, clearly distinct but equally calm */
+.fc-card-back {background:linear-gradient(165deg,#fdfaf5 0%,#f7f0e4 100%);color:#2a2016;transform:rotateY(180deg);}
+.fc-card-back .fc-face-label{color:#a3763f;}
+.fc-card-back .fc-face-icon{opacity:0.55;}
+
+body.dark .fc-card-front{background:linear-gradient(165deg,#182430 0%,#101a24 100%);color:#e7eef5;}
+body.dark .fc-card-front .fc-face-label{color:#7fa8d6;}
+body.dark .fc-card-back {background:linear-gradient(165deg,#241d15 0%,#1a140e 100%);color:#f2e6d4;}
+body.dark .fc-card-back .fc-face-label{color:#d9a35f;}
+
+.fc-face-icon{font-size:1.4rem;margin-bottom:6px;}
+.fc-face-label{font-size:0.66rem;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:16px;}
+.fc-face-text{font-family:'Georgia','Noto Sans Devanagari',serif;font-size:1.15rem;font-weight:600;line-height:1.75;word-break:break-word;letter-spacing:0.1px;}
+.fc-focus-on .fc-face-text{font-size:1.4rem;line-height:1.8;}
+.fc-tap-hint{display:none;}
 
 .fc-rating-row{
   display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;
@@ -486,8 +499,6 @@ textarea.inp{resize:vertical; min-height:64px;}
 .fc-stat-num{font-size:1.3rem;font-weight:900;}
 .fc-stat-lbl{font-size:0.62rem;color:var(--text2);margin-top:2px;font-weight:700;letter-spacing:0.3px;}
 
-body.dark .fc-card-front{background:linear-gradient(150deg,#0d2b6b,#0d47a1 55%,#0a3880);}
-body.dark .fc-card-back {background:linear-gradient(150deg,#00382f,#00695c 55%,#00382f);}
 .btn-orange{background:linear-gradient(135deg,#e65100,#ff8f00)!important;color:#fff!important;border:none!important;}
 .btn-xs{padding:4px 10px;font-size:0.72rem;border-radius:7px;font-weight:800;cursor:pointer;border:1.5px solid var(--border);}
 .btn-danger{background:rgba(198,40,40,0.1)!important;color:var(--red)!important;border-color:rgba(198,40,40,0.3)!important;}
@@ -5310,16 +5321,10 @@ function fcRenderCurrentCard(){
     '<div class="fc-card-outer' + (st.flipped ? ' flipped' : '') + '" id="fcCardOuter" onclick="fcFlipCard()">'+
       '<div class="fc-card-inner">'+
         '<div class="fc-card-face fc-card-front">'+
-          '<div class="fc-face-icon">❓</div>'+
-          '<div class="fc-face-label">SAWAAL</div>'+
           '<div class="fc-face-text">' + escHtml(card.front) + '</div>'+
-          '<div class="fc-tap-hint">👆 Tap karke jawab dekhein</div>'+
         '</div>'+
         '<div class="fc-card-face fc-card-back">'+
-          '<div class="fc-face-icon">💡</div>'+
-          '<div class="fc-face-label">JAWAB</div>'+
           '<div class="fc-face-text">' + escHtml(card.back) + '</div>'+
-          '<div class="fc-tap-hint">👆 Tap karke sawaal dekhein</div>'+
         '</div>'+
       '</div>'+
     '</div>'+
@@ -5402,9 +5407,18 @@ function fcRateCard(rating){
   else if(rating==='moderate') st.stats.moderate++;
   else if(rating==='easy')     st.stats.easy++;
   else if(rating==='knew')     st.stats.knew++;
-  // Track this card's most recent rating + its content, for the done-screen breakdown.
+  // Track this card's full rating history (not just the latest), so the
+  // done-screen breakdown can still surface a card under Hard/Moderate even
+  // if it was later marked "I Knew" — as long as it was struggled with
+  // enough times during this session.
   if(!st.ratingLog) st.ratingLog = {};
-  st.ratingLog[card.cardId] = { rating: rating, front: card.front, back: card.back };
+  if(!st.ratingLog[card.cardId]){
+    st.ratingLog[card.cardId] = { front: card.front, back: card.back, counts: {hard:0, moderate:0, easy:0, knew:0}, lastRating: rating };
+  }
+  var rl = st.ratingLog[card.cardId];
+  rl.counts[rating] = (rl.counts[rating]||0) + 1;
+  rl.lastRating = rating;
+  rl.front = card.front; rl.back = card.back;
   st.queue.splice(st.pos, 1); // remove current
   if(rating !== 'knew'){
     var gap = FC_GAPS[rating];
@@ -5530,12 +5544,25 @@ function fcSaveTempDeckToMyDecks(){
 var FC_RATING_LABELS = { hard:'Hard', moderate:'Moderate', easy:'Easy', knew:'I Knew' };
 var FC_RATING_COLORS = { hard:'#c62828', moderate:'#e65100', easy:'#2e7d32', knew:'#1565c0' };
 
+// A card belongs in a rating's review list if:
+//  - its most recent rating this session equals that rating, OR
+//  - (for hard/moderate only) it was rated that way 3+ times this session,
+//    even if it was eventually marked "I Knew" — so genuinely tough cards
+//    don't silently vanish from the Hard/Moderate lists just because the
+//    user got it right on the last attempt.
+var FC_TOUGH_THRESHOLD = 3;
+function fcCardBelongsToRating(entry, rating){
+  if(entry.lastRating === rating) return true;
+  if((rating==='hard' || rating==='moderate') && (entry.counts[rating]||0) >= FC_TOUGH_THRESHOLD) return true;
+  return false;
+}
+
 function fcShowRatingCards(rating){
   var st = _fcSession;
   var log = st.ratingLog || {};
   var box = document.getElementById('fcRatingCardsBox');
   if(!box) return;
-  var cards = Object.keys(log).map(function(k){ return log[k]; }).filter(function(c){ return c.rating===rating; });
+  var cards = Object.keys(log).map(function(k){ return log[k]; }).filter(function(c){ return fcCardBelongsToRating(c, rating); });
   var color = FC_RATING_COLORS[rating];
   if(!cards.length){
     box.innerHTML = '<div style="font-size:0.8rem;color:var(--text2);text-align:center;padding:14px;background:var(--surface2);border-radius:10px;">Is category me koi card nahi hai.</div>';
