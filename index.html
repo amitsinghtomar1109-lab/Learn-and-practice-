@@ -382,7 +382,7 @@ textarea.inp{resize:vertical; min-height:64px;}
 .fc-deck-actions{display:flex;gap:5px;flex-shrink:0;}
 
 #page-fc-play{
-  position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;
+  position:fixed;inset:0;z-index:50;display:none;flex-direction:column;
   overflow:hidden;background:var(--bg);
 }
 #page-fc-play.active{display:flex;}
@@ -3721,48 +3721,25 @@ function viewLastResult(quizId){
     if(link) link.href = url;
   } catch(e){ dbg('PWA manifest error: '+e.message,'warn'); }
 
-  // 2. Service Worker for offline caching
+  // 2. Service Worker — DISABLED.
+  // Blob-URL service workers are blocked by the browser on GitHub Pages
+  // (confirmed via console: "URL protocol of the script (blob:...) is not
+  // supported"), so this never actually registered — it only produced a
+  // harmless-looking but confusing error on every load. A real SW would
+  // need its own separate sw.js file served from the same origin, which
+  // this single-file setup doesn't have, so we skip it entirely instead of
+  // pretending to try.
+  // Also: unregister any leftover SW from earlier versions of this app, and
+  // clear any caches they made, so no old device can be stuck on stale files.
   if('serviceWorker' in navigator){
-    // Inline SW via blob
-    var swCode = `
-const CACHE = 'test-series-v1';
-const URLS = [
-  self.location.href.replace('/sw.js','/')
-];
-self.addEventListener('install', function(e){
-  e.waitUntil(
-    caches.open(CACHE).then(function(c){ return c.addAll(URLS).catch(function(){}); })
-  );
-  self.skipWaiting();
-});
-self.addEventListener('activate', function(e){
-  e.waitUntil(
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){ r.unregister(); });
+    }).catch(function(){});
+  }
+  if('caches' in window){
     caches.keys().then(function(keys){
-      return Promise.all(keys.filter(function(k){ return k!==CACHE; }).map(function(k){ return caches.delete(k); }));
-    })
-  );
-  self.clients.claim();
-});
-self.addEventListener('fetch', function(e){
-  if(e.request.method !== 'GET') return;
-  e.respondWith(
-    fetch(e.request).then(function(r){
-      var rc = r.clone();
-      caches.open(CACHE).then(function(c){ c.put(e.request, rc); });
-      return r;
-    }).catch(function(){
-      return caches.match(e.request);
-    })
-  );
-});
-`;
-    try {
-      var swBlob = new Blob([swCode], {type:'application/javascript'});
-      var swUrl = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swUrl, {scope: './'})
-        .then(function(reg){ dbg('SW registered ✓','success'); })
-        .catch(function(e){ dbg('SW registration failed: '+e.message,'warn'); });
-    } catch(e){ dbg('SW error: '+e.message,'warn'); }
+      keys.forEach(function(k){ caches.delete(k); });
+    }).catch(function(){});
   }
 
   // 3. Install prompt
@@ -5209,41 +5186,20 @@ function startFcSession(){
     return;
   }
 
-  fcLoadSession(deckId).then(function(saved){
-    if(saved && saved.queue && saved.queue.length > 0 && !saved.done){
-      var knew = (saved.stats && saved.stats.knew) || 0;
-      var tot  = saved.totalOriginal || cards.length;
-      var resumed = confirm(
-        'Pichle session ki progress mili!\n\nDeck: ' + deck.name + '\nKnew: ' + knew + '/' + tot + '\n\nResume karo? (Cancel = fresh start)'
-      );
-      if(resumed){
-        _fcSession = saved;
-        _fcSession.flipped = false;
-        fcRenderCurrentCard();
-        return;
-      }
-      fcClearSession(deckId);
-    }
-    _fcSession = {
-      deckId: deckId,
-      queue: fcBuildInitialQueue(cards),
-      pos: 0, flipped: false,
-      totalOriginal: cards.length,
-      stats: { hard:0, moderate:0, easy:0, knew:0 },
-      done: false
-    };
-    fcRenderCurrentCard();
-  }).catch(function(){
-    _fcSession = {
-      deckId: deckId,
-      queue: fcBuildInitialQueue(cards),
-      pos: 0, flipped: false,
-      totalOriginal: cards.length,
-      stats: { hard:0, moderate:0, easy:0, knew:0 },
-      done: false
-    };
-    fcRenderCurrentCard();
-  });
+  // Har baar deck open karne par fresh session se shuru karo.
+  // Koi bhi pichla adhoora session (agar tha) silently discard ho jata hai —
+  // resume ka popup ab nahi aayega, deck hamesha shuru se khulegi.
+  fcClearSession(deckId);
+  _fcSession = {
+    deckId: deckId,
+    queue: fcBuildInitialQueue(cards),
+    pos: 0, flipped: false,
+    totalOriginal: cards.length,
+    stats: { hard:0, moderate:0, easy:0, knew:0 },
+    ratingLog: {},
+    done: false
+  };
+  fcRenderCurrentCard();
 }
 
 // Persisted user preference for large reading (focus) mode
@@ -5349,7 +5305,33 @@ function fcRateCard(rating){
   fcRenderCurrentCard();
 }
 
+// Custom in-app confirm dialog — used instead of native confirm(), which
+// can silently return false / never resolve in some mobile/PWA/standalone
+// environments (this was the root cause of the "End" button doing nothing).
+function appConfirm(message, onYes){
+  dbg('appConfirm shown: '+message,'info');
+  var old = document.getElementById('appConfirmOverlay');
+  if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'appConfirmOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:var(--surface,#fff);border-radius:14px;padding:18px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-size:0.9rem;color:var(--text,#0d1b2a);margin-bottom:16px;white-space:pre-line;">'+message.replace(/</g,'&lt;')+'</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button id="appConfirmCancel" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border,#bdd5ea);background:transparent;color:var(--text2,#37526d);font-weight:700;cursor:pointer;">Cancel</button>'+
+        '<button id="appConfirmOk" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent,#1565c0);color:#fff;font-weight:700;cursor:pointer;">OK</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  function cleanup(){ ov.remove(); }
+  document.getElementById('appConfirmCancel').onclick = function(){ dbg('appConfirm: Cancel tapped','info'); cleanup(); };
+  document.getElementById('appConfirmOk').onclick = function(){ dbg('appConfirm: OK tapped','info'); cleanup(); onYes(); };
+  ov.onclick = function(e){ if(e.target === ov){ dbg('appConfirm: dismissed (backdrop tap)','info'); cleanup(); } };
+}
+
 function fcEndSession(){
+  dbg('fcEndSession called — _fcSession: '+(_fcSession ? 'exists' : 'null'),'info');
   // No active session yet (still loading / failed to load) — just exit, nothing to save.
   if(!_fcSession){
     fcHardExitPlay();
@@ -5357,14 +5339,16 @@ function fcEndSession(){
   }
   var isTemp = _fcSession.temp;
   if(isTemp){
-    if(!confirm('Shared deck ka session band karoge? (Progress save nahi hoti shared decks ke liye)')) return;
-    fcHardExitPlay();
+    appConfirm('Shared deck ka session band karoge? (Progress save nahi hoti shared decks ke liye)', function(){
+      fcHardExitPlay();
+    });
     return;
   }
-  if(!confirm('Session pause karo? Progress save ho gayi hai.')) return;
-  try{ fcSaveSession(JSON.parse(JSON.stringify(_fcSession))); }catch(e){}
-  showToast('Session paused. Resume kar sakte ho!','info');
-  fcHardExitPlay();
+  appConfirm('Session pause karo? Progress save ho gayi hai.', function(){
+    try{ fcSaveSession(JSON.parse(JSON.stringify(_fcSession))); }catch(e){}
+    showToast('Session paused. Resume kar sakte ho!','info');
+    fcHardExitPlay();
+  });
 }
 
 // Reliable exit from the flashcard play page — falls back to deck list
@@ -5484,33 +5468,105 @@ function fcResetAndReplay(){
 document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
 _navStack = [];
 showPage('loading');
+// One-time cleanup: any service worker + cache registered by an OLDER version
+// of this app (before this SW fix) could keep serving a stale cached HTML
+// file forever. Force-unregister + clear all caches ONCE per device, then
+// let the normal (fixed) SW registration below re-register cleanly.
+try{
+  if(!localStorage.getItem('sw_v2_cleanup_done')){
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        regs.forEach(function(r){ r.unregister(); });
+      }).catch(function(){});
+    }
+    if('caches' in window){
+      caches.keys().then(function(keys){
+        keys.forEach(function(k){ caches.delete(k); });
+      }).catch(function(){});
+    }
+    localStorage.setItem('sw_v2_cleanup_done','1');
+  }
+}catch(e){}
 // Push initial state so popstate fires on first back press
 history.replaceState({appPage:'loading'}, '', '');
 // Check for shared quiz URL before Firebase loads
 checkSharedQuizUrl();
+
+// CRITICAL FIX: mobile Chrome/Safari often restore this page from the
+// back-forward cache (bfcache) on "refresh"/tab-switch-back instead of doing
+// a real reload — when that happens NONE of our JS re-runs (no showPage,
+// no fresh Firebase auth check), so the DOM stays frozen exactly as it was
+// before (e.g. mid flashcard session, with a stray login card rendered on
+// top). This was the actual cause of "refresh shows old page and End does
+// nothing" — force a real reload whenever the page is served from bfcache.
+window.addEventListener('pageshow', function(e){
+  if(e.persisted){
+    dbg('Page restored from bfcache — forcing hard reload','warn');
+    location.reload();
+  }
+});
+
+// Tap 10 times anywhere on screen within 3 seconds to open the debug
+// console — works even if the small 🛠 topbar icon is hard to find/tap.
+(function(){
+  var tapCount = 0;
+  var tapTimer = null;
+  document.addEventListener('click', function(e){
+    // Ignore taps on the debug console itself so Clear/Close still work normally.
+    if(e.target.closest && e.target.closest('#debugConsole')) return;
+    tapCount++;
+    if(tapTimer) clearTimeout(tapTimer);
+    tapTimer = setTimeout(function(){ tapCount = 0; }, 3000);
+    if(tapCount >= 10){
+      tapCount = 0;
+      clearTimeout(tapTimer);
+      var dc = document.getElementById('debugConsole');
+      if(dc) dc.style.display = 'block';
+      dbg('Debug console opened via 10-tap trigger','success');
+    }
+  }, true);
+})();
 dbg('App script ready — Firebase SDK load ho raha hai...','info');
 
-// Save quiz state on page refresh or tab close
+// Silently pause a running (non-shared, non-done) flashcard session —
+// saves current progress to cloud but does NOT resume it automatically later;
+// next time the user opens that deck, startFcSession() always starts fresh.
+function fcSilentPauseIfRunning(){
+  if(_fcSession && !_fcSession.temp && !_fcSession.done){
+    try{ fcSaveSession(JSON.parse(JSON.stringify(_fcSession))); }catch(e){}
+  }
+}
+
+// Save quiz / flashcard state on page refresh or tab close
 window.addEventListener('beforeunload', function(){
   if(getActivePage()==='attempt'&&_att&&!_att.submitted){
     attSavePauseState();
   }
+  if(getActivePage()==='fc-play'){
+    fcSilentPauseIfRunning();
+  }
 });
-// Save quiz state when app goes to background on mobile.
-// Also: if the tab is restored to foreground and we're stuck on the
-// flashcard play page with no session ever loaded (or Firebase auth
-// lost), pause/exit that session and send the user back to a fresh Home
-// instead of leaving them staring at a dead "Loading..." screen.
+// Save quiz/flashcard state when app goes to background on mobile.
+// Also: if the tab is restored to foreground, always send the user back to a
+// fresh Home instead of leaving any previous page (complete or incomplete)
+// sitting there — any running flashcard session is silently paused first.
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){
     if(getActivePage()==='attempt'&&_att&&!_att.submitted){
       attSavePauseState();
     }
+    if(getActivePage()==='fc-play'){
+      fcSilentPauseIfRunning();
+    }
     return;
   }
-  // Tab just became visible again
-  if(getActivePage()==='fc-play' && !_fcSession){
-    dbg('Tab resumed stuck on flashcard loading — recovering to Home','warn');
+  // Tab just became visible again — flashcard play session (if any) was
+  // already silently paused above, so always send the user to a fresh Home
+  // instead of leaving them on the play/loading screen.
+  if(getActivePage()==='fc-play'){
+    dbg('Tab resumed on flashcard page — recovering to Home','warn');
+    _fcSession = null;
+    _fcTempPlayDeck = null;
     _navStack = [];
     if(_uid){
       goHome();
