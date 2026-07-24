@@ -4680,9 +4680,13 @@ function fcSaveSession(session){
 }
 function fcLoadSession(deckId){
   if(!_db||!_uid) return Promise.resolve(null);
-  return _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).get()
+  var fetchPromise = _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).get()
     .then(function(d){ return d.exists ? d.data() : null; })
     .catch(function(){ return null; });
+  var timeoutPromise = new Promise(function(resolve){
+    setTimeout(function(){ resolve(null); }, 5000); // 5s max wait — never hang the UI
+  });
+  return Promise.race([fetchPromise, timeoutPromise]);
 }
 function fcClearSession(deckId){
   if(!_db||!_uid) return;
@@ -5178,7 +5182,7 @@ function startFcSession(){
   var deck = isTemp ? _fcTempPlayDeck : _fcDecks.find(function(d){ return String(d.id)===String(deckId); });
   if(!deck){ showToast('Deck nahi mili!','error'); return; }
   var cards = deck.cards||[];
-  if(!cards.length){ showToast('Pehle cards add karo!','error'); appGoBack(); return; }
+  if(!cards.length){ showToast('Pehle cards add karo!','error'); fcHardExitPlay(); return; }
 
   fcApplyFocusModeUI();
   var titleEl = document.getElementById('fcPlayTitle');
@@ -5186,7 +5190,8 @@ function startFcSession(){
   var areaEl = document.getElementById('fcPlayArea');
   if(areaEl) areaEl.innerHTML =
     '<div class="center-loader"><div class="loader"></div>'+
-    '<div style="margin-top:10px;color:var(--text2);">Progress load ho rahi hai...</div></div>';
+    '<div style="margin-top:10px;color:var(--text2);">Progress load ho rahi hai...</div>'+
+    '<div style="margin-top:14px;font-size:0.72rem;color:var(--text2);">Zyada time lag raha hai? Upar "✕ End" dabao.</div></div>';
 
   if(isTemp){
     // Shared deck played directly — fresh session every time, nothing saved to cloud.
@@ -5345,16 +5350,33 @@ function fcRateCard(rating){
 }
 
 function fcEndSession(){
-  var isTemp = _fcSession && _fcSession.temp;
+  // No active session yet (still loading / failed to load) — just exit, nothing to save.
+  if(!_fcSession){
+    fcHardExitPlay();
+    return;
+  }
+  var isTemp = _fcSession.temp;
   if(isTemp){
     if(!confirm('Shared deck ka session band karoge? (Progress save nahi hoti shared decks ke liye)')) return;
-    appGoBack();
+    fcHardExitPlay();
     return;
   }
   if(!confirm('Session pause karo? Progress save ho gayi hai.')) return;
   try{ fcSaveSession(JSON.parse(JSON.stringify(_fcSession))); }catch(e){}
   showToast('Session paused. Resume kar sakte ho!','info');
-  appGoBack();
+  fcHardExitPlay();
+}
+
+// Reliable exit from the flashcard play page — falls back to deck list
+// even if the internal nav stack is somehow empty or stuck.
+function fcHardExitPlay(){
+  _fcSession = null;
+  _fcTempPlayDeck = null;
+  if(_navStack.length > 0){
+    appGoBack();
+  } else {
+    navTo('flashcards', {title:'🃏 Flashcards', render: renderFcDeckList});
+  }
 }
 
 function fcShowDoneScreen(){
@@ -5389,7 +5411,7 @@ function fcShowDoneScreen(){
     '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">'+
       '<button class="btn btn-orange" onclick="fcResetAndReplay()">🔁 Fresh Round Karo</button>'+
       (st.temp ? '<button class="btn btn-primary" onclick="fcSaveTempDeckToMyDecks()">💾 Apni List Me Save Karo</button>' : '')+
-      '<button class="btn btn-outline" onclick="appGoBack()">📚 Deck List</button>'+
+      '<button class="btn btn-outline" onclick="fcHardExitPlay()">📚 Deck List</button>'+
     '</div>';
 }
 
@@ -5407,6 +5429,7 @@ function fcSaveTempDeckToMyDecks(){
   };
   fcSaveDeck(newDeck).then(function(){
     showToast('🎉 Deck apni list me save ho gayi!','success');
+    fcHardExitPlay();
   }).catch(function(e){ showToast('Save error: '+e.message,'error'); });
 }
 
