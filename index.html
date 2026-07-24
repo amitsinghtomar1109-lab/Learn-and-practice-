@@ -563,7 +563,23 @@ body.fc-immersive{overflow:hidden;}
   border-color:rgba(198,40,40,0.28);
 }
 .fc-nav-btn.fc-del-btn:not(:disabled):hover{background:rgba(198,40,40,0.18);border-color:var(--red);}
+#fcSaveCardBtn{
+  flex:0 0 auto;width:46px;background:rgba(255,179,0,0.1);color:#e6a100;
+  border-color:rgba(255,179,0,0.3);font-size:1rem;
+}
+#fcSaveCardBtn.active{background:#ffb300;color:#fff;border-color:#ffb300;}
 body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
+.fc-saved-viewtab{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);font-weight:700;}
+.fc-saved-viewtab.active{background:#ffb300;color:#fff;border-color:#ffb300;}
+.fc-saved-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
+.fc-saved-card .fc-saved-q{font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:3px;}
+.fc-saved-card .fc-saved-a{font-size:0.78rem;color:#2e7d32;font-weight:600;}
+.fc-saved-card .fc-saved-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.fc-saved-tag{font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(21,101,192,0.1);color:var(--accent);}
+.fc-saved-tag.tag-hard{background:rgba(198,40,40,0.12);color:#c62828;}
+.fc-saved-tag.tag-mod{background:rgba(249,168,37,0.16);color:#a3763f;}
+.fc-saved-tag.tag-manual{background:rgba(255,179,0,0.14);color:#e6a100;}
+.fc-saved-group-title{font-size:0.7rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin:14px 0 8px;padding-left:2px;}
 </style>
 
 <!-- Firebase SDK loaded at body end -->
@@ -1232,7 +1248,10 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
         <div class="page-title">&#127183; Flashcards</div>
         <div class="page-subtitle">Decks banao, cards add karo, practice karo</div>
       </div>
-      <button class="btn btn-orange btn-sm" onclick="openFcNewDeckForm()">&#10133; New Deck</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" style="color:#e6a100;border-color:rgba(255,179,0,0.35);" onclick="navTo('fc-saved',{title:'🔖 Saved Cards'});renderFcSavedPage();">&#128278; Saved</button>
+        <button class="btn btn-orange btn-sm" onclick="openFcNewDeckForm()">&#10133; New Deck</button>
+      </div>
     </div>
     <div class="card" id="fcNewDeckForm" style="display:none;margin-bottom:10px;">
       <div class="card-title">&#10133; Naya Flashcard Deck</div>
@@ -1320,7 +1339,25 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
     </div>
   </div>
 
-<!-- ===== SHARE QUIZ MODAL ===== -->
+  <!-- ===== FLASHCARD SAVED CARDS PAGE ===== -->
+  <div id="page-fc-saved" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">&#128278; Saved Cards</div>
+        <div class="page-subtitle" id="fcSavedSubtitle">Bookmark kiye aur tough cards</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:10px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-sm fc-saved-viewtab active" id="fcSavedTabTopic" onclick="fcSetSavedView('topic')" style="flex:1;">&#127991; Subject / Topic</button>
+        <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabResponse" onclick="fcSetSavedView('response')" style="flex:1;">&#128202; Response Wise</button>
+      </div>
+      <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;">
+        <option value="">Sab dikhaiye</option>
+      </select>
+    </div>
+    <div id="fcSavedList"></div>
+  </div>
 <div class="share-modal-overlay" id="shareModalOverlay" onclick="if(event.target===this)closeShareModal()">
   <div class="share-modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -1572,6 +1609,9 @@ function _doNavigateTo(pageName, pushBrowser){
     renderFcCardsList();
   } else if(pageName === 'fc-play'){
     document.getElementById('topbarTitle').textContent = '🃏 Practice';
+  } else if(pageName === 'fc-saved'){
+    document.getElementById('topbarTitle').textContent = '🔖 Saved Cards';
+    renderFcSavedPage();
   }
 }
 
@@ -1796,6 +1836,7 @@ function attachListeners(){
   _hlAttachFirebaseListeners();
   attachSharedAttemptListener();
   fcAttachListener();
+  fcAttachSavedListener();
 
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
@@ -1832,6 +1873,7 @@ function detachListeners(){
   if(_sharedAttemptListener){ try{_sharedAttemptListener();}catch(e){} _sharedAttemptListener=null; }
   _hlDetachFirebaseListeners();
   fcDetachListener();
+  fcDetachSavedListener();
   STATE.quizzes=[]; STATE.attempts=[]; STATE.sharedAttempts=[];
   // savedQuestions ko preserve karo — reload on next auth
 }
@@ -4694,6 +4736,7 @@ var _fcDecks = [];
 var _fcDeckListener = null;
 var _fcCurrentDeckId = null;
 var FC_GAPS = { hard: 1, moderate: 3, easy: 7 };
+var FC_TOUGH_THRESHOLD = 3;
 var _fcSession = {
   deckId: null, queue: [], pos: 0, flipped: false,
   totalOriginal: 0, stats: { hard:0, moderate:0, easy:0, knew:0 }, done: false
@@ -4743,6 +4786,195 @@ function fcLoadSession(deckId){
 function fcClearSession(deckId){
   if(!_db||!_uid) return;
   _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).delete().catch(function(){});
+}
+
+// ---- Saved Cards (bookmark folder) ----
+// Cards land here two ways: (1) user manually taps the save/bookmark icon
+// during play, or (2) a card crosses FC_TOUGH_THRESHOLD (3+) Hard/Moderate
+// ratings in a session and gets auto-saved so it isn't lost track of.
+var _fcSavedCards = [];
+var _fcSavedListener = null;
+function fcAttachSavedListener(){
+  if(_fcSavedListener){ try{_fcSavedListener();}catch(e){} }
+  if(!_db||!_uid) return;
+  _fcSavedListener = _db.collection('users').doc(_uid).collection('fc_saved')
+    .onSnapshot(function(snap){
+      _fcSavedCards = [];
+      snap.forEach(function(d){ if(d.exists) _fcSavedCards.push(d.data()); });
+      _fcSavedCards.sort(function(a,b){ return (b.savedAt||0)-(a.savedAt||0); });
+      if(getActivePage()==='fc-saved') renderFcSavedPage();
+    }, function(err){ dbg('FC saved listener err: '+err.message,'error'); });
+}
+function fcDetachSavedListener(){
+  if(_fcSavedListener){ try{_fcSavedListener();}catch(e){} _fcSavedListener=null; }
+}
+function fcSavedDocId(deckId, cardId){ return String(deckId)+'__'+String(cardId); }
+function fcSaveCardToFolder(deckId, cardId, front, back, reason, toughType){
+  if(!_db||!_uid) return Promise.reject('not logged in');
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(deckId); }) ||
+             (_fcTempPlayDeck && String(_fcTempPlayDeck.id)===String(deckId) ? _fcTempPlayDeck : null);
+  var docId = fcSavedDocId(deckId, cardId);
+  var existing = _fcSavedCards.find(function(s){ return s.id===docId; });
+  var entry = {
+    id: docId, deckId: String(deckId), cardId: String(cardId),
+    front: front, back: back,
+    deckName: deck ? deck.name : '(Unknown Deck)',
+    topic: deck ? (deck.topic||'') : '',
+    savedAt: existing ? existing.savedAt : Date.now(),
+    manual: reason==='manual' ? true : !!(existing && existing.manual),
+    autoTough: reason==='auto' ? true : !!(existing && existing.autoTough),
+    toughType: (reason==='auto' ? toughType : (existing ? existing.toughType : null)) || null
+  };
+  return _db.collection('users').doc(_uid).collection('fc_saved').doc(docId).set(entry);
+}
+function fcRemoveSavedCard(docId){
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('fc_saved').doc(docId).delete().catch(function(){});
+}
+function fcIsCardSaved(deckId, cardId){
+  var docId = fcSavedDocId(deckId, cardId);
+  return _fcSavedCards.some(function(s){ return s.id===docId; });
+}
+// Called from the play screen's bookmark button.
+function fcToggleSaveCurrentCard(){
+  var st = _fcSession;
+  if(!st.queue||st.pos>=st.queue.length) return;
+  var card = st.queue[st.pos];
+  var docId = fcSavedDocId(st.deckId, card.cardId);
+  if(fcIsCardSaved(st.deckId, card.cardId)){
+    fcRemoveSavedCard(docId);
+    showToast('Card saved folder se hata diya','info');
+  } else {
+    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'manual').then(function(){
+      showToast('🔖 Card save ho gaya!','success');
+    }).catch(function(e){ showToast('Save error: '+e.message,'error'); });
+  }
+  fcUpdateSaveBtnUI();
+}
+function fcUpdateSaveBtnUI(){
+  var st = _fcSession;
+  var btn = document.getElementById('fcSaveCardBtn');
+  if(!btn || !st.queue || st.pos>=st.queue.length) return;
+  var card = st.queue[st.pos];
+  var saved = fcIsCardSaved(st.deckId, card.cardId);
+  btn.classList.toggle('active', saved);
+  btn.title = saved ? 'Saved (tap to remove)' : 'Save this card';
+}
+
+// ---- Saved Cards Page ----
+var _fcSavedView = 'topic'; // 'topic' | 'response'
+function fcSetSavedView(mode){
+  _fcSavedView = mode;
+  var tTopic = document.getElementById('fcSavedTabTopic');
+  var tResp  = document.getElementById('fcSavedTabResponse');
+  if(tTopic) tTopic.classList.toggle('active', mode==='topic');
+  if(tResp)  tResp.classList.toggle('active', mode==='response');
+  fcPopulateSavedFilter();
+  renderFcSavedPage();
+}
+function fcPopulateSavedFilter(){
+  var sel = document.getElementById('fcSavedFilterSelect'); if(!sel) return;
+  var curVal = sel.value;
+  var opts = ['<option value="">Sab dikhaiye</option>'];
+  if(_fcSavedView==='topic'){
+    var groups = {};
+    _fcSavedCards.forEach(function(c){
+      var key = (c.deckName||'(Unknown)') + (c.topic ? ' — '+c.topic : '');
+      groups[key] = true;
+    });
+    Object.keys(groups).sort().forEach(function(g){
+      opts.push('<option value="'+escHtml(g)+'">'+escHtml(g)+'</option>');
+    });
+  } else {
+    opts.push('<option value="hard">Tough</option>');
+    opts.push('<option value="moderate">Moderate</option>');
+  }
+  sel.innerHTML = opts.join('');
+  if(opts.some(function(o){ return o.indexOf('value="'+curVal+'"')!==-1; })) sel.value = curVal;
+}
+function fcSavedCardGroupKey(c){
+  return (c.deckName||'(Unknown)') + (c.topic ? ' — '+c.topic : '');
+}
+function fcRemoveSavedCardConfirm(docId){
+  var c = _fcSavedCards.find(function(s){ return s.id===docId; });
+  var frontPreview = c ? c.front : '';
+  appConfirm('Is card ko Saved folder se hata doge?\n\n"'+(frontPreview||'').slice(0,80)+'"', function(){
+    fcRemoveSavedCard(docId);
+    showToast('Saved folder se hata diya','success');
+  });
+}
+function renderFcSavedPage(){
+  fcPopulateSavedFilter();
+  var container = document.getElementById('fcSavedList'); if(!container) return;
+  var sub = document.getElementById('fcSavedSubtitle');
+  if(sub) sub.textContent = _fcSavedCards.length + ' saved cards';
+  var filterVal = (document.getElementById('fcSavedFilterSelect')||{}).value || '';
+  var list = _fcSavedCards.slice();
+
+  if(_fcSavedView==='topic'){
+    if(filterVal) list = list.filter(function(c){ return fcSavedCardGroupKey(c)===filterVal; });
+    if(!list.length){
+      container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
+        '<div style="font-size:2rem;margin-bottom:6px;">&#128278;</div>'+
+        '<div>Koi saved card nahi mila.</div>'+
+        '<div style="font-size:0.74rem;margin-top:4px;">Practice ke dauran card save karo, ya 3+ baar Tough/Moderate rate hone par yeh khud-ba-khud yahan aa jayega.</div></div>';
+      return;
+    }
+    var groups = {};
+    var order = [];
+    list.forEach(function(c){
+      var key = fcSavedCardGroupKey(c);
+      if(!groups[key]){ groups[key]=[]; order.push(key); }
+      groups[key].push(c);
+    });
+    order.sort();
+    container.innerHTML = order.map(function(key){
+      return '<div class="fc-saved-group-title">&#127991; '+escHtml(key)+'</div>'+
+        groups[key].map(fcRenderSavedCardHtml).join('');
+    }).join('');
+  } else {
+    var buckets = { hard: [], moderate: [] };
+    list.forEach(function(c){
+      if(!c.autoTough) return; // manual-only saves have no response bucket
+      var bucket = c.toughType==='moderate' ? 'moderate' : 'hard';
+      buckets[bucket].push(c);
+    });
+    if(filterVal) { buckets = filterVal==='moderate' ? {hard:[],moderate:buckets.moderate} : {hard:buckets.hard,moderate:[]}; }
+    var manualOnly = list.filter(function(c){ return c.manual && !c.autoTough; });
+    var html = '';
+    if(buckets.hard.length){
+      html += '<div class="fc-saved-group-title">&#128308; Tough</div>' + buckets.hard.map(fcRenderSavedCardHtml).join('');
+    }
+    if(buckets.moderate.length){
+      html += '<div class="fc-saved-group-title">&#128993; Moderate</div>' + buckets.moderate.map(fcRenderSavedCardHtml).join('');
+    }
+    if(!filterVal && manualOnly.length){
+      html += '<div class="fc-saved-group-title">&#128278; Manually Saved</div>' + manualOnly.map(fcRenderSavedCardHtml).join('');
+    }
+    if(!html){
+      html = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
+        '<div style="font-size:2rem;margin-bottom:6px;">&#128278;</div>'+
+        '<div>Is response category me koi card nahi hai.</div></div>';
+    }
+    container.innerHTML = html;
+  }
+  container.onclick = function(e){
+    var rmBtn = e.target.closest('.fc-saved-remove-btn');
+    if(rmBtn) fcRemoveSavedCardConfirm(rmBtn.getAttribute('data-sid'));
+  };
+}
+function fcRenderSavedCardHtml(c){
+  var tags = '';
+  if(c.autoTough) tags += '<span class="fc-saved-tag '+(c.toughType==='moderate'?'tag-mod':'tag-hard')+'">'+(c.toughType==='moderate'?'Moderate':'Tough')+' 3x+</span>';
+  if(c.manual) tags += '<span class="fc-saved-tag tag-manual">&#128278; Manual Save</span>';
+  return '<div class="fc-saved-card">'+
+    '<div class="fc-saved-q">Q: '+escHtml(c.front)+'</div>'+
+    '<div class="fc-saved-a">A: '+escHtml(c.back)+'</div>'+
+    '<div class="fc-saved-meta">'+tags+'</div>'+
+    '<div style="display:flex;gap:6px;margin-top:8px;">'+
+      '<button class="btn btn-xs btn-danger fc-saved-remove-btn" data-sid="'+escHtml(c.id)+'">&#128465; Remove</button>'+
+    '</div>'+
+  '</div>';
 }
 
 // ---- Deck List ----
@@ -5364,10 +5596,12 @@ function fcRenderCurrentCard(){
     '</div>'+
     '<div class="fc-nav-row">'+
       '<button class="fc-nav-btn" id="fcPrevBtn" onclick="fcPrevCard()"'+(st.pos<=0?' disabled':'')+'>&#8592; Previous</button>'+
+      '<button class="fc-nav-btn" id="fcSaveCardBtn" onclick="fcToggleSaveCurrentCard()" title="Save this card">&#128278;</button>'+
       '<button class="fc-nav-btn fc-del-btn" onclick="fcDeleteCurrentCard()" title="Is card ko delete karo">&#128465;</button>'+
       '<button class="fc-nav-btn" id="fcNextBtn" onclick="fcNextCard()"'+(st.pos>=st.queue.length-1?' disabled':'')+'>Next &#8594;</button>'+
     '</div>'+
     '</div>';
+  fcUpdateSaveBtnUI();
 }
 
 // ---- Manual Prev / Next navigation (does not affect ratings/stats) ----
@@ -5445,6 +5679,13 @@ function fcRateCard(rating){
   rl.counts[rating] = (rl.counts[rating]||0) + 1;
   rl.lastRating = rating;
   rl.front = card.front; rl.back = card.back;
+  // Auto-save to the bookmark folder the moment a card crosses the tough
+  // threshold on Hard or Moderate — regardless of what it gets rated after.
+  if((rating==='hard'||rating==='moderate') && rl.counts[rating]===FC_TOUGH_THRESHOLD){
+    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'auto', rating).then(function(){
+      showToast('📌 Tough card auto-save ho gaya!','info');
+    }).catch(function(){});
+  }
   st.queue.splice(st.pos, 1); // remove current
   if(rating !== 'knew'){
     var gap = FC_GAPS[rating];
@@ -5576,7 +5817,6 @@ var FC_RATING_COLORS = { hard:'#c62828', moderate:'#e65100', easy:'#2e7d32', kne
 //    even if it was eventually marked "I Knew" — so genuinely tough cards
 //    don't silently vanish from the Hard/Moderate lists just because the
 //    user got it right on the last attempt.
-var FC_TOUGH_THRESHOLD = 3;
 function fcCardBelongsToRating(entry, rating){
   if(entry.lastRating === rating) return true;
   if((rating==='hard' || rating==='moderate') && (entry.counts[rating]||0) >= FC_TOUGH_THRESHOLD) return true;
