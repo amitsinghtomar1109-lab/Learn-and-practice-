@@ -580,16 +580,27 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
 .fc-saved-eye-btn{flex:0 0 auto;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:3px 8px;font-size:0.82rem;color:var(--text2);cursor:pointer;}
 .fc-saved-blur{color:var(--text2);font-style:italic;opacity:0.55;font-weight:500;}
 .fc-saved-card .fc-saved-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-.fc-mark-btn{
-  position:relative;flex-shrink:0;width:32px;height:30px;border:none;border-radius:8px;
-  background:rgba(198,40,40,0.1);color:#c62828;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  -webkit-tap-highlight-color:transparent;transition:all 0.15s;
+.fc-mark-group{
+  display:flex;align-items:center;gap:2px;flex-shrink:0;
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:2px;
 }
-.fc-mark-btn:active{transform:scale(0.9);}
-.fc-mark-btn:hover{background:rgba(198,40,40,0.18);}
+.fc-mark-adj{
+  width:24px;height:24px;flex-shrink:0;border:none;border-radius:6px;background:transparent;
+  color:var(--text2);font-size:0.9rem;font-weight:800;cursor:pointer;line-height:1;
+  display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;
+  transition:background 0.15s;
+}
+.fc-mark-adj:active{transform:scale(0.88);}
+.fc-mark-adj:hover{background:rgba(0,0,0,0.06);}
+.fc-mark-icon{
+  position:relative;width:26px;height:24px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#c62828;opacity:0.32; /* light/transparent until marked at least once */
+  transition:opacity 0.15s;
+}
+.fc-mark-group.active .fc-mark-icon{opacity:1;} /* dark once count > 0 */
 .fc-mark-count{
-  position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;
+  position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;padding:0 3px;
   background:#c62828;color:#fff;font-size:0.6rem;font-weight:800;border-radius:50%;
   display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.3);
   line-height:1;
@@ -4860,21 +4871,23 @@ function fcRemoveSavedCard(docId){
   if(!_db||!_uid) return;
   _db.collection('users').doc(_uid).collection('fc_saved').doc(docId).delete().catch(function(){});
 }
-// Mark a saved card as "still didn't remember it" during revision. Each tap
-// bumps the count (1, 2, 3...) so the person can see how many revision
-// passes this particular card has survived without sticking.
-function fcMarkStillNotRemembered(docId){
+// Mark a saved card as "still didn't remember it" during revision (+1), or
+// reduce the count when it's finally remembered (-1). Count never goes
+// below 0 — at 0 the mark shows as a plain, unmarked (light) icon again.
+function fcAdjustNotRemembered(docId, delta){
   if(!_db||!_uid) return;
   var entry = _fcSavedCards.find(function(s){ return s.id===docId; });
   if(!entry) return;
-  var newCount = (entry.notRememberedCount||0) + 1;
+  var oldCount = entry.notRememberedCount||0;
+  var newCount = Math.max(0, oldCount + delta);
+  if(newCount === oldCount) return;
   // Optimistic local update so the badge count updates instantly.
   entry.notRememberedCount = newCount;
   renderFcSavedPage();
   _db.collection('users').doc(_uid).collection('fc_saved').doc(docId)
     .update({ notRememberedCount: newCount })
     .catch(function(e){
-      entry.notRememberedCount = newCount - 1; // rollback on failure
+      entry.notRememberedCount = oldCount; // rollback on failure
       renderFcSavedPage();
       showToast('Mark karne me error: '+e.message,'error');
     });
@@ -5078,8 +5091,10 @@ function renderFcSavedPage(){
     if(rmBtn) fcRemoveSavedCardConfirm(rmBtn.getAttribute('data-sid'));
     var eyeBtn = e.target.closest('.fc-saved-eye-btn');
     if(eyeBtn) fcToggleSavedPart(eyeBtn.getAttribute('data-sid'), eyeBtn.getAttribute('data-part'));
-    var markBtn = e.target.closest('.fc-saved-mark-btn');
-    if(markBtn) fcMarkStillNotRemembered(markBtn.getAttribute('data-sid'));
+    var markPlusBtn = e.target.closest('.fc-saved-mark-plus');
+    if(markPlusBtn) fcAdjustNotRemembered(markPlusBtn.getAttribute('data-sid'), 1);
+    var markMinusBtn = e.target.closest('.fc-saved-mark-minus');
+    if(markMinusBtn) fcAdjustNotRemembered(markMinusBtn.getAttribute('data-sid'), -1);
   };
 }
 function fcRenderSavedCardHtml(c){
@@ -5101,10 +5116,14 @@ function fcRenderSavedCardHtml(c){
     '<div class="fc-saved-meta">'+tags+'</div>'+
     '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">'+
       '<button class="btn btn-xs btn-danger fc-saved-remove-btn" data-sid="'+escHtml(c.id)+'">&#128465; Remove</button>'+
-      '<button class="fc-mark-btn fc-saved-mark-btn" data-sid="'+escHtml(c.id)+'" title="Abhi bhi yaad nahi &#8212; mark karo">'+
-        '<svg viewBox="0 0 22 20" width="18" height="17"><polygon points="11,19 0.5,1 21.5,1" fill="currentColor"/><circle cx="11" cy="6.3" r="1.35" fill="#fff"/><rect x="9.9" y="9" width="2.2" height="6.2" rx="1.1" fill="#fff"/></svg>'+
-        ((c.notRememberedCount||0) > 1 ? '<span class="fc-mark-count">'+c.notRememberedCount+'</span>' : '')+
-      '</button>'+
+      '<div class="fc-mark-group'+((c.notRememberedCount||0)>0 ? ' active' : '')+'">'+
+        '<button class="fc-mark-adj fc-saved-mark-minus" data-sid="'+escHtml(c.id)+'" title="Yaad ho gaya &#8212; count ghataao">&#8722;</button>'+
+        '<span class="fc-mark-icon" title="Abhi bhi yaad nahi">'+
+          '<svg viewBox="0 0 22 20" width="18" height="17"><polygon points="11,1 21.5,19 0.5,19" fill="currentColor"/><rect x="9.9" y="5.2" width="2.2" height="6" rx="1.1" fill="#fff"/><circle cx="11" cy="14.4" r="1.35" fill="#fff"/></svg>'+
+          ((c.notRememberedCount||0) > 0 ? '<span class="fc-mark-count">'+c.notRememberedCount+'</span>' : '')+
+        '</span>'+
+        '<button class="fc-mark-adj fc-saved-mark-plus" data-sid="'+escHtml(c.id)+'" title="Abhi bhi yaad nahi &#8212; count badhao">&#43;</button>'+
+      '</div>'+
     '</div>'+
   '</div>';
 }
