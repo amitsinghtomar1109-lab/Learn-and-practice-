@@ -1141,12 +1141,21 @@ body.dark .fc-card-back {background:linear-gradient(135deg,#004d40,#00695c);}
       </div>
     </div>
     <div class="card" style="background:rgba(230,81,0,0.04);border:1.5px solid rgba(230,81,0,0.15);margin-bottom:10px;">
-      <div class="card-title" style="color:#e65100;margin-bottom:6px;">&#128161; Bulk Import</div>
-      <div style="font-size:0.72rem;color:var(--text2);margin-bottom:4px;">Browser Console (F12) mein yeh paste karo:</div>
-      <div style="font-size:0.72rem;background:var(--surface2);border-radius:8px;padding:8px;font-family:monospace;line-height:1.7;overflow-x:auto;">
-        fcImportCards(deckId, [{front:"Q?", back:"A"}, ...])
+      <div class="card-title" style="color:#e65100;margin-bottom:6px;">&#128161; File Se Bulk Import</div>
+      <div style="font-size:0.72rem;color:var(--text2);margin-bottom:8px;line-height:1.6;">
+        .txt/.json/.csv/.html file select karo &#8212; format auto-detect ho jayega:<br>
+        &#8226; <b>JSON:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"front":"Q","back":"A"}, ...]</code><br>
+        &#8226; <b>Text:</b> har line <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Sawaal :: Jawab</code>
       </div>
-      <div style="font-size:0.68rem;color:var(--text2);margin-top:5px;">deckId deck list mein dikhta hai.</div>
+      <input type="file" class="inp" id="fcImportFileInp" accept=".txt,.json,.csv,.html,.htm" style="padding:7px;" onchange="fcHandleFileSelect(event)" />
+      <div id="fcImportPreviewBox" style="display:none;margin-top:10px;">
+        <div style="font-size:0.76rem;font-weight:700;color:var(--text);margin-bottom:6px;" id="fcImportPreviewSummary"></div>
+        <div id="fcImportPreviewList" style="max-height:180px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:8px;font-size:0.72rem;line-height:1.6;"></div>
+        <div class="btn-row">
+          <button class="btn btn-orange" id="fcImportConfirmBtn" onclick="fcConfirmFileImport()">&#10003; In Cards Ko Deck Me Add Karo</button>
+          <button class="btn btn-outline btn-sm" onclick="fcCancelFileImport()">Cancel</button>
+        </div>
+      </div>
     </div>
     <div id="fcCardsList"></div>
   </div>
@@ -4750,7 +4759,120 @@ function fcDeleteCard(cardId){
   fcSaveDeck(deck).then(function(){ showToast('Card delete ho gaya.','success'); });
 }
 
-// ---- Bulk Import (browser console) ----
+// ---- Bulk Import (file upload) ----
+var _fcPendingImportCards = null;
+
+function fcHandleFileSelect(evt){
+  var file = evt.target.files && evt.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var raw = String(e.target.result || '');
+    var parsed = fcParseImportText(raw);
+    if(!parsed.length){
+      showToast('File me koi valid card nahi mila. Format check karo.','error');
+      _fcPendingImportCards = null;
+      document.getElementById('fcImportPreviewBox').style.display='none';
+      return;
+    }
+    _fcPendingImportCards = parsed;
+    fcShowImportPreview(parsed);
+  };
+  reader.onerror = function(){ showToast('File read nahi ho payi.','error'); };
+  reader.readAsText(file);
+}
+
+function fcParseImportText(raw){
+  var text = raw.trim();
+  var cards = [];
+
+  // 1) Try JSON array first: [{front, back}, ...] (also accepts {q,a} or {question,answer})
+  try{
+    var maybeJson = text;
+    // If it's an HTML file with a JSON array embedded, try to extract it
+    if(/^</.test(text)){
+      var m = text.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+      if(m) maybeJson = m[0];
+    }
+    var data = JSON.parse(maybeJson);
+    if(Array.isArray(data)){
+      data.forEach(function(item){
+        var front = item.front || item.q || item.question || item.term || '';
+        var back  = item.back  || item.a || item.answer   || item.definition || '';
+        front = String(front).trim(); back = String(back).trim();
+        if(front && back) cards.push({front:front, back:back});
+      });
+      if(cards.length) return cards;
+    }
+  }catch(e){ /* not JSON, fall through to text parsing */ }
+
+  // 2) Fallback: plain text, one card per line, "Front :: Back"
+  //    Also supports "Front | Back" and "Front - Back" as separators.
+  var lines = text.split(/\r?\n/);
+  lines.forEach(function(line){
+    line = line.trim();
+    if(!line) return;
+    var parts = null;
+    if(line.indexOf('::') !== -1) parts = line.split('::');
+    else if(line.indexOf('|') !== -1) parts = line.split('|');
+    else if(line.indexOf('\t') !== -1) parts = line.split('\t');
+    if(!parts || parts.length < 2) return;
+    var front = parts[0].trim();
+    var back = parts.slice(1).join('::').trim();
+    if(front && back) cards.push({front:front, back:back});
+  });
+  return cards;
+}
+
+function fcShowImportPreview(cards){
+  var box = document.getElementById('fcImportPreviewBox');
+  var summary = document.getElementById('fcImportPreviewSummary');
+  var list = document.getElementById('fcImportPreviewList');
+  if(!box||!summary||!list) return;
+  summary.textContent = cards.length + ' cards mile — preview neeche dekh lo:';
+  var html = '';
+  cards.slice(0, 50).forEach(function(c, i){
+    html += '<div style="padding:5px 0;' + (i>0?'border-top:1px solid var(--border);':'') + '">' +
+      '<b>' + (i+1) + '.</b> ' + escHtml(c.front) + ' <span style="color:var(--text2);">&#8594;</span> ' + escHtml(c.back) +
+      '</div>';
+  });
+  if(cards.length > 50){
+    html += '<div style="padding-top:6px;color:var(--text2);">...aur ' + (cards.length-50) + ' cards</div>';
+  }
+  list.innerHTML = html;
+  box.style.display = '';
+}
+
+function fcCancelFileImport(){
+  _fcPendingImportCards = null;
+  var box = document.getElementById('fcImportPreviewBox'); if(box) box.style.display='none';
+  var fi = document.getElementById('fcImportFileInp'); if(fi) fi.value='';
+}
+
+function fcConfirmFileImport(){
+  if(!_fcPendingImportCards || !_fcPendingImportCards.length){
+    showToast('Koi cards import karne ko nahi hain.','error'); return;
+  }
+  var deck=_fcDecks.find(function(d){ return String(d.id)===String(_fcCurrentDeckId); });
+  if(!deck){ showToast('Deck nahi mili!','error'); return; }
+  var btn = document.getElementById('fcImportConfirmBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Import ho raha hai...'; }
+  var existing=(deck.cards||[]).slice(); var added=0;
+  _fcPendingImportCards.forEach(function(c){
+    existing.push({ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+added, front:c.front, back:c.back });
+    added++;
+  });
+  deck.cards=existing;
+  fcSaveDeck(deck).then(function(){
+    showToast(added+' cards deck me add ho gaye!','success');
+    fcCancelFileImport();
+  }).catch(function(e){
+    showToast('Save error: '+e.message,'error');
+    if(btn){ btn.disabled = false; btn.textContent = '\u2713 In Cards Ko Deck Me Add Karo'; }
+  });
+}
+
+// ---- Bulk Import (browser console, legacy — still works) ----
 window.fcImportCards = function(deckId, cardsArr){
   var deck=_fcDecks.find(function(d){ return String(d.id)===String(deckId); });
   if(!deck){ console.error('FC: Deck nahi mili. Sahi deckId dalo.'); return; }
