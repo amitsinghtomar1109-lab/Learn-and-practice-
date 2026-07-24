@@ -1074,6 +1074,19 @@ body.dark .fc-card-back {background:linear-gradient(135deg,#004d40,#00695c);}
     </div>
   </div>
 
+  <!-- ===== SHARED FLASHCARD DECK LANDING PAGE ===== -->
+  <div id="page-fc-shared" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">&#128279; Shared Deck</div>
+        <div class="page-subtitle">Yeh flashcard deck aapke saath share ki gayi hai</div>
+      </div>
+    </div>
+    <div id="fcSharedContent">
+      <div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Deck load ho rahi hai...</div></div>
+    </div>
+  </div>
+
   <!-- ===== SHARED ATTEMPTS HISTORY PAGE ===== -->
   <div id="page-shared-history" class="page">
     <div class="page-header">
@@ -1122,7 +1135,10 @@ body.dark .fc-card-back {background:linear-gradient(135deg,#004d40,#00695c);}
         <div class="page-title">&#127183; Cards Manager</div>
         <div class="page-subtitle" id="fcCardsSubtitle">Deck</div>
       </div>
-      <button class="btn btn-orange btn-sm" onclick="fcStartPlay(_fcCurrentDeckId)">&#9654; Practice</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareFcDeck(_fcCurrentDeckId)">&#128279; Share</button>
+        <button class="btn btn-orange btn-sm" onclick="fcStartPlay(_fcCurrentDeckId)">&#9654; Practice</button>
+      </div>
     </div>
     <div class="card" id="fcAddCardForm" style="margin-bottom:10px;">
       <div class="card-title" id="fcAddCardTitle">&#10133; Card Add Karo</div>
@@ -1586,16 +1602,17 @@ function onAuth(user){
 function showSharedLoginPage(){
   // Override login page to show share context
   var loginCard = document.querySelector('#page-login .login-card');
+  var isFc = _pendingShareType === 'fc';
   if(loginCard){
     loginCard.innerHTML =
       '<div class="logo">🔗</div>'+
-      '<h2 style="color:var(--accent);">Shared Quiz</h2>'+
-      '<p>Kisi ne aapke saath ek quiz share ki hai. Attempt karne ke liye login karo!</p>'+
+      '<h2 style="color:var(--accent);">'+(isFc?'Shared Flashcard Deck':'Shared Quiz')+'</h2>'+
+      '<p>'+(isFc?'Kisi ne aapke saath ek flashcard deck share ki hai. Dekhne ke liye login karo!':'Kisi ne aapke saath ek quiz share ki hai. Attempt karne ke liye login karo!')+'</p>'+
       '<div style="background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:0.78rem;color:var(--accent);font-weight:700;text-align:left;">'+
-        '🎯 Login hone ke baad quiz automatically khulegi.'+
+        '🎯 Login hone ke baad '+(isFc?'deck':'quiz')+' automatically khulegi.'+
       '</div>'+
-      '<button class="btn btn-primary" style="width:100%;" onclick="signInGoogle()">🔐 Google se Login Karo & Attempt Karo</button>'+
-      '<div style="font-size:0.7rem;color:var(--text2);margin-top:10px;">Aapka attempt alag document mein save hoga.</div>'+
+      '<button class="btn btn-primary" style="width:100%;" onclick="signInGoogle()">🔐 Google se Login Karo</button>'+
+      '<div style="font-size:0.7rem;color:var(--text2);margin-top:10px;">'+(isFc?'Login ke baad aap yeh deck apni list me import kar sakte ho.':'Aapka attempt alag document mein save hoga.')+'</div>'+
       '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:0.75rem;" onclick="goHomeFromLogin()">← Bina Login Ke Home</button>';
   }
   showPage('login');
@@ -1861,23 +1878,36 @@ function closeShareModal(){
 // SHARED QUIZ LANDING — Load & Display from URL param
 // ================================================================
 
-// Check URL for ?share= param on page load
+// Check URL for ?share= or ?fcshare= param on page load
 function checkSharedQuizUrl(){
   var params = new URLSearchParams(window.location.search);
   var shareId = params.get('share');
-  if(!shareId) return false;
-  dbg('Share param found: '+shareId,'info');
-  _pendingShareId = shareId;
-  return true;
+  var fcShareId = params.get('fcshare');
+  if(fcShareId){
+    dbg('FC share param found: '+fcShareId,'info');
+    _pendingShareId = fcShareId;
+    _pendingShareType = 'fc';
+    return true;
+  }
+  if(shareId){
+    dbg('Share param found: '+shareId,'info');
+    _pendingShareId = shareId;
+    _pendingShareType = 'quiz';
+    return true;
+  }
+  return false;
 }
 var _pendingShareId = null;
+var _pendingShareType = 'quiz';
 
 // Called after auth resolves — if pending share ID exists, load it
 function handlePendingShare(){
   if(!_pendingShareId) return;
   var sid = _pendingShareId;
+  var type = _pendingShareType;
   _pendingShareId = null;
-  loadSharedQuiz(sid);
+  if(type==='fc') loadSharedFcDeck(sid);
+  else loadSharedQuiz(sid);
 }
 
 function loadSharedQuiz(shareId){
@@ -1948,8 +1978,9 @@ function signInGoogleForShared(){
   showToast('Google login khul raha hai...','info');
   _auth.signInWithPopup(provider)
     .then(function(result){
-      // After login, refresh the page to handle the shared quiz
-      if(_sharedQuizData) renderSharedQuizLanding(_sharedQuizData);
+      // After login, refresh the page to handle the shared quiz or shared deck
+      if(_sharedFcDeckData) renderSharedFcDeckLanding(_sharedFcDeckData);
+      else if(_sharedQuizData) renderSharedQuizLanding(_sharedQuizData);
     })
     .catch(function(e){
       dbg('Google popup error: '+e.message,'error');
@@ -4631,6 +4662,7 @@ function renderFcDeckList(){
       '<div class="fc-deck-actions">'+
         '<button class="btn btn-xs" style="background:rgba(21,101,192,0.1);color:var(--accent);border:1.5px solid rgba(21,101,192,0.25);" onclick="openFcCards('+did+')">&#9998; Edit</button>'+
         '<button class="btn btn-xs btn-orange" onclick="fcStartPlay('+did+')">&#9654; Play</button>'+
+        '<button class="btn btn-xs btn-outline" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareFcDeck('+did+')">&#128279; Share</button>'+
         '<button class="btn btn-xs btn-danger" onclick="fcConfirmDeleteDeck('+did+')">&#128465;</button>'+
       '</div>'+
     '</div>';
@@ -4872,6 +4904,157 @@ function fcConfirmFileImport(){
   });
 }
 
+// ---- Deck Sharing ----
+function shareFcDeck(deckId){
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(deckId); });
+  if(!deck){ showToast('Deck nahi mili!','error'); return; }
+  if(!(deck.cards||[]).length){ showToast('Pehle cards add karo!','error'); return; }
+
+  var overlay = document.getElementById('shareModalOverlay');
+  var body = document.getElementById('shareModalBody');
+  if(!overlay||!body) return;
+
+  body.innerHTML = '<div class="center-loader"><div class="loader"></div><div style="margin-top:8px;font-size:0.82rem;color:var(--text2);">Share link bana raha hai...</div></div>';
+  overlay.classList.add('open');
+
+  var publicData = {
+    id: deck.id,
+    name: deck.name,
+    topic: deck.topic||'',
+    cards: (deck.cards||[]).map(function(c){ return { id:c.id, front:c.front, back:c.back }; }),
+    sharedBy: _uid,
+    sharedByName: (_user&&_user.displayName)||'Unknown',
+    sharedByEmail: (_user&&_user.email)||'',
+    cardCount: (deck.cards||[]).length,
+    sharedAt: Date.now(),
+    sharedAtStr: new Date().toLocaleDateString('hi-IN')+' '+new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})
+  };
+
+  _db.collection('public_flashcard_decks').doc(String(deck.id)).set(publicData)
+    .then(function(){
+      var baseUrl = window.location.href.split('?')[0].split('#')[0];
+      var shareUrl = baseUrl + '?fcshare=' + deck.id;
+      body.innerHTML =
+        '<div style="text-align:center;margin-bottom:14px;">'+
+          '<div style="font-size:2.5rem;margin-bottom:6px;">🎉</div>'+
+          '<div style="font-weight:800;font-size:0.95rem;color:var(--green);">Deck share ho gayi!</div>'+
+          '<div style="font-size:0.78rem;color:var(--text2);margin-top:4px;">Neeche link copy karo aur kisi ko bhi bhejo</div>'+
+        '</div>'+
+        '<div style="background:rgba(230,81,0,0.07);border:1.5px solid rgba(230,81,0,0.2);border-radius:12px;padding:12px 14px;margin-bottom:12px;">'+
+          '<div style="font-weight:800;font-size:0.85rem;color:var(--text);margin-bottom:4px;">🃏 '+escHtml(deck.name)+'</div>'+
+          '<div style="font-size:0.72rem;color:var(--text2);">📋 '+(deck.cards||[]).length+' cards</div>'+
+        '</div>'+
+        '<div class="share-link-box">'+
+          '<span id="shareLinkText">'+escHtml(shareUrl)+'</span>'+
+          '<button onclick="copyShareLink()" style="background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:800;cursor:pointer;flex-shrink:0;">📋 Copy</button>'+
+        '</div>'+
+        '<div style="font-size:0.72rem;color:var(--text2);margin-top:10px;padding:8px 10px;background:rgba(46,125,50,0.07);border-radius:8px;border-left:3px solid var(--green);">'+
+          '✅ <b>Yeh link kisi ko bhi bhejo</b> — woh Google se login karke deck apni list me import kar sakte hain.<br>'+
+          '📌 Baad me deck update karo toh dubara Share dabao taaki link ka data refresh ho jaye.'+
+        '</div>'+
+        '<button onclick="closeShareModal()" style="width:100%;margin-top:14px;padding:10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;">Done ✓</button>';
+      showToast('🔗 Share link ready!','success');
+    })
+    .catch(function(e){
+      body.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px;">Share failed: '+escHtml(e.message)+'</div>'+
+        '<button onclick="closeShareModal()" style="width:100%;margin-top:10px;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;">Close</button>';
+      dbg('FC Share error: '+e.message,'error');
+    });
+}
+
+var _sharedFcDeckData = null; // currently loaded shared deck
+
+function loadSharedFcDeck(shareId){
+  if(!_db){ showToast('Firebase ready nahi','error'); return; }
+  navTo('fc-shared', {title:'🔗 Shared Deck'}, false);
+  document.getElementById('topbarTitle').textContent = '🔗 Shared Deck';
+  var contentEl = document.getElementById('fcSharedContent');
+  if(contentEl) contentEl.innerHTML = '<div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Deck load ho rahi hai...</div></div>';
+
+  _db.collection('public_flashcard_decks').doc(String(shareId)).get()
+    .then(function(doc){
+      if(!doc.exists){
+        if(contentEl) contentEl.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:var(--text2);"><div style="font-size:2.5rem;margin-bottom:8px;">😕</div><div style="font-weight:800;">Deck nahi mili</div><div style="font-size:0.8rem;margin-top:6px;">Yeh link expired ho sakta hai ya deck delete ho gayi hogi.</div><div style="margin-top:14px;"><button class="btn btn-primary btn-sm" onclick="goHome()">🏠 Ghar Jao</button></div></div>';
+        return;
+      }
+      _sharedFcDeckData = doc.data();
+      renderSharedFcDeckLanding(_sharedFcDeckData);
+    })
+    .catch(function(e){
+      dbg('loadSharedFcDeck err: '+e.message,'error');
+      if(contentEl) contentEl.innerHTML = '<div class="card" style="text-align:center;padding:30px;color:var(--red);"><div style="font-size:2rem;margin-bottom:8px;">⚠️</div><div>Load failed: '+escHtml(e.message)+'</div><div style="margin-top:14px;"><button class="btn btn-primary btn-sm" onclick="goHome()">🏠 Ghar Jao</button></div></div>';
+    });
+}
+
+function renderSharedFcDeckLanding(deck){
+  var el = document.getElementById('fcSharedContent');
+  if(!el) return;
+  var isLoggedIn = !!_uid && !(_user&&_user.isAnonymous);
+  var cards = deck.cards||[];
+  var previewCards = cards.slice(0, 5);
+
+  var previewHtml = previewCards.map(function(c){
+    return '<div style="background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:0.78rem;">'+
+      '<b>'+escHtml(c.front)+'</b> <span style="color:var(--text2);">&#8594;</span> '+escHtml(c.back)+
+    '</div>';
+  }).join('');
+  if(cards.length > 5){
+    previewHtml += '<div style="font-size:0.72rem;color:var(--text2);text-align:center;padding-top:2px;">...aur '+(cards.length-5)+' cards</div>';
+  }
+
+  el.innerHTML =
+    '<div class="card" style="background:linear-gradient(135deg,rgba(230,81,0,0.08),rgba(230,81,0,0.02));border:1.5px solid rgba(230,81,0,0.2);margin-bottom:14px;">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'+
+        '<span class="shared-badge">🔗 Shared Deck</span>'+
+        '<span style="font-size:0.7rem;color:var(--text2);">by '+escHtml(deck.sharedByName||'Someone')+'</span>'+
+      '</div>'+
+      '<div style="font-weight:900;font-size:1.1rem;color:var(--text);margin-bottom:8px;">🃏 '+escHtml(deck.name)+'</div>'+
+      (deck.topic?'<div style="font-size:0.72rem;color:var(--accent);margin-bottom:8px;">'+escHtml(deck.topic)+'</div>':'')+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+
+        '<span style="font-size:0.78rem;background:rgba(230,81,0,0.1);color:#e65100;border-radius:20px;padding:3px 10px;font-weight:700;">📋 '+(deck.cardCount||cards.length)+' Cards</span>'+
+        '<span style="font-size:0.78rem;background:var(--surface2);border-radius:20px;padding:3px 10px;font-weight:700;color:var(--text2);">📅 '+escHtml(deck.sharedAtStr||'')+'</span>'+
+      '</div>'+
+    '</div>'+
+    (previewHtml ? '<div class="card" style="margin-bottom:14px;"><div class="card-title" style="margin-bottom:8px;">👀 Preview</div>'+previewHtml+'</div>' : '')+
+    (isLoggedIn ?
+      '<div class="card">'+
+        '<div style="font-weight:800;font-size:0.92rem;color:var(--green);margin-bottom:8px;">✅ Aap login hain!</div>'+
+        '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:14px;">Yeh deck apni flashcard list me import karo — phir aap normally practice kar sakte ho, aur cards edit/add bhi.</div>'+
+        '<button class="btn btn-primary" style="width:100%;" id="fcImportSharedBtn" onclick="importSharedFcDeck()">⬇ Apni List Me Import Karo</button>'+
+      '</div>'
+    :
+      '<div class="card" style="text-align:center;padding:24px 16px;">'+
+        '<div style="font-size:2.5rem;margin-bottom:8px;">🔐</div>'+
+        '<div style="font-weight:800;font-size:0.95rem;color:var(--accent);margin-bottom:6px;">Google se Login Karo</div>'+
+        '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:16px;">Deck ko apni list me import karne ke liye Google account se login karna zaroori hai.</div>'+
+        '<button class="btn btn-primary" style="width:100%;" onclick="signInGoogleForShared()">🔐 Sign in with Google</button>'+
+      '</div>'
+    );
+}
+
+function importSharedFcDeck(){
+  if(!_sharedFcDeckData){ showToast('Deck data nahi mila!','error'); return; }
+  var btn = document.getElementById('fcImportSharedBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Import ho raha hai...'; }
+  var src = _sharedFcDeckData;
+  var newDeck = {
+    id: Date.now(),
+    name: src.name + ' (Shared)',
+    topic: src.topic || '',
+    cards: (src.cards||[]).map(function(c, i){
+      return { id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+    }),
+    createdAt: Date.now()
+  };
+  fcSaveDeck(newDeck).then(function(){
+    showToast('🎉 Deck apni list me import ho gayi!','success');
+    openFcCards(newDeck.id);
+  }).catch(function(e){
+    showToast('Import error: '+e.message,'error');
+    if(btn){ btn.disabled = false; btn.textContent = '⬇ Apni List Me Import Karo'; }
+  });
+}
+
 // ---- Bulk Import (browser console, legacy — still works) ----
 window.fcImportCards = function(deckId, cardsArr){
   var deck=_fcDecks.find(function(d){ return String(d.id)===String(deckId); });
@@ -5019,6 +5202,9 @@ function fcRateCard(rating){
   else if(rating==='moderate') st.stats.moderate++;
   else if(rating==='easy')     st.stats.easy++;
   else if(rating==='knew')     st.stats.knew++;
+  // Track this card's most recent rating + its content, for the done-screen breakdown.
+  if(!st.ratingLog) st.ratingLog = {};
+  st.ratingLog[card.cardId] = { rating: rating, front: card.front, back: card.back };
   st.queue.splice(st.pos, 1); // remove current
   if(rating !== 'knew'){
     var gap = FC_GAPS[rating];
@@ -5054,11 +5240,13 @@ function fcShowDoneScreen(){
       '<div class="fc-done-sub">Saare '+st.totalOriginal+' cards knew ho gaye. Zabardast!</div>'+
     '</div>'+
     '<div class="fc-stat-grid">'+
-      '<div class="fc-stat-box"><div class="fc-stat-num" style="color:#1565c0;">'+st.stats.knew+'</div><div class="fc-stat-lbl">I Knew</div></div>'+
-      '<div class="fc-stat-box"><div class="fc-stat-num" style="color:#2e7d32;">'+st.stats.easy+'</div><div class="fc-stat-lbl">Easy</div></div>'+
-      '<div class="fc-stat-box"><div class="fc-stat-num" style="color:#e65100;">'+st.stats.moderate+'</div><div class="fc-stat-lbl">Moderate</div></div>'+
-      '<div class="fc-stat-box"><div class="fc-stat-num" style="color:#c62828;">'+st.stats.hard+'</div><div class="fc-stat-lbl">Hard</div></div>'+
+      '<div class="fc-stat-box" style="cursor:pointer;" onclick="fcShowRatingCards(\'knew\')"><div class="fc-stat-num" style="color:#1565c0;">'+st.stats.knew+'</div><div class="fc-stat-lbl">I Knew</div></div>'+
+      '<div class="fc-stat-box" style="cursor:pointer;" onclick="fcShowRatingCards(\'easy\')"><div class="fc-stat-num" style="color:#2e7d32;">'+st.stats.easy+'</div><div class="fc-stat-lbl">Easy</div></div>'+
+      '<div class="fc-stat-box" style="cursor:pointer;" onclick="fcShowRatingCards(\'moderate\')"><div class="fc-stat-num" style="color:#e65100;">'+st.stats.moderate+'</div><div class="fc-stat-lbl">Moderate</div></div>'+
+      '<div class="fc-stat-box" style="cursor:pointer;" onclick="fcShowRatingCards(\'hard\')"><div class="fc-stat-num" style="color:#c62828;">'+st.stats.hard+'</div><div class="fc-stat-lbl">Hard</div></div>'+
     '</div>'+
+    '<div style="font-size:0.68rem;color:var(--text2);text-align:center;margin:-6px 0 10px;">Kisi bhi number par tap karke woh cards dekho</div>'+
+    '<div id="fcRatingCardsBox" style="display:none;margin-bottom:14px;"></div>'+
     '<div style="font-size:0.8rem;color:var(--text2);background:var(--surface2);border-radius:10px;padding:10px 14px;margin-bottom:14px;line-height:1.6;">'+
       '<b>Total reviews:</b> '+totalReviews+'<br>'+
       '<b>1st-pass knew:</b> '+eff+'%'+
@@ -5067,6 +5255,38 @@ function fcShowDoneScreen(){
       '<button class="btn btn-orange" onclick="fcResetAndReplay()">Fresh Round Karo</button>'+
       '<button class="btn btn-outline" onclick="appGoBack()">Deck List</button>'+
     '</div>';
+}
+
+var FC_RATING_LABELS = { hard:'Hard', moderate:'Moderate', easy:'Easy', knew:'I Knew' };
+var FC_RATING_COLORS = { hard:'#c62828', moderate:'#e65100', easy:'#2e7d32', knew:'#1565c0' };
+
+function fcShowRatingCards(rating){
+  var st = _fcSession;
+  var log = st.ratingLog || {};
+  var box = document.getElementById('fcRatingCardsBox');
+  if(!box) return;
+  var cards = Object.keys(log).map(function(k){ return log[k]; }).filter(function(c){ return c.rating===rating; });
+  var color = FC_RATING_COLORS[rating];
+  if(!cards.length){
+    box.innerHTML = '<div style="font-size:0.8rem;color:var(--text2);text-align:center;padding:14px;background:var(--surface2);border-radius:10px;">Is category me koi card nahi hai.</div>';
+    box.style.display = '';
+    return;
+  }
+  var html = '<div style="font-weight:800;font-size:0.85rem;color:'+color+';margin-bottom:8px;">'+FC_RATING_LABELS[rating]+' &#8212; '+cards.length+' cards</div>';
+  html += '<div style="max-height:280px;overflow-y:auto;">';
+  cards.forEach(function(c, i){
+    html +=
+      '<div style="background:var(--surface2);border-left:3px solid '+color+';border-radius:8px;padding:10px 12px;margin-bottom:8px;">'+
+        '<div style="font-size:0.68rem;font-weight:700;color:var(--text2);margin-bottom:3px;">SAWAAL</div>'+
+        '<div style="font-size:0.84rem;color:var(--text);margin-bottom:8px;">'+escHtml(c.front)+'</div>'+
+        '<div style="font-size:0.68rem;font-weight:700;color:var(--text2);margin-bottom:3px;">JAWAB</div>'+
+        '<div style="font-size:0.84rem;color:var(--text);">'+escHtml(c.back)+'</div>'+
+      '</div>';
+  });
+  html += '</div>';
+  box.innerHTML = html;
+  box.style.display = '';
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function fcResetAndReplay(){
