@@ -93,11 +93,31 @@ body{
   white-space:nowrap; pointer-events:none;
 }
 
-/* Card */
-.card{
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-  padding:16px; margin-bottom:14px; box-shadow:var(--shadow);
+/* ── Saved Cards — slide-in options panel ── */
+#fcSavedPanelToggle{
+  position:fixed; top:14px; left:14px; z-index:301;
+  width:42px; height:42px; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#1565c0,#1976d2); color:#fff;
+  font-size:1.15rem; display:none; align-items:center; justify-content:center;
+  box-shadow:0 4px 18px rgba(21,101,192,0.40);
+  transition:transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color:transparent;
 }
+#fcSavedPanelToggle.visible{display:flex;}
+#fcSavedPanelToggle:active{transform:scale(0.92);}
+#fcSavedPanelOverlay{
+  position:fixed; inset:0; z-index:398; background:rgba(0,0,0,0.35);
+  display:none; opacity:0; transition:opacity 0.2s;
+}
+#fcSavedPanelOverlay.open{display:block; opacity:1;}
+#fcSavedPanel{
+  position:fixed; top:0; left:0; bottom:0; z-index:399;
+  width:82%; max-width:320px; background:var(--surface);
+  box-shadow:4px 0 24px rgba(0,0,0,0.22);
+  padding:18px 16px; overflow-y:auto;
+  transform:translateX(-100%); transition:transform 0.25s ease;
+}
+#fcSavedPanel.open{transform:translateX(0);}
 .card-title{font-weight:800; font-size:0.95rem; color:var(--accent); margin-bottom:10px;}
 
 /* Page system */
@@ -1440,25 +1460,33 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
         <div class="page-subtitle" id="fcSavedSubtitle">Your bookmarked and tough cards</div>
       </div>
     </div>
-    <div class="card" style="margin-bottom:10px;">
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button class="btn btn-sm fc-saved-viewtab active" id="fcSavedTabTopic" onclick="fcSetSavedView('topic')" style="flex:1;">&#127991; Subject / Topic</button>
-        <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabResponse" onclick="fcSetSavedView('response')" style="flex:1;">&#128202; Response Wise</button>
-        <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabMarked" onclick="fcSetSavedView('marked')" style="flex:1;">&#9888; Marked</button>
-      </div>
-      <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;margin-bottom:10px;">
-        <option value="">Show all</option>
-      </select>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllAnswers()">&#128064; Hide All Answers</button>
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllAnswers()">&#128065; Show All Answers</button>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllQuestions()">&#128064; Hide All Questions</button>
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllQuestions()">&#128065; Show All Questions</button>
-      </div>
-    </div>
     <div id="fcSavedList"></div>
+  </div>
+
+  <!-- Saved Cards — slide-in options panel + its toggle handle -->
+  <button id="fcSavedPanelToggle" onclick="fcToggleSavedPanel()" aria-label="Saved options">&#9776;</button>
+  <div id="fcSavedPanelOverlay" onclick="fcCloseSavedPanel()"></div>
+  <div id="fcSavedPanel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-weight:900;font-size:0.95rem;color:var(--accent);">&#9881; View &amp; Filter</div>
+      <button onclick="fcCloseSavedPanel()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text2);">&#10005;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-sm fc-saved-viewtab active" id="fcSavedTabTopic" onclick="fcSetSavedView('topic')">&#127991; Subject / Topic</button>
+      <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabResponse" onclick="fcSetSavedView('response')">&#128202; Response Wise</button>
+      <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabMarked" onclick="fcSetSavedView('marked')">&#9888; Marked</button>
+    </div>
+    <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;margin-bottom:10px;">
+      <option value="">Show all</option>
+    </select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllAnswers()">&#128064; Hide All Answers</button>
+      <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllAnswers()">&#128065; Show All Answers</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+      <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllQuestions()">&#128064; Hide All Questions</button>
+      <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllQuestions()">&#128065; Show All Questions</button>
+    </div>
   </div>
 <div class="share-modal-overlay" id="shareModalOverlay" onclick="if(event.target===this)closeShareModal()">
   <div class="share-modal-box">
@@ -1593,7 +1621,7 @@ function _updateFloatingBack(){
   var btn = document.getElementById('floatingBack');
   if(!btn) return;
   var cur = getActivePage();
-  if(!cur || _rootPages.indexOf(cur) !== -1 || _navStack.length === 0){
+  if(!cur || _rootPages.indexOf(cur) !== -1 || _navStack.length === 0 || cur === 'fc-saved'){
     btn.classList.remove('visible');
   } else {
     btn.classList.add('visible');
@@ -1604,6 +1632,31 @@ function _updateFloatingBack(){
       btn.setAttribute('data-label', 'Back');
     }
   }
+  // Saved Cards page ka slide-panel toggle sirf usi page par dikhna chahiye
+  var pt = document.getElementById('fcSavedPanelToggle');
+  if(pt){
+    if(cur === 'fc-saved'){ pt.classList.add('visible'); }
+    else { pt.classList.remove('visible'); fcCloseSavedPanel(); }
+  }
+}
+
+// ---- Saved Cards slide-in panel controls ----
+function fcOpenSavedPanel(){
+  var p = document.getElementById('fcSavedPanel');
+  var o = document.getElementById('fcSavedPanelOverlay');
+  if(p) p.classList.add('open');
+  if(o) o.classList.add('open');
+}
+function fcCloseSavedPanel(){
+  var p = document.getElementById('fcSavedPanel');
+  var o = document.getElementById('fcSavedPanelOverlay');
+  if(p) p.classList.remove('open');
+  if(o) o.classList.remove('open');
+}
+function fcToggleSavedPanel(){
+  var p = document.getElementById('fcSavedPanel');
+  if(p && p.classList.contains('open')) fcCloseSavedPanel();
+  else fcOpenSavedPanel();
 }
 
 // Low-level page switcher — does NOT push to stack, does NOT push browser history
