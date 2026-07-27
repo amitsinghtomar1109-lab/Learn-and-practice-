@@ -389,23 +389,60 @@ textarea.inp{resize:vertical; min-height:64px;}
 /* ================================================================
    FLASHCARD FEATURE STYLES
    ================================================================ */
+/* ── Flashcard Deck List — redesigned deck cards ── */
+#fcDeckList{display:flex;flex-direction:column;gap:12px;}
 .fc-deck-card {
-  background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
-  padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);
-  display:flex;align-items:center;gap:12px;
-  transition:border 0.18s,box-shadow 0.15s;
+  position:relative;
+  background:var(--surface);border:1.5px solid var(--border);border-radius:16px;
+  padding:16px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:12px;
+  transition:border 0.18s,box-shadow 0.2s,transform 0.15s;
 }
-.fc-deck-card:hover{border-color:var(--accent);box-shadow:0 4px 18px rgba(21,101,192,0.12);}
+.fc-deck-card:hover{border-color:var(--accent);box-shadow:0 6px 22px rgba(21,101,192,0.14);transform:translateY(-1px);}
+.fc-deck-top{display:flex;align-items:flex-start;gap:12px;}
 .fc-deck-icon{
-  width:44px;height:44px;border-radius:13px;flex-shrink:0;
+  width:48px;height:48px;border-radius:14px;flex-shrink:0;
   background:linear-gradient(135deg,#e65100,#ff8f00);
-  display:flex;align-items:center;justify-content:center;font-size:1.4rem;
-  box-shadow:0 2px 8px rgba(230,81,0,0.3);
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+  box-shadow:0 3px 10px rgba(230,81,0,0.35);
 }
-.fc-deck-info{flex:1;min-width:0;}
-.fc-deck-name{font-weight:800;font-size:0.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.fc-deck-meta{font-size:0.68rem;color:var(--text2);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;}
-.fc-deck-actions{display:flex;gap:5px;flex-shrink:0;}
+.fc-deck-info{flex:1;min-width:0;padding-top:1px;}
+.fc-deck-name{
+  font-weight:800;font-size:1.02rem;color:var(--text);line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-word;
+}
+.fc-deck-meta{font-size:0.72rem;color:var(--text2);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.fc-deck-meta span{display:inline-flex;align-items:center;gap:4px;}
+.fc-deck-topic-chip{
+  background:rgba(21,101,192,0.08);color:var(--accent);
+  padding:2px 9px;border-radius:20px;font-weight:700;font-size:0.68rem;
+}
+.fc-deck-menu-wrap{position:relative;flex-shrink:0;}
+.fc-deck-menu-btn{
+  width:32px;height:32px;border-radius:9px;border:1.5px solid var(--border);
+  background:var(--surface2);color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:900;
+  flex-shrink:0;line-height:1;transition:background 0.15s,color 0.15s,border-color 0.15s;
+}
+.fc-deck-menu-btn:hover{background:rgba(21,101,192,0.1);color:var(--accent);border-color:rgba(21,101,192,0.3);}
+.fc-deck-menu{
+  position:absolute;top:38px;right:0;z-index:60;min-width:168px;
+  background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:6px;display:none;
+}
+.fc-deck-menu.open{display:block;animation:fadeIn 0.15s ease;}
+.fc-deck-menu button{
+  width:100%;text-align:left;background:none;border:none;cursor:pointer;
+  padding:9px 10px;border-radius:8px;font-size:0.8rem;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:8px;font-family:inherit;
+}
+.fc-deck-menu button:hover{background:var(--surface2);}
+.fc-deck-menu button.fc-menu-danger{color:var(--red);}
+.fc-deck-menu button.fc-menu-danger:hover{background:rgba(198,40,40,0.08);}
+.fc-deck-actions{display:flex;gap:8px;flex-shrink:0;}
+.fc-deck-actions .btn{flex:1;padding:8px 10px;font-size:0.76rem;border-radius:9px;}
+.fc-deck-actions .btn-orange{box-shadow:0 3px 10px rgba(230,81,0,0.28);}
 
 #page-fc-play{
   position:fixed;inset:0;z-index:50;display:none;flex-direction:column;
@@ -1360,14 +1397,23 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
 
   <!-- ===== FLASHCARDS LIST PAGE ===== -->
   <div id="page-flashcards" class="page">
-    <div class="page-header">
+    <div class="page-header" style="align-items:center;">
       <div>
         <div class="page-title">&#127183; Flashcards</div>
         <div class="page-subtitle">Decks banao, cards add karo, practice karo</div>
       </div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-outline btn-sm" style="color:#e6a100;border-color:rgba(255,179,0,0.35);" onclick="navTo('fc-saved',{title:'🔖 Saved Cards'});renderFcSavedPage();">&#128278; Saved</button>
         <button class="btn btn-orange btn-sm" onclick="openFcNewDeckForm()">&#10133; New Deck</button>
+        <div class="fc-deck-menu-wrap">
+          <button class="fc-deck-menu-btn" id="fcListMenuBtn" onclick="fcToggleListMenu(event)" aria-label="Manage" title="Manage">&#8942;</button>
+          <div class="fc-deck-menu" id="fcListMenu">
+            <button onclick="fcCloseListMenu();navTo('fc-saved',{title:'🔖 Saved Cards'});renderFcSavedPage();">&#128278; Saved Cards</button>
+            <button onclick="fcCloseListMenu();openFcNewDeckForm();">&#10133; New Deck</button>
+            <button onclick="fcCloseListMenu();fcExportAllDecks();">&#11015; Export All Decks</button>
+            <button onclick="fcCloseListMenu();renderFcDeckList();showToast('List refresh ho gayi','success');">&#8635; Refresh List</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="card" id="fcNewDeckForm" style="display:none;margin-bottom:10px;">
@@ -5310,22 +5356,87 @@ function renderFcDeckList(){
     var cnt = (deck.cards||[]).length;
     var did = deck.id; // numeric timestamp — safe to use without quotes in onclick
     return '<div class="fc-deck-card">'+
-      '<div class="fc-deck-icon">&#127183;</div>'+
-      '<div class="fc-deck-info">'+
-        '<div class="fc-deck-name">'+escHtml(deck.name)+'</div>'+
-        '<div class="fc-deck-meta">'+
-          '<span>&#128203; '+cnt+' cards</span>'+
-          (deck.topic ? '<span>&#127991; '+escHtml(deck.topic)+'</span>' : '')+
+      '<div class="fc-deck-top">'+
+        '<div class="fc-deck-icon">&#127183;</div>'+
+        '<div class="fc-deck-info">'+
+          '<div class="fc-deck-name">'+escHtml(deck.name)+'</div>'+
+          '<div class="fc-deck-meta">'+
+            '<span>&#128203; '+cnt+' cards</span>'+
+            (deck.topic ? '<span class="fc-deck-topic-chip">&#127991; '+escHtml(deck.topic)+'</span>' : '')+
+          '</div>'+
+        '</div>'+
+        '<div class="fc-deck-menu-wrap">'+
+          '<button class="fc-deck-menu-btn" onclick="fcToggleDeckMenu(event,'+did+')" aria-label="Deck options" title="More options">&#8942;</button>'+
+          '<div class="fc-deck-menu" id="fcDeckMenu_'+did+'">'+
+            '<button onclick="fcCloseDeckMenus();fcRenameDeck('+did+')">&#9998; Rename Deck</button>'+
+            '<button onclick="fcCloseDeckMenus();shareFcDeck('+did+')">&#128279; Share Deck</button>'+
+            '<button onclick="fcCloseDeckMenus();fcExportDeck('+did+')">&#11015; Export Deck</button>'+
+            '<button class="fc-menu-danger" onclick="fcCloseDeckMenus();fcConfirmDeleteDeck('+did+')">&#128465; Delete Deck</button>'+
+          '</div>'+
         '</div>'+
       '</div>'+
       '<div class="fc-deck-actions">'+
-        '<button class="btn btn-xs" style="background:rgba(21,101,192,0.1);color:var(--accent);border:1.5px solid rgba(21,101,192,0.25);" onclick="openFcCards('+did+')">&#9998; Edit</button>'+
-        '<button class="btn btn-xs btn-orange" onclick="fcStartPlay('+did+')">&#9654; Play</button>'+
-        '<button class="btn btn-xs btn-outline" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareFcDeck('+did+')">&#128279; Share</button>'+
-        '<button class="btn btn-xs btn-danger" onclick="fcConfirmDeleteDeck('+did+')">&#128465;</button>'+
+        '<button class="btn btn-outline" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="openFcCards('+did+')">&#9998; Edit</button>'+
+        '<button class="btn btn-orange" onclick="fcStartPlay('+did+')">&#9654; Play</button>'+
       '</div>'+
     '</div>';
   }).join('');
+}
+// ---- Deck-list kebab menus (per-deck + page-level manage menu) ----
+function fcCloseDeckMenus(){
+  document.querySelectorAll('.fc-deck-menu.open').forEach(function(m){ m.classList.remove('open'); });
+}
+function fcToggleDeckMenu(ev, did){
+  ev.stopPropagation();
+  var menu = document.getElementById('fcDeckMenu_'+did);
+  var wasOpen = menu && menu.classList.contains('open');
+  fcCloseDeckMenus(); fcCloseListMenu();
+  if(menu && !wasOpen) menu.classList.add('open');
+}
+function fcToggleListMenu(ev){
+  ev.stopPropagation();
+  var menu = document.getElementById('fcListMenu');
+  var wasOpen = menu && menu.classList.contains('open');
+  fcCloseDeckMenus(); fcCloseListMenu();
+  if(menu && !wasOpen) menu.classList.add('open');
+}
+function fcCloseListMenu(){
+  var menu = document.getElementById('fcListMenu');
+  if(menu) menu.classList.remove('open');
+}
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.fc-deck-menu-wrap')){ fcCloseDeckMenus(); fcCloseListMenu(); }
+});
+function fcRenameDeck(did){
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(did); });
+  if(!deck) return;
+  var newName = prompt('Deck ka naya naam:', deck.name);
+  if(newName===null) return;
+  newName = newName.trim();
+  if(!newName){ showToast('Naam khaali nahi ho sakta!','error'); return; }
+  deck.name = newName;
+  fcSaveDeck(deck).then(function(){ showToast('Deck rename ho gayi!','success'); }).catch(function(e){ showToast('Error: '+e.message,'error'); });
+}
+function fcExportDeck(did){
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(did); });
+  if(!deck) return;
+  var blob = new Blob([JSON.stringify(deck.cards||[], null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = (deck.name||'deck').replace(/[^a-z0-9\- ]/gi,'_')+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Deck export ho gaya!','success');
+}
+function fcExportAllDecks(){
+  if(!_fcDecks.length){ showToast('Koi deck nahi hai export karne ke liye.','error'); return; }
+  var blob = new Blob([JSON.stringify(_fcDecks, null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'all_flashcard_decks.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Saare decks export ho gaye!','success');
 }
 function openFcNewDeckForm(){
   var f = document.getElementById('fcNewDeckForm');
