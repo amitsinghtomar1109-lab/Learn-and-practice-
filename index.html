@@ -1588,6 +1588,12 @@ function navTo(page, opts, pushBrowser){
 // App-level back — pops our internal stack
 function appGoBack(){
   if(_navStack.length === 0) return;
+  // Leaving the flashcard play page via back — save progress to cloud first
+  // so it can be offered back via the resume popup next time this deck is
+  // opened (mirrors the quiz attempt's auto-pause-on-back behaviour).
+  if(getActivePage()==='fc-play' && typeof fcSilentPauseIfRunning==='function'){
+    fcSilentPauseIfRunning();
+  }
   var prev = _navStack.pop();
   _navLocked = true;
 
@@ -1658,6 +1664,11 @@ function _doNavigateTo(pageName, pushBrowser){
 // Hardware back button / browser back
 window.addEventListener('popstate', function(e){
   if(_navLocked) return;
+  // Leaving the flashcard play page via hardware/browser back — save
+  // progress to cloud first so it can be resumed later via the popup.
+  if(getActivePage()==='fc-play' && typeof fcSilentPauseIfRunning==='function'){
+    fcSilentPauseIfRunning();
+  }
   if(_navStack.length > 0){
     var prev = _navStack.pop();
     _navLocked = true;
@@ -5696,10 +5707,23 @@ function startFcSession(){
     return;
   }
 
-  // Har baar deck open karne par fresh session se shuru karo.
-  // Koi bhi pichla adhoora session (agar tha) silently discard ho jata hai —
-  // resume ka popup ab nahi aayega, deck hamesha shuru se khulegi.
-  fcClearSession(deckId);
+  // Check for a previously paused/in-progress session on THIS deck (saved to
+  // cloud on background/minimize/refresh — see fcSilentPauseIfRunning). If
+  // one exists and still has cards left to review, ask the user whether to
+  // resume it or start a fresh session, instead of silently discarding it.
+  fcLoadSession(deckId).then(function(saved){
+    if(saved && !saved.done && saved.queue && saved.queue.length && String(saved.deckId)===String(deckId)){
+      fcShowResumeChoice(deck, saved, cards);
+    } else {
+      fcClearSession(deckId);
+      fcBeginFreshSession(deckId, cards);
+    }
+  });
+}
+
+// Build & render a brand-new session for this deck (used both for first play
+// and when the user explicitly chooses "New Session" over a paused one).
+function fcBeginFreshSession(deckId, cards){
   _fcSession = {
     deckId: deckId,
     queue: fcShuffleArray(fcBuildInitialQueue(cards)),
@@ -5710,6 +5734,55 @@ function startFcSession(){
     done: false
   };
   fcRenderCurrentCard();
+}
+
+// Restore a previously-saved session exactly as it was (same queue order,
+// position, stats, and rating history) so the user picks up right where
+// they paused — including all responses given so far.
+function fcResumeSavedSession(saved){
+  _fcSession = saved;
+  fcRenderCurrentCard();
+}
+
+// Popup shown when re-opening a deck that has an unfinished paused session.
+// Offers "Resume" (continue exactly where left off) or "New Session"
+// (discard the paused progress and start fresh) — never silently picks one.
+function fcShowResumeChoice(deck, saved, cards){
+  var areaEl = document.getElementById('fcPlayArea');
+  var totalDone = (saved.stats.knew||0) + (saved.stats.easy||0) + (saved.stats.moderate||0) + (saved.stats.hard||0);
+  var remaining = saved.queue.length;
+  var old = document.getElementById('fcResumeOverlay');
+  if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'fcResumeOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:var(--surface,#fff);border-radius:14px;padding:18px;max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--text);margin-bottom:8px;">⏸ Paused Session Mili!</div>'+
+      '<div style="font-size:0.86rem;color:var(--text2);margin-bottom:16px;line-height:1.6;">'+
+        'Is deck ki ek adhoori session pehle se chal rahi thi &#8212; '+
+        '<b>'+remaining+'</b> cards baaki hain, aur ab tak <b>'+totalDone+'</b> responses diye the.<br><br>'+
+        'Wahin se resume karo jaha chhodi thi, ya naya session shuru karo?'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button id="fcResumeNewBtn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border,#bdd5ea);background:transparent;color:var(--text2,#37526d);font-weight:700;cursor:pointer;">🔄 New Session</button>'+
+        '<button id="fcResumeContBtn" class="btn btn-orange" style="flex:1;padding:11px;">▶ Resume Karo</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  function cleanup(){ ov.remove(); }
+  document.getElementById('fcResumeNewBtn').onclick = function(){
+    cleanup();
+    fcClearSession(deck.id);
+    fcBeginFreshSession(String(deck.id), cards);
+  };
+  document.getElementById('fcResumeContBtn').onclick = function(){
+    cleanup();
+    fcResumeSavedSession(saved);
+    showToast('▶ Session resume ho gayi — wahin se jaha chhodi thi!','success');
+  };
+  // No backdrop-tap dismiss here on purpose — user must make an explicit
+  // choice, otherwise the loading screen would be left stuck behind it.
 }
 
 // Persisted user preference for large reading (focus) mode
@@ -6030,6 +6103,8 @@ function fcEndSession(){
 // Reliable exit from the flashcard play page — falls back to deck list
 // even if the internal nav stack is somehow empty or stuck.
 function fcHardExitPlay(){
+  var stray = document.getElementById('fcResumeOverlay');
+  if(stray) stray.remove();
   _fcSession = null;
   _fcTempPlayDeck = null;
   if(_navStack.length > 0){
@@ -6217,8 +6292,13 @@ window.addEventListener('pageshow', function(e){
 dbg('App script ready — Firebase SDK load ho raha hai...','info');
 
 // Silently pause a running (non-shared, non-done) flashcard session —
-// saves current progress to cloud but does NOT resume it automatically later;
-// next time the user opens that deck, startFcSession() always starts fresh.
+// saves current progress to cloud so it can be resumed later. This is a
+// backup save only: the in-memory _fcSession is left untouched here, so if
+// the app is simply minimized and reopened (process kept alive by the OS),
+// the user lands back exactly on the same card with no interruption at all.
+// The cloud copy only matters if the app was fully closed/reloaded — in that
+// case startFcSession() will find it via fcLoadSession() and ask the user
+// whether to resume or start a new session (see fcShowResumeChoice above).
 function fcSilentPauseIfRunning(){
   if(_fcSession && !_fcSession.temp && !_fcSession.done){
     try{ fcSaveSession(JSON.parse(JSON.stringify(_fcSession))); }catch(e){}
@@ -6234,10 +6314,15 @@ window.addEventListener('beforeunload', function(){
     fcSilentPauseIfRunning();
   }
 });
-// Save quiz/flashcard state when app goes to background on mobile.
-// Also: if the tab is restored to foreground, always send the user back to a
-// fresh Home instead of leaving any previous page (complete or incomplete)
-// sitting there — any running flashcard session is silently paused first.
+// Save quiz/flashcard state when app goes to background on mobile (e.g. user
+// minimizes to check another app). We only back up progress to the cloud
+// here — we deliberately do NOT clear _fcSession, navigate away, or reload
+// anything when the app comes back to foreground. As long as the browser/OS
+// hasn't killed the page in the background, the user simply sees the same
+// flashcard, at the same position, with all their responses intact — no
+// popup, no Home redirect, nothing lost. (If the process WAS killed and the
+// page had to reload from scratch, _fcSession will be empty on boot and
+// startFcSession()'s resume-choice popup takes over instead.)
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){
     if(getActivePage()==='attempt'&&_att&&!_att.submitted){
@@ -6246,23 +6331,10 @@ document.addEventListener('visibilitychange', function(){
     if(getActivePage()==='fc-play'){
       fcSilentPauseIfRunning();
     }
-    return;
   }
-  // Tab just became visible again — flashcard play session (if any) was
-  // already silently paused above, so always send the user to a fresh Home
-  // instead of leaving them on the play/loading screen.
-  if(getActivePage()==='fc-play'){
-    dbg('Tab resumed on flashcard page — recovering to Home','warn');
-    _fcSession = null;
-    _fcTempPlayDeck = null;
-    _navStack = [];
-    if(_uid){
-      goHome();
-    } else {
-      showPage('loading');
-      if(_auth) _auth.onAuthStateChanged(onAuth);
-    }
-  }
+  // Tab/app back in foreground: intentionally do nothing extra here — the
+  // page's own in-memory state (if it survived) is exactly what the user
+  // should keep seeing.
 });
 
 // Override popstate to intercept attempt page confirm
