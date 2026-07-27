@@ -586,14 +586,56 @@ body.fc-immersive{overflow:hidden;}
 body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
 .fc-saved-viewtab{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);font-weight:700;}
 .fc-saved-viewtab.active{background:#ffb300;color:#fff;border-color:#ffb300;}
-.fc-saved-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
-.fc-saved-card .fc-saved-q{font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:3px;}
-.fc-saved-card .fc-saved-a{font-size:0.78rem;color:#2e7d32;font-weight:600;}
-.fc-saved-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:3px;}
+
+/* ── Saved Flashcards — professional, eye-friendly reading card ── */
+.fc-saved-card{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-left:4px solid #ffb300;
+  border-radius:16px;
+  padding:16px 18px;
+  margin-bottom:12px;
+  box-shadow:0 2px 10px rgba(20,30,45,0.06);
+  transition:box-shadow 0.15s,transform 0.15s;
+}
+.fc-saved-card:hover{box-shadow:0 4px 16px rgba(20,30,45,0.10);}
+.fc-saved-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.fc-saved-row:last-of-type{margin-bottom:0;}
 .fc-saved-row > div{flex:1;min-width:0;}
-.fc-saved-eye-btn{flex:0 0 auto;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:3px 8px;font-size:0.82rem;color:var(--text2);cursor:pointer;}
+.fc-saved-card .fc-saved-q{
+  font-family:'Georgia','Noto Sans Devanagari',serif;
+  font-size:0.98rem;line-height:1.6;
+  font-weight:700;color:var(--text);
+  letter-spacing:0.1px;
+}
+.fc-saved-card .fc-saved-q::before{
+  content:'Q';display:inline-block;font-family:'Inter',sans-serif;
+  font-size:0.62rem;font-weight:900;color:#fff;background:var(--accent);
+  width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;
+  margin-right:8px;vertical-align:2px;
+}
+.fc-saved-card .fc-saved-a{
+  font-family:'Georgia','Noto Sans Devanagari',serif;
+  font-size:0.95rem;line-height:1.6;
+  color:#1b5e20;font-weight:600;
+  background:rgba(46,125,50,0.06);
+  border-radius:10px;padding:8px 10px;
+}
+.fc-saved-card .fc-saved-a::before{
+  content:'A';display:inline-block;font-family:'Inter',sans-serif;
+  font-size:0.62rem;font-weight:900;color:#fff;background:#2e7d32;
+  width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;
+  margin-right:8px;vertical-align:2px;
+}
+body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.14);}
+.fc-saved-eye-btn{
+  flex:0 0 auto;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:9px;padding:5px 10px;font-size:0.9rem;color:var(--text2);cursor:pointer;
+  transition:background 0.15s;
+}
+.fc-saved-eye-btn:hover{background:var(--bg2);}
 .fc-saved-blur{color:var(--text2);font-style:italic;opacity:0.55;font-weight:500;}
-.fc-saved-card .fc-saved-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.fc-saved-card .fc-saved-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
 .fc-mark-group{
   display:flex;align-items:center;gap:2px;flex-shrink:0;
   background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:2px;
@@ -619,11 +661,16 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
   display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.3);
   line-height:1;
 }
-.fc-saved-tag{font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(21,101,192,0.1);color:var(--accent);}
-.fc-saved-tag.tag-hard{background:rgba(198,40,40,0.12);color:#c62828;}
-.fc-saved-tag.tag-mod{background:rgba(249,168,37,0.16);color:#a3763f;}
-.fc-saved-tag.tag-manual{background:rgba(255,179,0,0.14);color:#e6a100;}
-.fc-saved-group-title{font-size:0.7rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin:14px 0 8px;padding-left:2px;}
+.fc-saved-tag{font-size:0.64rem;font-weight:800;letter-spacing:0.2px;padding:3px 9px;border-radius:20px;background:rgba(21,101,192,0.1);color:var(--accent);border:1px solid rgba(21,101,192,0.18);}
+.fc-saved-tag.tag-hard{background:rgba(198,40,40,0.1);color:#c62828;border-color:rgba(198,40,40,0.2);}
+.fc-saved-tag.tag-mod{background:rgba(249,168,37,0.14);color:#a3763f;border-color:rgba(249,168,37,0.28);}
+.fc-saved-tag.tag-manual{background:rgba(255,179,0,0.12);color:#e6a100;border-color:rgba(255,179,0,0.25);}
+.fc-saved-group-title{
+  font-size:0.72rem;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--text2);margin:18px 0 10px;padding-bottom:6px;
+  border-bottom:2px solid var(--border);display:flex;align-items:center;gap:6px;
+}
+.fc-saved-group-title:first-child{margin-top:0;}
 </style>
 
 <!-- Firebase SDK loaded at body end -->
@@ -1390,7 +1437,7 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
     <div class="page-header">
       <div>
         <div class="page-title">&#128278; Saved Cards</div>
-        <div class="page-subtitle" id="fcSavedSubtitle">Bookmark kiye aur tough cards</div>
+        <div class="page-subtitle" id="fcSavedSubtitle">Your bookmarked and tough cards</div>
       </div>
     </div>
     <div class="card" style="margin-bottom:10px;">
@@ -1400,15 +1447,15 @@ body.dark .fc-nav-btn{background:rgba(255,255,255,0.05);}
         <button class="btn btn-sm fc-saved-viewtab" id="fcSavedTabMarked" onclick="fcSetSavedView('marked')" style="flex:1;">&#9888; Marked</button>
       </div>
       <select class="inp" id="fcSavedFilterSelect" onchange="renderFcSavedPage()" style="width:100%;margin-bottom:10px;">
-        <option value="">Sab dikhaiye</option>
+        <option value="">Show all</option>
       </select>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllAnswers()">&#128064; Sab Jawab Chhupao</button>
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllAnswers()">&#128065; Sab Jawab Dikhao</button>
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllAnswers()">&#128064; Hide All Answers</button>
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllAnswers()">&#128065; Show All Answers</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllQuestions()">&#128064; Sab Sawaal Chhupao</button>
-        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllQuestions()">&#128065; Sab Sawaal Dikhao</button>
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcHideAllQuestions()">&#128064; Hide All Questions</button>
+        <button class="btn btn-xs btn-outline" style="flex:1;min-width:130px;" onclick="fcShowAllQuestions()">&#128065; Show All Questions</button>
       </div>
     </div>
     <div id="fcSavedList"></div>
@@ -5023,7 +5070,7 @@ function fcSetSavedView(mode){
 function fcPopulateSavedFilter(){
   var sel = document.getElementById('fcSavedFilterSelect'); if(!sel) return;
   var curVal = sel.value;
-  var opts = ['<option value="">Sab dikhaiye</option>'];
+  var opts = ['<option value="">Show all</option>'];
   if(_fcSavedView==='topic'){
     var groups = {};
     _fcSavedCards.forEach(function(c){
@@ -5071,9 +5118,9 @@ function fcShowAllQuestions(){
 function fcRemoveSavedCardConfirm(docId){
   var c = _fcSavedCards.find(function(s){ return s.id===docId; });
   var frontPreview = c ? c.front : '';
-  appConfirm('Is card ko Saved folder se hata doge?\n\n"'+(frontPreview||'').slice(0,80)+'"', function(){
+  appConfirm('Remove this card from your Saved folder?\n\n"'+(frontPreview||'').slice(0,80)+'"', function(){
     fcRemoveSavedCard(docId);
-    showToast('Saved folder se hata diya','success');
+    showToast('Removed from Saved folder','success');
   });
 }
 function renderFcSavedPage(){
@@ -5089,8 +5136,8 @@ function renderFcSavedPage(){
     if(!list.length){
       container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
         '<div style="font-size:2rem;margin-bottom:6px;">&#128278;</div>'+
-        '<div>Koi saved card nahi mila.</div>'+
-        '<div style="font-size:0.74rem;margin-top:4px;">Practice ke dauran card save karo, ya 3+ baar Tough/Moderate rate hone par yeh khud-ba-khud yahan aa jayega.</div></div>';
+        '<div>No saved cards found.</div>'+
+        '<div style="font-size:0.74rem;margin-top:4px;">Save a card during practice, or it will be added here automatically once rated Tough/Moderate 3+ times.</div></div>';
       return;
     }
     var groups = {};
@@ -5127,7 +5174,7 @@ function renderFcSavedPage(){
     if(!html){
       html = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
         '<div style="font-size:2rem;margin-bottom:6px;">&#128278;</div>'+
-        '<div>Is response category me koi card nahi hai.</div></div>';
+        '<div>No cards in this response category.</div></div>';
     }
     container.innerHTML = html;
   } else {
@@ -5138,10 +5185,10 @@ function renderFcSavedPage(){
     if(!marked.length){
       container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
         '<div style="font-size:2rem;margin-bottom:6px;">&#9888;</div>'+
-        '<div>Abhi koi card mark nahi hui.</div>'+
-        '<div style="font-size:0.74rem;margin-top:4px;">Revision ke dauran jo card fir se yaad na aaye, uspar &#9888; button dabao — wo yahan alag se dikhega.</div></div>';
+        '<div>No cards marked yet.</div>'+
+        '<div style="font-size:0.74rem;margin-top:4px;">During revision, tap the &#9888; button on any card you still don\'t remember — it will show up here separately.</div></div>';
     } else {
-      container.innerHTML = '<div class="fc-saved-group-title">&#9888; Baar-baar bhoola gaya</div>' + marked.map(fcRenderSavedCardHtml).join('');
+      container.innerHTML = '<div class="fc-saved-group-title">&#9888; Frequently Forgotten</div>' + marked.map(fcRenderSavedCardHtml).join('');
     }
   }
   container.onclick = function(e){
@@ -5159,28 +5206,28 @@ function fcRenderSavedCardHtml(c){
   var tags = '';
   if(c.autoTough) tags += '<span class="fc-saved-tag '+(c.toughType==='moderate'?'tag-mod':'tag-hard')+'">'+(c.toughType==='moderate'?'Moderate':'Tough')+' 3x+</span>';
   if(c.manual) tags += '<span class="fc-saved-tag tag-manual">&#128278; Manual Save</span>';
-  if((c.notRememberedCount||0) > 0) tags += '<span class="fc-saved-tag tag-hard">&#9888; Phir bhi yaad nahi: '+c.notRememberedCount+'x</span>';
+  if((c.notRememberedCount||0) > 0) tags += '<span class="fc-saved-tag tag-hard">&#9888; Still not remembered: '+c.notRememberedCount+'x</span>';
   var qHidden = _fcSavedHiddenQ[c.id];
   var aHidden = _fcSavedHiddenA[c.id];
   return '<div class="fc-saved-card">'+
     '<div class="fc-saved-row">'+
-      '<div class="fc-saved-q">Q: '+(qHidden ? '<span class="fc-saved-blur">Sawaal chhupa hai</span>' : escHtml(c.front))+'</div>'+
-      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="q" title="'+(qHidden?'Sawaal dikhao':'Sawaal chhupao')+'">'+(qHidden?'&#128065;':'&#128064;')+'</button>'+
+      '<div class="fc-saved-q">'+(qHidden ? '<span class="fc-saved-blur">Question hidden</span>' : escHtml(c.front))+'</div>'+
+      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="q" title="'+(qHidden?'Show question':'Hide question')+'">'+(qHidden?'&#128065;':'&#128064;')+'</button>'+
     '</div>'+
     '<div class="fc-saved-row">'+
-      '<div class="fc-saved-a">A: '+(aHidden ? '<span class="fc-saved-blur">Jawab chhupa hai</span>' : escHtml(c.back))+'</div>'+
-      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="a" title="'+(aHidden?'Jawab dikhao':'Jawab chhupao')+'">'+(aHidden?'&#128065;':'&#128064;')+'</button>'+
+      '<div class="fc-saved-a">'+(aHidden ? '<span class="fc-saved-blur">Answer hidden</span>' : escHtml(c.back))+'</div>'+
+      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="a" title="'+(aHidden?'Show answer':'Hide answer')+'">'+(aHidden?'&#128065;':'&#128064;')+'</button>'+
     '</div>'+
     '<div class="fc-saved-meta">'+tags+'</div>'+
     '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">'+
       '<button class="btn btn-xs btn-danger fc-saved-remove-btn" data-sid="'+escHtml(c.id)+'">&#128465; Remove</button>'+
       '<div class="fc-mark-group'+((c.notRememberedCount||0)>0 ? ' active' : '')+'">'+
-        '<button class="fc-mark-adj fc-saved-mark-minus" data-sid="'+escHtml(c.id)+'" title="Yaad ho gaya &#8212; count ghataao">&#8722;</button>'+
-        '<span class="fc-mark-icon" title="Abhi bhi yaad nahi">'+
+        '<button class="fc-mark-adj fc-saved-mark-minus" data-sid="'+escHtml(c.id)+'" title="Remembered now &#8212; decrease count">&#8722;</button>'+
+        '<span class="fc-mark-icon" title="Still not remembered">'+
           '<svg viewBox="0 0 22 20" width="18" height="17"><polygon points="11,1 21.5,19 0.5,19" fill="currentColor"/><rect x="9.9" y="5.2" width="2.2" height="6" rx="1.1" fill="#fff"/><circle cx="11" cy="14.4" r="1.35" fill="#fff"/></svg>'+
           ((c.notRememberedCount||0) > 0 ? '<span class="fc-mark-count">'+c.notRememberedCount+'</span>' : '')+
         '</span>'+
-        '<button class="fc-mark-adj fc-saved-mark-plus" data-sid="'+escHtml(c.id)+'" title="Abhi bhi yaad nahi &#8212; count badhao">&#43;</button>'+
+        '<button class="fc-mark-adj fc-saved-mark-plus" data-sid="'+escHtml(c.id)+'" title="Still don\'t remember &#8212; increase count">&#43;</button>'+
       '</div>'+
     '</div>'+
   '</div>';
