@@ -93,9 +93,9 @@ body{
   white-space:nowrap; pointer-events:none;
 }
 
-/* ── Saved Cards — sticky top strip (toggle + title) ── */
+/* ── Saved Cards — sticky top strip (toggle + title), sits flush under topbar ── */
 #fcSavedTopStrip{
-  position:sticky; top:0; z-index:120;
+  position:sticky; top:58px; z-index:49;
   display:flex; align-items:center; gap:10px;
   margin:-18px -14px 10px; padding:10px 14px;
   background:var(--bg);
@@ -1640,9 +1640,15 @@ function _updateFloatingBack(){
   }
   // Saved Cards page se bahar jaate waqt slide-panel band kar do
   if(cur !== 'fc-saved') fcCloseSavedPanel();
+  else if(typeof fcSyncTopStripOffset === 'function') setTimeout(fcSyncTopStripOffset, 0);
 }
 
 // ---- Saved Cards slide-in panel controls ----
+function fcSyncTopStripOffset(){
+  var strip = document.getElementById('fcSavedTopStrip');
+  var tb = document.querySelector('.topbar');
+  if(strip && tb) strip.style.top = tb.offsetHeight + 'px';
+}
 function fcOpenSavedPanel(){
   var p = document.getElementById('fcSavedPanel');
   var o = document.getElementById('fcSavedPanelOverlay');
@@ -1660,6 +1666,7 @@ function fcToggleSavedPanel(){
   if(p && p.classList.contains('open')) fcCloseSavedPanel();
   else fcOpenSavedPanel();
 }
+window.addEventListener('resize', fcSyncTopStripOffset);
 
 // Low-level page switcher — does NOT push to stack, does NOT push browser history
 function _rawShowPage(name){
