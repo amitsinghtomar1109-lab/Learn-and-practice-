@@ -1377,7 +1377,8 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <div id="atTimer" style="display:none;background:linear-gradient(135deg,#e65100,#ff8f00);color:#fff;padding:4px 10px;border-radius:20px;font-weight:900;font-size:0.82rem;font-family:monospace;white-space:nowrap;">
         ⏱ <span id="atTimerVal">60:00</span>
       </div>
-      <button onclick="confirmSubmit()" style="padding:6px 12px;background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;flex-shrink:0;">Submit</button>
+       <button onclick="pauseAttempt()" style="padding:6px 10px;background:var(--surface2);color:var(--accent);border:1.5px solid rgba(21,101,192,0.35);border-radius:8px;font-weight:800;font-size:0.76rem;cursor:pointer;flex-shrink:0;">⏸ Pause</button>
+       <button onclick="confirmSubmit()" style="padding:6px 12px;background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:0.78rem;cursor:pointer;flex-shrink:0;">Submit</button>
     </div>
 
     <div style="padding:12px 14px;">
@@ -1927,6 +1928,15 @@ function navTo(page, opts, pushBrowser){
 // App-level back — pops our internal stack
 function appGoBack(){
   if(_navStack.length === 0) return;
+   // Leaving an unfinished quiz through the in-app back button is also a
+   // pause action. Save before changing the page so the next visit can offer
+   // the exact same session again.
+   if(getActivePage()==='attempt' && _att && !_att.submitted){
+     attSavePauseState();
+     attStopAutoSave();
+     if(_att.timer) clearInterval(_att.timer);
+     if(_att.perQTimer) clearInterval(_att.perQTimer);
+   }
   // Leaving the flashcard play page via back — save progress to cloud first
   // so it can be offered back via the resume popup next time this deck is
   // opened (mirrors the quiz attempt's auto-pause-on-back behaviour).
@@ -2033,6 +2043,7 @@ function _handleAttemptBack(){
   if(getActivePage() === 'attempt'){
     if(!_att.submitted){
       attSavePauseState();
+      attStopAutoSave();
       if(_att.timer) clearInterval(_att.timer);
       if(_att.perQTimer) clearInterval(_att.perQTimer);
       showToast('⏸ Quiz pause ho gayi — resume kar sakte ho!','info');
@@ -2313,6 +2324,37 @@ function cloudSaveAttempt(a){
     _db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a)
       .catch(function(e){ console.warn('saveAttempt err:',e); });
   });
+}
+
+// ================================================================
+// QUIZ SESSION CLOUD BACKUP
+// One unfinished session is kept per quiz. Local storage is always written
+// first (so refresh/offline is safe); Firestore makes the same session
+// available after login on another tab/device.
+// ================================================================
+function attSessionDocId(quizId){
+  return 'quiz_'+String(quizId);
+}
+function cloudSaveQuizSession(state){
+  if(!_db||!_uid||!state||state.isShared) return Promise.resolve(false);
+  return _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
+    .doc(attSessionDocId(state.quizId)).set(state, {merge:true})
+    .then(function(){ return true; })
+    .catch(function(e){ console.warn('quiz session save err:',e); return false; });
+}
+function cloudLoadQuizSession(quizId){
+  if(!_db||!_uid) return Promise.resolve(null);
+  return _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
+    .doc(attSessionDocId(quizId)).get()
+    .then(function(d){ return d.exists ? d.data() : null; })
+    .catch(function(e){ console.warn('quiz session load err:',e); return null; });
+}
+function cloudDeleteQuizSession(quizId){
+  if(!_db||!_uid) return;
+  _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
+    .doc(attSessionDocId(quizId)).delete().catch(function(e){
+      console.warn('quiz session delete err:',e);
+    });
 }
 
 // ================================================================
@@ -2910,75 +2952,173 @@ function smDeleteEntry(idx){
 }
 
 // ================================================================
-// AUTO PAUSE & RESUME (quiz state + timer save on back/refresh)
+// AUTO SAVE, PAUSE & RESUME (quiz state + timer save on back/refresh)
 // ================================================================
+// Previous versions used one global localStorage key and a browser confirm.
+// That meant another quiz could overwrite the saved quiz and a cloud-only
+// session was invisible after refresh/device change. Sessions are now keyed
+// per quiz and mirrored to Firestore.
 var _attPauseKey = 'ts_att_paused';
+var _attCloudSaveTimer = null;
+var _attAutosaveTimer = null;
 
+function attLocalKey(quizId){
+  return _attPauseKey+'_'+String(quizId);
+}
+function attBuildState(paused){
+  if(!_att||!_att.quizId||_att.submitted) return null;
+  return {
+    quizId:_att.quizId,
+    quiz:_att.quiz,
+    answers:(_att.answers||[]).slice(),
+    marked:(_att.marked||[]).slice(),
+    skipped:(_att.skipped||[]).slice(),
+    difficulty:(_att.difficulty||[]).slice(),
+    currentQ:_att.currentQ,
+    timeLeft:_att.timeLeft||0,
+    perQLeft:typeof _att.perQLeft==='number'?_att.perQLeft:null,
+    perQQuestion:typeof _att.perQQuestion==='number'?_att.perQQuestion:null,
+    startTime:_att.startTime||Date.now(),
+    sessionId:_att.sessionId||('att_'+Date.now()+'_'+Math.random().toString(36).slice(2)),
+    paused:!!paused,
+    isShared:!!_att.isShared,
+    savedAt:Date.now()
+  };
+}
+function attWriteState(state, immediateCloud){
+  if(!state) return;
+  try{ localStorage.setItem(attLocalKey(state.quizId), JSON.stringify(state)); }catch(e){}
+  // Keep the legacy key as a migration breadcrumb only for the current
+  // session; readers below also understand old saved data.
+  try{ localStorage.setItem(_attPauseKey, JSON.stringify(state)); }catch(e){}
+  if(state.isShared) return;
+  if(immediateCloud){
+    if(_attCloudSaveTimer){ clearTimeout(_attCloudSaveTimer); _attCloudSaveTimer=null; }
+    cloudSaveQuizSession(state);
+  } else {
+    var copy=JSON.parse(JSON.stringify(state));
+    if(_attCloudSaveTimer) clearTimeout(_attCloudSaveTimer);
+    _attCloudSaveTimer=setTimeout(function(){
+      _attCloudSaveTimer=null;
+      cloudSaveQuizSession(copy);
+    },700);
+  }
+}
+function attSaveProgress(){
+  if(!_att||!_att.quizId||_att.submitted) return;
+  attWriteState(attBuildState(false), false);
+}
 function attSavePauseState(){
   if(!_att||!_att.quizId||_att.submitted) return;
-  var state={
-    quizId: _att.quizId,
-    quiz: _att.quiz,
-    answers: _att.answers,
-    marked: _att.marked,
-    skipped: _att.skipped,
-    difficulty: _att.difficulty,
-    currentQ: _att.currentQ,
-    timeLeft: _att.timeLeft,
-    startTime: _att.startTime,
-    savedAt: Date.now()
-  };
-  try{ localStorage.setItem(_attPauseKey, JSON.stringify(state)); }catch(e){}
+  var state=attBuildState(true);
+  attWriteState(state, true);
+  return state;
 }
-function attClearPauseState(){
-  localStorage.removeItem(_attPauseKey);
-}
-function attHasPausedState(quizId){
+function attClearPauseState(quizId){
+  var id=quizId||(_att&&_att.quizId);
+  if(!id) return;
+  try{ localStorage.removeItem(attLocalKey(id)); }catch(e){}
   try{
-    var s=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
+    var legacy=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
+    if(!legacy||String(legacy.quizId)===String(id)) localStorage.removeItem(_attPauseKey);
+  }catch(e){}
+  if(!(_att&&_att.isShared)) cloudDeleteQuizSession(id);
+}
+function attReadLocalState(quizId){
+  try{
+    var raw=localStorage.getItem(attLocalKey(quizId));
+    // Migrate the old single-key format when it belongs to this quiz.
+    if(!raw){
+      var old=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
+      if(old&&String(old.quizId)===String(quizId)){
+        raw=JSON.stringify(old);
+        localStorage.setItem(attLocalKey(quizId),raw);
+      }
+    }
+    var s=raw?JSON.parse(raw):null;
     if(!s||!s.quizId) return null;
-    // Expire after 24 hours
-    if(Date.now()-s.savedAt > 24*60*60*1000){ attClearPauseState(); return null; }
-    if(quizId&&s.quizId!==quizId) return null;
+    if(Date.now()-(s.savedAt||0)>7*24*60*60*1000){
+      attClearPauseState(quizId);
+      return null;
+    }
     return s;
   }catch(e){ return null; }
 }
-function attResumeFromPause(saved){
-  var quiz=STATE.quizzes.find(function(q){return q.id===saved.quizId;});
-  if(!quiz){ attClearPauseState(); return false; }
+function attHasPausedState(quizId){
+  var s=attReadLocalState(quizId);
+  return s&&String(s.quizId)===String(quizId)?s:null;
+}
+function attLoadSavedState(quizId){
+  var local=attHasPausedState(quizId);
+  return cloudLoadQuizSession(quizId).then(function(cloud){
+    if(cloud&&cloud.quizId&&String(cloud.quizId)===String(quizId)&&
+       (!local||(cloud.savedAt||0)>(local.savedAt||0))){
+      try{ localStorage.setItem(attLocalKey(quizId),JSON.stringify(cloud)); }catch(e){}
+      return cloud;
+    }
+    return local;
+  }).catch(function(){ return local; });
+}
+function attStopAutoSave(){
+  if(_attAutosaveTimer){ clearInterval(_attAutosaveTimer); _attAutosaveTimer=null; }
+  if(_attCloudSaveTimer){ clearTimeout(_attCloudSaveTimer); _attCloudSaveTimer=null; }
+}
+function attStartAutoSave(){
+  attStopAutoSave();
+  _attAutosaveTimer=setInterval(function(){
+    if(getActivePage()==='attempt'&&_att&&!_att.submitted) attSaveProgress();
+  },5000);
+}
+function attStartFullTimer(){
   if(_att.timer) clearInterval(_att.timer);
-  if(_att.perQTimer) clearInterval(_att.perQTimer);
-  _att={
-    quizId:saved.quizId, quiz:saved.quiz,
-    answers:saved.answers, marked:saved.marked,
-    skipped:saved.skipped, difficulty:saved.difficulty,
-    currentQ:saved.currentQ, timer:null,
-    timeLeft:saved.timeLeft||0, perQTimer:null,
-    startTime:saved.startTime||Date.now(),
-    submitted:false, answerRevealed:false
-  };
-  navTo('attempt',{title:'📝 '+saved.quiz.name},true);
-  document.getElementById('topbarTitle').textContent='📝 '+saved.quiz.name;
-  // Restart full timer from where it was paused
-  if(saved.quiz.timer&&saved.quiz.timer.type==='full'&&saved.timeLeft>0){
+  if(_att.quiz.timer&&_att.quiz.timer.type==='full'&&_att.timeLeft>0){
     document.getElementById('atTimer').style.display='inline-flex';
     updateTimerDisplay();
     _att.timer=setInterval(function(){
-      if(_att.submitted){clearInterval(_att.timer);return;}
-      _att.timeLeft--;
+      if(_att.submitted){ clearInterval(_att.timer); return; }
+      _att.timeLeft=Math.max(0,_att.timeLeft-1);
       updateTimerDisplay();
       if(_att.timeLeft<=0){
         clearInterval(_att.timer);
+        attSaveProgress();
         showToast('⏱ Time Up! Auto-submitting...','error');
-        setTimeout(function(){submitAttempt(true);},1000);
+        setTimeout(function(){ submitAttempt(true); },1000);
       }
     },1000);
-  } else if(saved.quiz.timer&&saved.quiz.timer.type==='full'){
-    document.getElementById('atTimer').style.display='none';
   } else {
     document.getElementById('atTimer').style.display='none';
   }
+}
+function attResumeFromPause(saved){
+  var quiz=STATE.quizzes.find(function(q){return String(q.id)===String(saved.quizId);});
+  if(!quiz||!saved.quiz){ attClearPauseState(saved&&saved.quizId); return false; }
+  if(_att.timer) clearInterval(_att.timer);
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+  var total=(saved.quiz.questions||[]).length;
+  _att={
+    quizId:saved.quizId, quiz:saved.quiz,
+    answers:(saved.answers||[]).slice(0,total),
+    marked:(saved.marked||[]).slice(0,total),
+    skipped:(saved.skipped||[]).slice(0,total),
+    difficulty:(saved.difficulty||[]).slice(0,total),
+    currentQ:Math.max(0,Math.min(Number(saved.currentQ)||0,total-1)),
+    timer:null, timeLeft:Math.max(0,Number(saved.timeLeft)||0), perQTimer:null,
+    perQLeft:typeof saved.perQLeft==='number'?saved.perQLeft:null,
+    perQQuestion:typeof saved.perQQuestion==='number'?saved.perQQuestion:-1,
+    startTime:saved.startTime||Date.now(), submitted:false, answerRevealed:false,
+    sessionId:saved.sessionId||('att_'+Date.now()+'_resume'),
+    isShared:!!saved.isShared
+  };
+  while(_att.answers.length<total) _att.answers.push(null);
+  while(_att.marked.length<total) _att.marked.push(false);
+  while(_att.skipped.length<total) _att.skipped.push(false);
+  while(_att.difficulty.length<total) _att.difficulty.push(null);
+  navTo('attempt',{title:'📝 '+_att.quiz.name},true);
+  document.getElementById('topbarTitle').textContent='📝 '+_att.quiz.name;
+  attStartFullTimer();
+  attStartAutoSave();
   renderCurrentQ();
+  attSaveProgress();
   showToast('▶ Quiz resume ho gayi — wahin se jahan chhodi thi!','success');
   return true;
 }
@@ -3457,18 +3597,19 @@ function startAttempt(quizId, shuffleQs){
   var quiz=STATE.quizzes.find(function(q){ return q.id===quizId; });
   if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
   if(!(quiz.questions||[]).length){ showToast('Is quiz mein koi question nahi!','error'); return; }
-
-  // Check paused state for THIS quiz
-  var paused=attHasPausedState(quizId);
-  if(paused){
-    if(confirm('Is quiz ki paused progress mili hai!\n\nQ'+(paused.currentQ+1)+' par ruke the, '+(paused.answers.filter(function(a){return a!==null;}).length)+' answers diye the.\n\nResume karo? (Cancel = Fresh start)')){
-      attResumeFromPause(paused);
-      return;
+  // Read both local and cloud copies before starting. This is intentionally
+  // async so a session saved on another tab/device is not missed.
+  var launch=function(saved){
+    if(saved){
+      attShowResumeChoice(quiz, saved, shuffleQs);
     } else {
-      attClearPauseState();
+      attBeginFreshAttempt(quiz, shuffleQs);
     }
-  }
-
+  };
+  attLoadSavedState(quizId).then(launch);
+}
+function attBeginFreshAttempt(quiz, shuffleQs){
+  attStopAutoSave();
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
 
@@ -3483,38 +3624,56 @@ function startAttempt(quizId, shuffleQs){
   }
 
   _att={
-    quizId:quizId, quiz:qCopy,
+    quizId:quiz.id, quiz:qCopy,
     answers:qCopy.questions.map(function(){ return null; }),
     marked:qCopy.questions.map(function(){ return false; }),
     skipped:qCopy.questions.map(function(){ return false; }),
     difficulty:qCopy.questions.map(function(){ return null; }),
-    currentQ:0, timer:null, timeLeft:0, perQTimer:null,
-    startTime:Date.now(), submitted:false, answerRevealed:false
+    currentQ:0, timer:null, timeLeft:quiz.timer&&quiz.timer.type==='full'?quiz.timer.value*60:0,
+    perQTimer:null, perQLeft:null, perQQuestion:-1,
+    startTime:Date.now(), submitted:false, answerRevealed:false,
+    sessionId:'att_'+Date.now()+'_'+Math.random().toString(36).slice(2)
   };
 
   navTo('attempt', {title:'📝 '+quiz.name}, true);
   document.getElementById('topbarTitle').textContent = '📝 '+quiz.name;
-
-  // Setup full timer
-  if(quiz.timer&&quiz.timer.type==='full'){
-    _att.timeLeft=quiz.timer.value*60;
-    document.getElementById('atTimer').style.display='inline-flex';
-    updateTimerDisplay();
-    _att.timer=setInterval(function(){
-      if(_att.submitted){ clearInterval(_att.timer); return; }
-      _att.timeLeft--;
-      updateTimerDisplay();
-      if(_att.timeLeft<=0){
-        clearInterval(_att.timer);
-        showToast('⏱ Time Up! Auto-submitting...','error');
-        setTimeout(function(){ submitAttempt(true); }, 1000);
-      }
-    },1000);
-  } else {
-    document.getElementById('atTimer').style.display='none';
-  }
-
+  attStartFullTimer();
+  attStartAutoSave();
   renderCurrentQ();
+  attSaveProgress();
+}
+function attShowResumeChoice(quiz, saved, shuffleQs){
+  var old=document.getElementById('attResumeOverlay');
+  if(old) old.remove();
+  var total=(saved.quiz&&saved.quiz.questions||[]).length;
+  var answered=(saved.answers||[]).filter(function(a){return a!==null;}).length;
+  var remaining=Math.max(0,total-answered);
+  var ov=document.createElement('div');
+  ov.id='attResumeOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.52);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML=
+    '<div style="background:var(--surface,#fff);border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--text);margin-bottom:8px;">⏸ Last Session Mili</div>'+
+      '<div style="font-size:0.86rem;color:var(--text2);margin-bottom:16px;line-height:1.6;">'+
+        '<b>'+escHtml(quiz.name)+'</b> ki adhoori practice saved hai.<br>'+
+        '<b>'+answered+'</b> questions attempt kiye gaye, <b>'+remaining+'</b> baaki hain.<br><br>'+
+        'Aap wahi session continue kar sakte hain ya bilkul naya session shuru kar sakte hain.'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button id="attNewSessionBtn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border,#bdd5ea);background:transparent;color:var(--text2,#37526d);font-weight:700;cursor:pointer;">🔄 New Session</button>'+
+        '<button id="attLastSessionBtn" class="btn btn-primary" style="flex:1;padding:11px;">▶ Last Session</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  function cleanup(){ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); }
+  document.getElementById('attNewSessionBtn').onclick=function(){
+    cleanup();
+    attBeginFreshAttempt(quiz, shuffleQs);
+  };
+  document.getElementById('attLastSessionBtn').onclick=function(){
+    cleanup();
+    attResumeFromPause(saved);
+  };
 }
 function updateTimerDisplay(){
   var t=_att.timeLeft;
@@ -3622,11 +3781,17 @@ function renderCurrentQ(){
     var perQEl=document.getElementById('atPerQTimer');
     var perQD=document.getElementById('atPerQVal');
     if(perQEl) perQEl.style.display='block';
-    var pLeft=st.quiz.timer.value;
+    var pLeft=(st.perQQuestion===st.currentQ&&typeof st.perQLeft==='number') ?
+      st.perQLeft : st.quiz.timer.value;
+    pLeft=Math.max(0,Number(pLeft)||0);
+    st.perQQuestion=st.currentQ;
+    st.perQLeft=pLeft;
     if(perQD) perQD.textContent=pLeft;
     _att.perQTimer=setInterval(function(){
       if(_att.submitted){ clearInterval(_att.perQTimer); return; }
-      pLeft--;
+      pLeft=Math.max(0,pLeft-1);
+      _att.perQLeft=pLeft;
+      attSaveProgress();
       if(perQD) perQD.textContent=pLeft;
       if(pLeft<=0){
         clearInterval(_att.perQTimer);
@@ -3636,6 +3801,8 @@ function renderCurrentQ(){
     },1000);
   } else {
     var pe=document.getElementById('atPerQTimer'); if(pe) pe.style.display='none';
+    st.perQLeft=null;
+    st.perQQuestion=-1;
   }
 
   var ov=document.getElementById('overviewPanel'); if(ov) ov.style.display='none';
@@ -3644,12 +3811,14 @@ function selectOpt(i){
   if(_att.submitted) return;
   _att.answers[_att.currentQ]=i;
   _att.skipped[_att.currentQ]=false;
+  attSaveProgress();
   renderCurrentQ();
 }
 function skipQ(){
   if(_att.submitted) return;
   _att.skipped[_att.currentQ]=true;
   _att.answers[_att.currentQ]=null;
+  attSaveProgress();
   showToast('⏩ Question skip ho gaya','info');
   var total=(_att.quiz.questions||[]).length;
   if(_att.currentQ<total-1){
@@ -3661,11 +3830,13 @@ function skipQ(){
 function markForReview(){
   if(_att.submitted) return;
   _att.marked[_att.currentQ]=!_att.marked[_att.currentQ];
+  attSaveProgress();
   renderCurrentQ();
   showToast(_att.marked[_att.currentQ]?'🔖 Marked for review!':'Unmark ho gaya','info');
 }
 function toggleAnswerReveal(){
   _att.answerRevealed=!_att.answerRevealed;
+  attSaveProgress();
   renderCurrentQ();
 }
 function navQ(dir){
@@ -3676,6 +3847,7 @@ function navQ(dir){
   if(ni>=total){ openOverview(); return; }
   _att.currentQ=ni;
   _att.answerRevealed=false;
+  attSaveProgress();
   renderCurrentQ();
 }
 function openOverview(){
@@ -3703,6 +3875,20 @@ function openOverview(){
 function goToQ(idx){
   if(_att.perQTimer) clearInterval(_att.perQTimer);
   _att.currentQ=idx; renderCurrentQ();
+  attSaveProgress();
+}
+function pauseAttempt(){
+  if(!_att||!_att.quizId||_att.submitted) return;
+  attSavePauseState();
+  attStopAutoSave();
+  if(_att.timer) clearInterval(_att.timer);
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+  showToast('⏸ Quiz pause ho gayi — progress save hai!','success');
+  // Give the immediate Firestore write a moment, while local storage already
+  // protects against refresh/offline exits.
+  setTimeout(function(){
+    if(getActivePage()==='attempt') appGoBack();
+  },120);
 }
 function confirmSubmit(){
   var st=_att;
@@ -3717,6 +3903,7 @@ function confirmSubmit(){
 function submitAttempt(auto){
   if(_att.submitted) return;
   _att.submitted=true;
+  attStopAutoSave();
   attClearPauseState(); // clear saved pause on submit
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
@@ -3761,6 +3948,7 @@ function setAttDifficulty(diff){
   if(_att.submitted) return;
   var cur=_att.difficulty[_att.currentQ];
   _att.difficulty[_att.currentQ]=(cur===diff)?null:diff; // toggle
+  attSaveProgress();
   renderCurrentQ();
   var labels={easy:'😊 Easy',tough:'😓 Tough',doubt:'🤔 Doubtful'};
   if(_att.difficulty[_att.currentQ]===diff) showToast(labels[diff]+' mark ho gaya','info');
@@ -3783,6 +3971,7 @@ function toggleSaveCurrentQ(){
     showToast('📌 Question save ho gaya!','success');
   }
   cloudSaveSavedQ();
+  attSaveProgress();
   renderCurrentQ();
 }
 function cloudSaveSavedQ(){
@@ -6936,6 +7125,7 @@ function fcSilentPauseIfRunning(){
 window.addEventListener('beforeunload', function(){
   if(getActivePage()==='attempt'&&_att&&!_att.submitted){
     attSavePauseState();
+    attStopAutoSave();
   }
   if(getActivePage()==='fc-play'){
     fcSilentPauseIfRunning();
@@ -6953,7 +7143,9 @@ window.addEventListener('beforeunload', function(){
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){
     if(getActivePage()==='attempt'&&_att&&!_att.submitted){
-      attSavePauseState();
+      // Write immediately for mobile app-switches and sudden network loss.
+      // The quiz remains live if this tab comes back without being killed.
+      attSaveProgress();
     }
     if(getActivePage()==='fc-play'){
       fcSilentPauseIfRunning();
@@ -6969,6 +7161,7 @@ window.addEventListener('popstate', function(e){
   // If on attempt page and not submitted, auto-pause and save
   if(getActivePage() === 'attempt' && _att && !_att.submitted){
     attSavePauseState();
+    attStopAutoSave();
     showToast('⏸ Quiz pause ho gayi — resume kar sakte ho!','info');
     if(_att.timer) clearInterval(_att.timer);
     if(_att.perQTimer) clearInterval(_att.perQTimer);
