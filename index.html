@@ -124,6 +124,23 @@ body.reader-spacious #rsContent .hl-zone{line-height:1.85!important;}
 #floatingBack.visible{display:flex;}
 #floatingBack:active{transform:scale(0.92);}
 #floatingBack:hover{transform:translateY(-2px); box-shadow:0 6px 22px rgba(21,101,192,0.50);}
+#attemptTimerPausePill{
+  position:fixed;right:14px;bottom:20px;z-index:310;display:none;align-items:center;justify-content:center;
+  min-width:42px;padding:6px 9px;border:1.5px solid rgba(21,101,192,0.35);border-radius:20px;
+  background:var(--surface);color:var(--accent);font-size:0.62rem;font-weight:900;line-height:1;
+  box-shadow:0 3px 12px rgba(0,0,0,0.18);cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+#attemptTimerPausePill.paused{background:linear-gradient(135deg,#e65100,#ff8f00);color:#fff;border-color:transparent;}
+#attemptTimerPausePill:active{transform:scale(0.94);}
+.revision-instant-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:3px;flex:1;min-width:0;}
+.revision-instant-wrap #atPrev{width:100%;}
+#revisionInstantToggle{
+  min-height:18px;padding:1px 6px;border:1px solid var(--border);border-radius:20px;
+  background:var(--surface2);color:var(--text2);font-size:0.55rem;font-weight:900;line-height:1.2;
+  cursor:pointer;white-space:nowrap;
+}
+#revisionInstantToggle.on{background:rgba(46,125,50,0.13);border-color:rgba(46,125,50,0.45);color:var(--green);}
+#revisionInstantToggle:active{transform:scale(0.96);}
 /* Label tooltip under button */
 #floatingBack::after{
   content:attr(data-label);
@@ -1484,7 +1501,10 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
 
       <!-- Navigation -->
       <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px;">
-        <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev" style="flex:1;">← Pichla</button>
+        <div class="revision-instant-wrap">
+          <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev">← Pichla</button>
+          <button id="revisionInstantToggle" onclick="toggleRevisionInstantMode()" aria-pressed="false" title="Revision slideshow mein question aur options ek saath dikhayein">Q+O OFF</button>
+        </div>
         <button class="btn btn-outline btn-sm" onclick="openOverview()" style="flex:0 0 auto;padding:6px 10px;">📋</button>
         <button class="btn btn-primary btn-sm" onclick="navQ(1)" id="atNext" style="flex:1;">Agla →</button>
       </div>
@@ -1787,6 +1807,7 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
 
 <!-- Floating Back Button — bottom left -->
 <button id="floatingBack" onclick="appGoBack()" data-label="Back" aria-label="Go back">←</button>
+<button id="attemptTimerPausePill" onclick="toggleAttemptTimerPause()" aria-label="Pause quiz timers" title="Quiz timer pause karein">⏸</button>
 <div id="offlineBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c62828;color:#fff;text-align:center;font-size:0.78rem;font-weight:700;padding:7px;animation:fadeIn 0.3s;">📵 Aap offline hain — Cached data se kaam kar raha hai</div>
 
 <script>
@@ -2001,6 +2022,7 @@ function _rawShowPage(name){
   if(el) el.classList.add('active');
   document.body.style.overflow = (name === 'fc-play') ? 'hidden' : '';
   document.body.classList.toggle('fc-immersive', name === 'fc-play');
+  updateAttemptTimerPausePill();
   window.scrollTo({top:0, behavior:'instant'});
   // Close float panel on page change, then update button visibility
   var fp = document.getElementById('floatHlPanel');
@@ -2741,7 +2763,7 @@ function startSharedAttempt(shuffleQs){
     currentQ: 0, timer: null, timeLeft: 0, perQTimer: null,
     startTime: Date.now(), submitted: false, answerRevealed: false,
     revisionMode:false, revisionPhase:'question', revisionTimer:null, revisionRemaining:0, revisionComplete:false,
-    isShared: true, sharedQuizId: quiz.id
+    timerPaused:false, isShared: true, sharedQuizId: quiz.id
   };
 
   navTo('attempt', {title:'📝 '+quiz.name}, true);
@@ -2753,6 +2775,7 @@ function startSharedAttempt(shuffleQs){
     updateTimerDisplay();
     _att.timer = setInterval(function(){
       if(_att.submitted){ clearInterval(_att.timer); return; }
+      if(_att.timerPaused) return;
       _att.timeLeft--;
       updateTimerDisplay();
       if(_att.timeLeft<=0){
@@ -2877,6 +2900,54 @@ function fcCloseUserPanel(){
 var _revisionSlideDurationKey = 'revisionSlideDuration';
 var _revisionQuestionDurationKey = 'revisionQuestionDuration';
 var _revisionHideOptionsKey = 'revisionHideOtherOptions';
+var _revisionInstantModeKey = 'revisionInstantQuestionOptions';
+
+function getRevisionInstantMode(){
+  try{ return localStorage.getItem(_revisionInstantModeKey)==='1'; }catch(e){ return false; }
+}
+function updateRevisionInstantButton(){
+  var btn=document.getElementById('revisionInstantToggle');
+  if(!btn) return;
+  var enabled=getRevisionInstantMode();
+  btn.textContent=enabled?'Q+O ON':'Q+O OFF';
+  btn.classList.toggle('on',enabled);
+  btn.setAttribute('aria-pressed',enabled?'true':'false');
+  btn.title=enabled?
+    'ON: question aur options ek saath dikhte hain. Band karne ke liye tap karein.':
+    'OFF: pehle sirf question, phir options. Ek saath dikhane ke liye tap karein.';
+}
+function toggleRevisionInstantMode(){
+  var enabled=!getRevisionInstantMode();
+  try{ localStorage.setItem(_revisionInstantModeKey,enabled?'1':'0'); }catch(e){}
+  updateRevisionInstantButton();
+  if(_att&&_att.revisionMode&&!_att.submitted&&enabled&&_att.revisionPhase!=='answer'&&!_att.revisionComplete){
+    attStopRevisionTimer();
+    _att.revisionPhase='answer';
+    _att.answerRevealed=true;
+    _att.revisionRemaining=getRevisionSlideDuration();
+    renderCurrentQ();
+    attStartRevisionTimer();
+  }
+  showToast(enabled?'⚡ Question aur options ab saath dikhenge':'Revision slideshow ka pehle wala timing chalu','info');
+}
+function updateAttemptTimerPausePill(){
+  var btn=document.getElementById('attemptTimerPausePill');
+  if(!btn) return;
+  var active=getActivePage()==='attempt'&&typeof _att!=='undefined'&&_att&&!_att.submitted;
+  btn.style.display=active?'inline-flex':'none';
+  var paused=!!(_att&&_att.timerPaused);
+  btn.classList.toggle('paused',paused);
+  btn.textContent=paused?'▶':'⏸';
+  btn.setAttribute('aria-label',paused?'Resume quiz timers':'Pause quiz timers');
+  btn.title=paused?'Quiz timers resume karein':'Quiz timers pause karein';
+}
+function toggleAttemptTimerPause(){
+  if(!_att||!_att.quizId||_att.submitted) return;
+  _att.timerPaused=!_att.timerPaused;
+  updateAttemptTimerPausePill();
+  attSaveProgress();
+  showToast(_att.timerPaused?'⏸ Quiz timers pause':'▶ Quiz timers resume','info');
+}
 
 function getRevisionSlideDuration(){
   var value=10;
@@ -3292,6 +3363,7 @@ function attStartFullTimer(){
     updateTimerDisplay();
     _att.timer=setInterval(function(){
       if(_att.submitted){ clearInterval(_att.timer); return; }
+      if(_att.timerPaused) return;
       _att.timeLeft=Math.max(0,_att.timeLeft-1);
       updateTimerDisplay();
       if(_att.timeLeft<=0){
@@ -3325,7 +3397,7 @@ function attResumeFromPause(saved){
     startTime:saved.startTime||Date.now(), submitted:false, answerRevealed:false,
     revisionMode:!!saved.revisionMode, revisionPhase:saved.revisionPhase||'question', revisionTimer:null,
     revisionRemaining:typeof saved.revisionRemaining==='number'?saved.revisionRemaining:10,
-    revisionComplete:false,
+    revisionComplete:false,timerPaused:false,
     sessionId:saved.sessionId||('att_'+Date.now()+'_resume'),
     isShared:!!saved.isShared
   };
@@ -3335,6 +3407,11 @@ function attResumeFromPause(saved){
   while(_att.difficulty.length<total) _att.difficulty.push(null);
   navTo('attempt',{title:'📝 '+_att.quiz.name},true);
   document.getElementById('topbarTitle').textContent='📝 '+_att.quiz.name;
+  if(getRevisionInstantMode()&&_att.revisionMode&&_att.revisionPhase!=='answer'&&!_att.revisionComplete){
+    _att.revisionPhase='answer';
+    _att.answerRevealed=true;
+    _att.revisionRemaining=getRevisionSlideDuration();
+  }
   attStartFullTimer();
   attStartAutoSave();
   renderCurrentQ();
@@ -3809,6 +3886,7 @@ var _att = {
   quizId:null, quiz:null, answers:[], marked:[], skipped:[],
   difficulty:[], // 'easy'|'tough'|'doubt'|null per question
   currentQ:0, timer:null, timeLeft:0, perQTimer:null, startTime:0, submitted:false,
+  timerPaused:false,
   answerRevealed: false, revisionMode:false, revisionPhase:'question',
   revisionTimer:null, revisionRemaining:0, revisionComplete:false
 };
@@ -3856,6 +3934,7 @@ function attBeginFreshAttempt(quiz, shuffleQs){
     perQTimer:null, perQLeft:null, perQQuestion:-1,
     startTime:Date.now(), submitted:false, answerRevealed:false,
     revisionMode:false, revisionTimer:null, revisionRemaining:0, revisionComplete:false,
+    timerPaused:false,
     sessionId:'att_'+Date.now()+'_'+Math.random().toString(36).slice(2)
   };
 
@@ -4016,6 +4095,7 @@ function renderCurrentQ(){
     if(perQD) perQD.textContent=pLeft;
     _att.perQTimer=setInterval(function(){
       if(_att.submitted){ clearInterval(_att.perQTimer); return; }
+      if(_att.timerPaused) return;
       pLeft=Math.max(0,pLeft-1);
       _att.perQLeft=pLeft;
       attSaveProgress();
@@ -4034,6 +4114,8 @@ function renderCurrentQ(){
   }
 
   var ov=document.getElementById('overviewPanel'); if(ov) ov.style.display='none';
+  updateRevisionInstantButton();
+  updateAttemptTimerPausePill();
   attUpdateRevisionUI();
 }
 function selectOpt(i){
@@ -4089,6 +4171,8 @@ function attUpdateRevisionUI(){
       status.style.display='block';
       if(_att.revisionComplete){
         status.textContent='✅ Revision complete — Exit Revision karke normal attempt continue kar sakte hain.';
+      } else if(getRevisionInstantMode()){
+        status.textContent='⚡ Question aur options saath mein — agli slide '+(_att.revisionRemaining||getRevisionSlideDuration())+' sec mein.';
       } else if(_att.revisionPhase!=='answer'){
         status.textContent='📖 Pehle sirf question — answer '+(_att.revisionRemaining||getRevisionQuestionDuration())+' sec baad dikhega.';
       } else {
@@ -4099,6 +4183,12 @@ function attUpdateRevisionUI(){
 }
 function attStartRevisionTimer(){
   if(!_att||!_att.revisionMode||_att.submitted) return;
+  if(getRevisionInstantMode()&&_att.revisionPhase!=='answer'&&!_att.revisionComplete){
+    _att.revisionPhase='answer';
+    _att.answerRevealed=true;
+    _att.revisionRemaining=getRevisionSlideDuration();
+    renderCurrentQ();
+  }
   attStopRevisionTimer();
   _att.revisionComplete=false;
   var phaseDuration=_att.revisionPhase==='answer' ? getRevisionSlideDuration() : getRevisionQuestionDuration();
@@ -4110,6 +4200,7 @@ function attStartRevisionTimer(){
       attStopRevisionTimer();
       return;
     }
+    if(_att.timerPaused) return;
     _att.revisionRemaining=Math.max(0,Number(_att.revisionRemaining)-1);
     if(_att.revisionRemaining<=0){
       attStopRevisionTimer();
@@ -4123,9 +4214,9 @@ function attStartRevisionTimer(){
         attStartRevisionTimer();
       } else if(_att.currentQ<total-1){
         _att.currentQ++;
-        _att.revisionPhase='question';
-        _att.answerRevealed=false;
-        _att.revisionRemaining=getRevisionQuestionDuration();
+        _att.revisionPhase=getRevisionInstantMode()?'answer':'question';
+        _att.answerRevealed=getRevisionInstantMode();
+        _att.revisionRemaining=getRevisionInstantMode()?getRevisionSlideDuration():getRevisionQuestionDuration();
         attSaveProgress();
         renderCurrentQ();
         attStartRevisionTimer();
@@ -4144,10 +4235,10 @@ function toggleRevisionMode(){
   _att.revisionMode=!_att.revisionMode;
   if(_att.revisionMode){
     if(_att.perQTimer) clearInterval(_att.perQTimer);
-    _att.revisionPhase='question';
-    _att.answerRevealed=false;
+    _att.revisionPhase=getRevisionInstantMode()?'answer':'question';
+    _att.answerRevealed=getRevisionInstantMode();
     _att.revisionComplete=false;
-    _att.revisionRemaining=getRevisionQuestionDuration();
+    _att.revisionRemaining=getRevisionInstantMode()?getRevisionSlideDuration():getRevisionQuestionDuration();
     renderCurrentQ();
     attStartRevisionTimer();
     showToast('📖 Revision Mode ON — answer auto-show hoga','info');
@@ -4173,9 +4264,9 @@ function navQ(dir){
   _att.answerRevealed=false;
   _att.revisionComplete=false;
   if(_att.revisionMode){
-    _att.revisionPhase='question';
-    _att.answerRevealed=false;
-    _att.revisionRemaining=getRevisionQuestionDuration();
+    _att.revisionPhase=getRevisionInstantMode()?'answer':'question';
+    _att.answerRevealed=getRevisionInstantMode();
+    _att.revisionRemaining=getRevisionInstantMode()?getRevisionSlideDuration():getRevisionQuestionDuration();
   }
   attSaveProgress();
   renderCurrentQ();
@@ -4209,9 +4300,9 @@ function goToQ(idx){
   _att.currentQ=idx;
   _att.revisionComplete=false;
   if(_att.revisionMode){
-    _att.revisionPhase='question';
-    _att.answerRevealed=false;
-    _att.revisionRemaining=getRevisionQuestionDuration();
+    _att.revisionPhase=getRevisionInstantMode()?'answer':'question';
+    _att.answerRevealed=getRevisionInstantMode();
+    _att.revisionRemaining=getRevisionInstantMode()?getRevisionSlideDuration():getRevisionQuestionDuration();
   }
   renderCurrentQ();
   if(_att.revisionMode) attStartRevisionTimer();
