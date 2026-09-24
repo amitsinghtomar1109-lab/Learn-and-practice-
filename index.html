@@ -42,14 +42,51 @@ body.dark option{background:var(--surface2);color:var(--text);}
 
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
-html{scroll-behavior:smooth;}
+html{scroll-behavior:smooth;font-size:calc(16px * var(--reader-scale,1));}
 body{
   font-family:'Inter','Baloo 2',system-ui,sans-serif;
   background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
-  color:var(--text); min-height:100vh; font-size:14px; line-height:1.5;
+  color:var(--text); min-height:100vh; font-size:calc(14px * var(--reader-scale,1)); line-height:1.5;
   -webkit-overflow-scrolling:touch;
   transition:background 0.3s,color 0.3s;
 }
+/* Warm, low-glare reading palette */
+body.reading-mode{
+  --bg:#f1ead9;--bg2:#e9dfca;--surface:#faf6e9;--surface2:#f2ead8;
+  --accent:#795a36;--accent2:#93643a;--green:#496b4c;--red:#a44e43;
+  --orange:#93603b;--purple:#715681;--text:#3d382f;--text2:#665d4f;
+  --border:#d9cdb5;--shadow:0 2px 12px rgba(94,73,43,0.09);
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+}
+body.reading-mode .topbar{
+  background:linear-gradient(135deg,#746044,#887454);
+  box-shadow:0 3px 12px rgba(94,73,43,0.15);
+}
+body.reading-mode .card{box-shadow:var(--shadow);}
+body.reading-mode .inp,body.reading-mode textarea.inp,body.reading-mode select.inp{
+  background:var(--surface);color:var(--text);border-color:var(--border);
+}
+body.reading-mode #atQBody,
+body.reading-mode .qtext-lines,
+body.reading-mode .qmatch-entry,
+body.reading-mode #atOptions{line-height:1.85!important;}
+body.reading-mode .qmatch-col{background:var(--surface);}
+body.reading-mode .qmatch-title{background:rgba(121,90,54,0.09);color:var(--accent);}
+body.reader-spacious #atQBody,
+body.reader-spacious .qtext-lines,
+body.reader-spacious .qmatch-entry,
+body.reader-spacious #atOptions,
+body.reader-spacious #questionsList .hl-zone,
+body.reader-spacious #adContent .hl-zone,
+body.reader-spacious #vaultPageContent .hl-zone,
+body.reader-spacious #rsContent .hl-zone{line-height:1.85!important;}
+.reader-size-controls{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.reader-size-controls button{
+  min-width:38px;padding:7px 9px;border:1.5px solid var(--border);border-radius:9px;
+  background:var(--surface2);color:var(--text);font-weight:800;font-size:0.9rem;cursor:pointer;
+}
+.reader-size-controls button:disabled{opacity:.4;cursor:default;}
+.reader-size-value{min-width:72px;text-align:center;color:var(--text2);font-size:0.68rem;font-weight:700;}
 
 /* Topbar */
 .topbar{
@@ -919,6 +956,7 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
     <div class="topbar-avatar" id="userChip" onclick="fcToggleUserPanel()" style="display:none;" title="Profile">
       <span id="userAvatarInitial">U</span>
     </div>
+      <button class="topbar-icon-btn" id="readingModeQuickBtn" onclick="toggleReadingMode()" aria-label="Toggle reading mode" title="Reading Mode">📖</button>
     <div id="topbarMenuWrap">
       <button class="topbar-icon-btn" id="topbarMenuBtn" onclick="toggleTopbarMenu(event)" aria-label="Menu" title="Menu">&#8942;</button>
       <div id="topbarMenu">
@@ -2853,13 +2891,37 @@ function renderSettingsPage(){
   var el = document.getElementById('settingsPageBody');
   if(!el) return;
   var isDark = document.body.classList.contains('dark');
+  var isReading = document.body.classList.contains('reading-mode');
+  var isSpacious = document.body.classList.contains('reader-spacious');
+  var readerSize = getReaderTextSize();
+  var readerSizeLabels = ['Normal','Large','XL'];
   el.innerHTML =
     '<div class="card" style="padding:6px 12px;">'+
       '<div class="settings-row">'+
         '<div class="settings-row-icon" style="background:rgba(21,101,192,0.1);color:var(--accent);">🌙</div>'+
-        '<div class="settings-row-info"><div class="settings-row-title">Night Mode</div><div class="settings-row-sub">Eyes ke liye dark theme</div></div>'+
+        '<div class="settings-row-info"><div class="settings-row-title">Night Mode</div><div class="settings-row-sub">Raat me padhne ke liye dark theme</div></div>'+
         '<div class="toggle-switch'+(isDark?' on':'')+'" id="settingsNightToggle" onclick="toggleNightMode();renderSettingsPage();"><div class="toggle-switch-knob"></div></div>'+
       '</div>'+
+      '<div class="settings-row">'+
+        '<div class="settings-row-icon" style="background:rgba(121,90,54,0.1);color:var(--accent);">📖</div>'+
+        '<div class="settings-row-info"><div class="settings-row-title">Reading Mode</div><div class="settings-row-sub">Warm background, soft colours aur khuli line spacing</div></div>'+
+        '<div class="toggle-switch'+(isReading?' on':'')+'" id="settingsReadingToggle" onclick="toggleReadingMode();renderSettingsPage();"><div class="toggle-switch-knob"></div></div>'+
+      '</div>'+
+      '<div class="settings-row">'+
+        '<div class="settings-row-icon" style="background:rgba(46,125,50,0.1);color:var(--green);">↕</div>'+
+        '<div class="settings-row-info"><div class="settings-row-title">Comfortable Spacing</div><div class="settings-row-sub">Question aur options ke beech zyada jagah</div></div>'+
+        '<div class="toggle-switch'+(isSpacious?' on':'')+'" id="settingsSpacingToggle" onclick="toggleReadingSpacing();renderSettingsPage();"><div class="toggle-switch-knob"></div></div>'+
+      '</div>'+
+      '<div class="settings-row">'+
+        '<div class="settings-row-icon" style="background:rgba(106,27,154,0.1);color:#6a1b9a;">Aa</div>'+
+        '<div class="settings-row-info"><div class="settings-row-title">Text Size</div><div class="settings-row-sub">Padhne layak size chunein</div></div>'+
+        '<div class="reader-size-controls">'+
+          '<button onclick="adjustReaderTextSize(-1);renderSettingsPage();" aria-label="Text size kam karein" '+(readerSize===0?'disabled':'')+'>A−</button>'+
+          '<span class="reader-size-value" id="readerSizeValue">'+readerSizeLabels[readerSize]+'</span>'+
+          '<button onclick="adjustReaderTextSize(1);renderSettingsPage();" aria-label="Text size badhayein" '+(readerSize===2?'disabled':'')+'>A+</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:0.72rem;color:var(--text2);line-height:1.55;padding:8px 4px 10px;">Tip: screen brightness ko room ki roshni ke saath balance rakhein. App device brightness ko control nahi karta.</div>'+
       '<div class="settings-row" style="cursor:pointer;" onclick="openSubjectManager()">'+
         '<div class="settings-row-icon" style="background:rgba(106,27,154,0.1);color:#6a1b9a;">📚</div>'+
         '<div class="settings-row-info"><div class="settings-row-title">Subject / Topic Manager</div><div class="settings-row-sub">Subjects, sections, topics manage karo</div></div>'+
@@ -5384,24 +5446,82 @@ function hlReviewDownload() {
 // ================================================================
 // NIGHT MODE
 // ================================================================
+function getReaderTextSize(){
+  try{
+    var size=parseInt(localStorage.getItem('readerTextSize')||'0',10);
+    return isNaN(size)?0:Math.max(0,Math.min(2,size));
+  }catch(e){return 0;}
+}
+function applyReaderTextSize(){
+  var scales=[1,1.12,1.25];
+  document.documentElement.style.setProperty('--reader-scale',scales[getReaderTextSize()]);
+}
+function adjustReaderTextSize(delta){
+  var next=Math.max(0,Math.min(2,getReaderTextSize()+delta));
+  try{localStorage.setItem('readerTextSize',String(next));}catch(e){}
+  applyReaderTextSize();
+  var value=document.getElementById('readerSizeValue');
+  if(value) value.textContent=['Normal','Large','XL'][next];
+}
+function toggleReadingSpacing(){
+  var enabled=document.body.classList.toggle('reader-spacious');
+  try{localStorage.setItem('readerSpacing',enabled?'1':'0');}catch(e){}
+}
+function _syncReadingComfortControls(){
+  var isReading=document.body.classList.contains('reading-mode');
+  var isDark=document.body.classList.contains('dark');
+  var quick=document.getElementById('readingModeQuickBtn');
+  if(quick){
+    quick.textContent=isReading?'📘':'📖';
+    quick.title=isReading?'Turn reading mode off':'Turn reading mode on';
+    quick.setAttribute('aria-label',quick.title);
+  }
+  var nightToggle=document.getElementById('settingsNightToggle');
+  if(nightToggle) nightToggle.classList.toggle('on',isDark);
+  var readingToggle=document.getElementById('settingsReadingToggle');
+  if(readingToggle) readingToggle.classList.toggle('on',isReading);
+  var spacingToggle=document.getElementById('settingsSpacingToggle');
+  if(spacingToggle) spacingToggle.classList.toggle('on',document.body.classList.contains('reader-spacious'));
+  var themeMeta=document.querySelector('meta[name="theme-color"]');
+  if(themeMeta) themeMeta.setAttribute('content',isDark?'#0d1519':isReading?'#746044':'#1565c0');
+}
+function toggleReadingMode(){
+  var isReading=document.body.classList.toggle('reading-mode');
+  if(isReading) document.body.classList.remove('dark');
+  try{
+    localStorage.setItem('readingMode',isReading?'1':'0');
+    localStorage.setItem('nightMode','0');
+  }catch(e){}
+  _syncReadingComfortControls();
+}
 function toggleNightMode() {
   var isDark = document.body.classList.toggle('dark');
+  document.body.classList.remove('reading-mode');
   var btn = document.getElementById('nightModeBtn');
   if(btn) btn.textContent = isDark ? '☀️' : '🌙';
-  try { localStorage.setItem('nightMode', isDark ? '1' : '0'); } catch(e) {}
+  try {
+    localStorage.setItem('nightMode', isDark ? '1' : '0');
+    localStorage.setItem('readingMode','0');
+  } catch(e) {}
+  _syncReadingComfortControls();
   dbg('Night mode: ' + (isDark ? 'ON' : 'OFF'), 'info');
 }
 function _initNightMode() {
   try {
     var saved = localStorage.getItem('nightMode');
+    var savedReading = localStorage.getItem('readingMode');
     var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var useDark = saved !== null ? saved === '1' : prefersDark;
-    if(useDark) {
+    if(savedReading==='1'){
+      document.body.classList.add('reading-mode');
+    } else if(saved !== null ? saved === '1' : prefersDark) {
       document.body.classList.add('dark');
       var btn = document.getElementById('nightModeBtn');
       if(btn) btn.textContent = '☀️';
     }
   } catch(e) {}
+  try{if(localStorage.getItem('readerSpacing')==='1') document.body.classList.add('reader-spacious');}catch(e){}
+  applyReaderTextSize();
+  _syncReadingComfortControls();
 }
 _initNightMode();
 
