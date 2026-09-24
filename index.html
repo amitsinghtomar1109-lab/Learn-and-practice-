@@ -254,6 +254,31 @@ textarea.inp{resize:vertical; min-height:64px;}
   user-select: text;
   cursor: text;
 }
+.qtext-lines{line-height:1.65;overflow-wrap:anywhere;}
+.qmatch-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+  margin:10px 0;align-items:start;
+}
+.qmatch-col{
+  min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:10px;
+  background:var(--surface2);
+}
+.qmatch-title{
+  padding:8px 10px;background:rgba(21,101,192,0.09);color:var(--accent);
+  font-size:0.78rem;font-weight:800;border-bottom:1px solid var(--border);
+}
+.qmatch-items{padding:5px 8px;}
+.qmatch-entry{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;
+  align-items:start;padding:7px 2px;font-size:0.82rem;line-height:1.5;
+  overflow-wrap:anywhere;
+}
+.qmatch-entry+.qmatch-entry{border-top:1px solid var(--border);}
+.qmatch-label{
+  min-width:23px;text-align:center;padding:1px 5px;border-radius:6px;
+  background:rgba(21,101,192,0.11);color:var(--accent);font-weight:800;
+}
+@media(max-width:520px){.qmatch-grid{grid-template-columns:1fr;gap:8px;}}
 /* When container is in active HL mode: suppress iOS callout & Android long-press popup */
 .hl-mode-active .hl-zone,
 .hl-mode-active {
@@ -1781,6 +1806,69 @@ function escHtml(s){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+function renderQuestionText(raw){
+  var text=String(raw==null?'':raw).replace(/\r\n?/g,'\n');
+  var lines=text.split('\n');
+  var headerRe=/^\s*(सूची|list|column|स्तम्भ)\s*[-–—]?\s*(I{1,2}|[12]|one|two|एक|दो)\s*(?:\([^)]*\))?\s*[:：]?\s*$/i;
+  var headings=[];
+  lines.forEach(function(line,index){
+    var match=line.match(headerRe);
+    if(match){
+      var token=match[2].toLowerCase();
+      var which=(token==='ii'||token==='2'||token==='two'||token==='दो')?2:1;
+      headings.push({index:index,which:which,title:line.trim().replace(/[:：]\s*$/,'')});
+    }
+  });
+  var first=headings.find(function(h){return h.which===1;});
+  var second=headings.find(function(h){return h.which===2;});
+  if(!first||!second||first.index===second.index){
+    return '<div class="qtext-lines">'+escHtml(text).replace(/\n/g,'<br>')+'</div>';
+  }
+  var h1=headings.find(function(h){return h.which===1;});
+  var h2=headings.find(function(h){return h.which===2&&h.index>h1.index;});
+  if(!h2) return '<div class="qtext-lines">'+escHtml(text).replace(/\n/g,'<br>')+'</div>';
+
+  var intro=lines.slice(0,h1.index).join('\n').trim();
+  var firstLines=lines.slice(h1.index+1,h2.index);
+  var nextHeading=headings.find(function(h){return h.index>h2.index;});
+  var secondLines=lines.slice(h2.index+1,nextHeading?nextHeading.index:lines.length);
+  var tail=[];
+  var codeIndex=secondLines.findIndex(function(line){return /^\s*(कूट|code|कूट-संकेत)\s*[:：]?\s*$/i.test(line);});
+  if(codeIndex>=0){
+    tail=secondLines.slice(codeIndex);
+    secondLines=secondLines.slice(0,codeIndex);
+  }
+  if(nextHeading) tail=tail.concat(lines.slice(nextHeading.index));
+
+  function entriesHtml(items){
+    var entries=[];
+    items.forEach(function(line){
+      var match=line.match(/^\s*(?:\(([A-Za-z]|\d+)\)\s*|([A-Za-z]|\d+)\s*[.)\-:]\s*)(.*?)\s*$/);
+      if(match){
+        entries.push({label:match[1]||match[2],text:match[3]||''});
+      }else if(line.trim()&&entries.length){
+        entries[entries.length-1].text+=' '+line.trim();
+      }else if(line.trim()){
+        entries.push({label:'',text:line.trim()});
+      }
+    });
+    return entries.map(function(entry){
+      return '<div class="qmatch-entry">'+
+        (entry.label?'<span class="qmatch-label">'+escHtml(entry.label)+'</span>':'')+
+        '<span>'+escHtml(entry.text)+'</span>'+
+      '</div>';
+    }).join('');
+  }
+  function columnHtml(title,items){
+    return '<section class="qmatch-col"><div class="qmatch-title">'+escHtml(title)+'</div>'+
+      '<div class="qmatch-items">'+entriesHtml(items)+'</div></section>';
+  }
+  var html=intro?'<div class="qtext-lines">'+escHtml(intro).replace(/\n/g,'<br>')+'</div>':'';
+  html+='<div class="qmatch-grid">'+columnHtml(h1.title,firstLines)+columnHtml(h2.title,secondLines)+'</div>';
+  var tailText=tail.join('\n').trim();
+  if(tailText) html+='<div class="qtext-lines">'+escHtml(tailText).replace(/\n/g,'<br>')+'</div>';
+  return html;
+}
 // ================================================================
 // DEBUG CONSOLE
 // ================================================================
@@ -3278,7 +3366,7 @@ function renderQuestionsList(quiz){
         '<div style="display:flex;align-items:flex-start;gap:8px;">'+
           '<div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;margin-top:2px;">'+(i+1)+'</div>'+
           '<div style="flex:1;min-width:0;">'+
-            '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;word-break:break-word;">'+escHtml(q.q)+'</div>'+
+            '<div style="font-weight:700;font-size:0.84rem;line-height:1.5;word-break:break-word;">'+renderQuestionText(q.q)+'</div>'+
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:6px;">'+
               q.options.map(function(opt,oi){
                 var isCor=oi===q.correct;
@@ -3694,7 +3782,7 @@ function renderCurrentQ(){
   document.getElementById('atProgress').textContent=progText;
   document.getElementById('atBar').style.width=Math.round(((st.currentQ+1)/total)*100)+'%';
   document.getElementById('atQNum').textContent='Question '+(st.currentQ+1)+' of '+total;
-  document.getElementById('atQBody').textContent=q.q;
+  document.getElementById('atQBody').innerHTML=renderQuestionText(q.q);
 
   var mb=document.getElementById('atMarkBadge');
   if(mb) mb.style.display=st.marked[st.currentQ]?'inline-block':'none';
@@ -4161,7 +4249,7 @@ function renderAttemptDetail(at, quiz){
                 (isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
                 (isMarked?'<span style="font-size:0.65rem;font-weight:800;color:#e65100;background:rgba(255,152,0,0.12);border-radius:10px;padding:1px 7px;">🔖 Marked</span>':'')+
               '</div>'+
-              '<div class="hl-zone" id="adQ_'+i+'" data-hlzone="ad_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
+              '<div class="hl-zone" id="adQ_'+i+'" data-hlzone="ad_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+renderQuestionText(q.q)+'</div>'+
               (hidden
                 ? '<div style="padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:0.78rem;font-weight:700;text-align:center;border:1.5px dashed var(--border);">🙈 Answer chhupa hua hai — "Dikhao" button dabao</div>'
                 : '<div style="display:flex;flex-direction:column;gap:3px;">'+
@@ -4300,7 +4388,7 @@ function renderVaultPage(){
           (diffLabel?'<span style="font-size:0.65rem;font-weight:800;background:rgba(0,0,0,0.06);border-radius:10px;padding:1px 7px;">'+diffLabel+'</span>':'')+
           (item.isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
         '</div>'+
-        '<div style="font-weight:700;font-size:0.85rem;line-height:1.55;margin-bottom:8px;">'+escHtml(item.q.q)+'</div>'+
+        '<div style="font-weight:700;font-size:0.85rem;line-height:1.55;margin-bottom:8px;">'+renderQuestionText(item.q.q)+'</div>'+
         '<div style="display:flex;flex-direction:column;gap:3px;">'+
           item.q.options.map(function(opt,oi){
             var isCOpt=oi===item.q.correct; var isUOpt=oi===item.userAns;
@@ -4455,7 +4543,7 @@ function _renderFullAnalysis(){
             (isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
             (isMarked?'<span style="font-size:0.65rem;font-weight:800;color:#e65100;background:rgba(255,152,0,0.12);border-radius:10px;padding:1px 7px;">🔖 Marked</span>':'')+
           '</div>'+
-          '<div class="hl-zone" id="rsQ_'+i+'" data-hlzone="rs_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+escHtml(q.q)+'</div>'+
+          '<div class="hl-zone" id="rsQ_'+i+'" data-hlzone="rs_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+renderQuestionText(q.q)+'</div>'+
           '<div style="display:flex;flex-direction:column;gap:4px;">'+
             q.options.map(function(opt,oi){
               var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
