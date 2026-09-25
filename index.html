@@ -218,7 +218,7 @@ body.quiz-immersive #page-attempt.page.active{
 .attempt-heading #atProgress{margin-top:2px;color:var(--text2);font-size:.67rem;font-weight:700;}
 body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!important;}
 .attempt-controls-panel{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
   width:min(100%,900px);margin:0 auto;padding:10px 14px;
   background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;
 }
@@ -228,6 +228,8 @@ body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!importan
   font-family:inherit;font-size:.73rem;font-weight:800;line-height:1.2;cursor:pointer;
 }
 .attempt-control-revision{background:rgba(106,27,154,.08);color:#6a1b9a;border:1.5px solid rgba(106,27,154,.35);}
+.attempt-control-timer{background:rgba(21,101,192,.08);color:var(--accent);border:1.5px solid rgba(21,101,192,.3);}
+.attempt-control-timer.paused{background:rgba(230,81,0,.12);color:var(--orange);border-color:rgba(230,81,0,.4);}
 .attempt-control-pause{background:var(--surface2);color:var(--accent);border:1.5px solid rgba(21,101,192,.35);}
 .attempt-control-submit{background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:0;}
 .attempt-control-qo{grid-column:1/-1;justify-self:start;min-height:28px!important;padding:4px 8px!important;font-size:.62rem!important;}
@@ -276,6 +278,7 @@ body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!importan
   .attempt-back-button,.attempt-controls-toggle{width:35px;height:35px;flex-basis:35px;}
   .attempt-content{padding-left:10px;padding-right:10px;}
   .attempt-question-card{padding:12px!important;}
+  .attempt-controls-panel{grid-template-columns:repeat(2,minmax(0,1fr));}
   .attempt-difficulty{grid-template-columns:1fr 1fr;}
   .attempt-difficulty-label{grid-column:1/-1;}
 }
@@ -1557,6 +1560,7 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
     </div>
     <div class="attempt-controls-panel" id="attemptControlsPanel" hidden>
       <button onclick="toggleRevisionMode();closeAttemptControls();" id="atRevisionBtn" class="attempt-control-revision">📖 Revision Mode</button>
+      <button onclick="toggleAttemptTimerPause()" id="attemptTimerPauseControl" class="attempt-control-timer" aria-label="Pause quiz timers" title="Quiz timer pause karein">⏸ Timer</button>
       <button onclick="pauseAttempt()" class="attempt-control-pause">⏸ Pause</button>
       <button onclick="confirmSubmit();closeAttemptControls();" class="attempt-control-submit">✅ Submit</button>
       <button id="revisionInstantToggle" class="attempt-control-qo" onclick="toggleRevisionInstantMode()" aria-pressed="false" title="Revision slideshow mein question aur options ek saath dikhayein">Q+O OFF</button>
@@ -3029,14 +3033,23 @@ function toggleRevisionInstantMode(){
 }
 function updateAttemptTimerPausePill(){
   var btn=document.getElementById('attemptTimerPausePill');
-  if(!btn) return;
   var active=getActivePage()==='attempt'&&typeof _att!=='undefined'&&_att&&!_att.submitted;
-  btn.style.display=active?'inline-flex':'none';
   var paused=!!(_att&&_att.timerPaused);
-  btn.classList.toggle('paused',paused);
-  btn.textContent=paused?'▶':'⏸';
-  btn.setAttribute('aria-label',paused?'Resume quiz timers':'Pause quiz timers');
-  btn.title=paused?'Quiz timers resume karein':'Quiz timers pause karein';
+  if(btn){
+    btn.style.display=active?'inline-flex':'none';
+    btn.classList.toggle('paused',paused);
+    btn.textContent=paused?'▶':'⏸';
+    btn.setAttribute('aria-label',paused?'Resume quiz timers':'Pause quiz timers');
+    btn.title=paused?'Quiz timers resume karein':'Quiz timers pause karein';
+  }
+  var panelBtn=document.getElementById('attemptTimerPauseControl');
+  if(panelBtn){
+    panelBtn.textContent=paused?'▶ Resume Timer':'⏸ Pause Timer';
+    panelBtn.classList.toggle('paused',paused);
+    panelBtn.setAttribute('aria-label',paused?'Quiz timer resume karein':'Quiz timer pause karein');
+    panelBtn.title=paused?'Quiz timer resume karein':'Quiz timer pause karein';
+    panelBtn.disabled=!active;
+  }
 }
 function toggleAttemptControls(){
   var panel=document.getElementById('attemptControlsPanel');
