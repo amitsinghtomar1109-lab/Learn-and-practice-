@@ -232,6 +232,13 @@ body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!importan
 .attempt-control-timer.paused{background:rgba(230,81,0,.12);color:var(--orange);border-color:rgba(230,81,0,.4);}
 .attempt-control-pause{background:var(--surface2);color:var(--accent);border:1.5px solid rgba(21,101,192,.35);}
 .attempt-control-submit{background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:0;}
+.attempt-controls-section-label{
+  grid-column:1/-1;margin-top:2px;padding-top:7px;border-top:1px solid var(--border);
+  color:var(--text2);font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+}
+.attempt-control-theme{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);}
+.attempt-control-theme.is-active{background:rgba(21,101,192,.12);color:var(--accent);border-color:rgba(21,101,192,.38);}
+.attempt-control-settings{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}
 .attempt-control-qo{grid-column:1/-1;justify-self:start;min-height:28px!important;padding:4px 8px!important;font-size:.62rem!important;}
 #page-attempt #atRevisionStatus{
   width:calc(100% - 28px);max-width:872px;margin:9px auto 0!important;padding:7px 10px!important;
@@ -1563,6 +1570,10 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <button onclick="toggleAttemptTimerPause()" id="attemptTimerPauseControl" class="attempt-control-timer" aria-label="Pause quiz timers" title="Quiz timer pause karein">⏸ Timer</button>
       <button onclick="pauseAttempt()" class="attempt-control-pause">⏸ Pause</button>
       <button onclick="confirmSubmit();closeAttemptControls();" class="attempt-control-submit">✅ Submit</button>
+      <div class="attempt-controls-section-label">Display &amp; Settings</div>
+      <button onclick="toggleNightMode()" id="attemptNightModeControl" class="attempt-control-theme" aria-pressed="false">🌙 Night</button>
+      <button onclick="toggleReadingMode()" id="attemptReadingModeControl" class="attempt-control-theme" aria-pressed="false">📖 Reading</button>
+      <button onclick="openAttemptSettings()" class="attempt-control-settings">⚙ Settings</button>
       <button id="revisionInstantToggle" class="attempt-control-qo" onclick="toggleRevisionInstantMode()" aria-pressed="false" title="Revision slideshow mein question aur options ek saath dikhayein">Q+O OFF</button>
     </div>
     <div id="atRevisionStatus" style="display:none;margin:8px 14px 0;padding:7px 10px;background:rgba(106,27,154,0.09);border:1px solid rgba(106,27,154,0.25);border-radius:9px;color:#6a1b9a;font-size:0.74rem;font-weight:800;text-align:center;"></div>
@@ -3050,6 +3061,16 @@ function updateAttemptTimerPausePill(){
     panelBtn.title=paused?'Quiz timer resume karein':'Quiz timer pause karein';
     panelBtn.disabled=!active;
   }
+}
+function openAttemptSettings(){
+  if(_att&&_att.quizId&&!_att.submitted&&!_att.timerPaused){
+    _att.timerPaused=true;
+    updateAttemptTimerPausePill();
+    attSaveProgress();
+    showToast('Settings ke liye quiz timer pause kiya — lautkar Timer Resume karein','info');
+  }
+  closeAttemptControls();
+  navTo('settings',{title:'⚙️ Settings',render:renderSettingsPage});
 }
 function toggleAttemptControls(){
   var panel=document.getElementById('attemptControlsPanel');
@@ -5897,6 +5918,18 @@ function _syncReadingComfortControls(){
   if(readingToggle) readingToggle.classList.toggle('on',isReading);
   var spacingToggle=document.getElementById('settingsSpacingToggle');
   if(spacingToggle) spacingToggle.classList.toggle('on',document.body.classList.contains('reader-spacious'));
+  var attemptNight=document.getElementById('attemptNightModeControl');
+  if(attemptNight){
+    attemptNight.textContent=isDark?'☀️ Night ON':'🌙 Night';
+    attemptNight.classList.toggle('is-active',isDark);
+    attemptNight.setAttribute('aria-pressed',isDark?'true':'false');
+  }
+  var attemptReading=document.getElementById('attemptReadingModeControl');
+  if(attemptReading){
+    attemptReading.textContent=isReading?'📘 Reading ON':'📖 Reading';
+    attemptReading.classList.toggle('is-active',isReading);
+    attemptReading.setAttribute('aria-pressed',isReading?'true':'false');
+  }
   var themeMeta=document.querySelector('meta[name="theme-color"]');
   if(themeMeta) themeMeta.setAttribute('content',isDark?'#0d1519':isReading?'#746044':'#1565c0');
 }
