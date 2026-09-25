@@ -211,16 +211,25 @@ body.quiz-immersive #page-attempt.page.active{
 }
 .attempt-controls-toggle{font-size:1.15rem;}
 .attempt-heading{flex:1;min-width:0;}
+.attempt-title-line{display:flex;align-items:center;gap:8px;min-width:0;}
 .attempt-heading #atTitle{
-  color:var(--text);font-size:.88rem;font-weight:900;line-height:1.25;
+  flex:1;min-width:0;color:var(--text);font-size:.88rem;font-weight:900;line-height:1.25;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .attempt-heading #atProgress{margin-top:2px;color:var(--text2);font-size:.67rem;font-weight:700;}
-body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!important;}
+.attempt-heading #atTimer{
+  flex:0 0 auto;padding:0!important;background:transparent!important;border:0!important;
+  color:var(--orange)!important;font-size:.76rem!important;font-weight:900!important;
+  font-family:monospace!important;line-height:1;white-space:nowrap;
+}
 .attempt-controls-panel{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
-  width:min(100%,900px);margin:0 auto;padding:10px 14px;
-  background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;
+  position:fixed;top:calc(env(safe-area-inset-top) + 58px);left:50%;z-index:920;
+  transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
+  width:min(900px,calc(100% - 16px));max-height:calc(100vh - 72px);
+  max-height:calc(100dvh - env(safe-area-inset-top) - 72px);overflow-y:auto;
+  overscroll-behavior:contain;margin:0;padding:10px 14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:0 0 14px 14px;
+  box-shadow:0 12px 28px rgba(0,0,0,.2);
 }
 .attempt-controls-panel[hidden]{display:none!important;}
 .attempt-controls-panel button{
@@ -239,6 +248,14 @@ body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!importan
 .attempt-control-theme{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);}
 .attempt-control-theme.is-active{background:rgba(21,101,192,.12);color:var(--accent);border-color:rgba(21,101,192,.38);}
 .attempt-control-settings{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}
+.attempt-control-action{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);}
+.attempt-control-action.review{background:rgba(255,152,0,.08);color:#e65100;border-color:rgba(255,152,0,.35);}
+.attempt-control-action.reveal{background:rgba(106,27,154,.08);color:#6a1b9a;border-color:rgba(106,27,154,.3);}
+.attempt-control-question-tag{min-width:0;padding:7px 4px;border-radius:18px;background:transparent;font-family:inherit;font-size:.68rem;font-weight:800;line-height:1.2;cursor:pointer;}
+.attempt-control-question-tag.easy{color:var(--green);border:1.5px solid rgba(46,125,50,.3);}
+.attempt-control-question-tag.tough{color:var(--red);border:1.5px solid rgba(198,40,40,.3);}
+.attempt-control-question-tag.doubt{color:var(--orange);border:1.5px solid rgba(230,81,0,.3);}
+.attempt-control-question-tag.save{color:#6a1b9a;border:1.5px solid rgba(106,27,154,.3);}
 .attempt-control-qo{grid-column:1/-1;justify-self:start;min-height:28px!important;padding:4px 8px!important;font-size:.62rem!important;}
 #page-attempt #atRevisionStatus{
   width:calc(100% - 28px);max-width:872px;margin:9px auto 0!important;padding:7px 10px!important;
@@ -261,22 +278,7 @@ body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!importan
 #page-attempt #atExplanation{margin-top:11px;}
 #page-attempt #atExplanation:empty{display:none;}
 #page-attempt #atExplanation > div{font-size:.83rem!important;line-height:1.6;padding:9px 11px!important;}
-.attempt-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
-.attempt-actions button{
-  min-width:0;min-height:40px;padding:8px 9px;border-radius:9px;
-  font-family:inherit;font-size:.76rem;font-weight:750;line-height:1.25;cursor:pointer;
-}
-.attempt-actions .attempt-reveal{grid-column:1/-1;}
-.attempt-difficulty{
-  display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));
-  align-items:center;gap:6px;margin-top:9px;
-}
-.attempt-difficulty-label{font-size:.66rem;font-weight:800;color:var(--text2);}
-.attempt-difficulty button{
-  min-width:0;padding:6px 4px;border-radius:18px;background:transparent;
-  font:800 .66rem/1.15 inherit;cursor:pointer;
-}
-.attempt-navigation{display:grid;grid-template-columns:1fr auto 1.25fr;gap:8px;margin-top:10px;}
+.attempt-navigation{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
 .attempt-navigation button{min-width:0;min-height:40px;padding:7px 8px;font-size:.75rem;}
 #page-attempt #overviewPanel{margin-top:12px!important;}
 #page-attempt #overviewPanel .card{padding:14px;}
@@ -286,8 +288,6 @@ body.quiz-immersive #atTimer{padding:5px 8px!important;font-size:.75rem!importan
   .attempt-content{padding-left:10px;padding-right:10px;}
   .attempt-question-card{padding:12px!important;}
   .attempt-controls-panel{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .attempt-difficulty{grid-template-columns:1fr 1fr;}
-  .attempt-difficulty-label{grid-column:1/-1;}
 }
 
 .page-header{
@@ -1557,11 +1557,11 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
     <div class="attempt-header">
       <button class="attempt-back-button" onclick="appGoBack()" aria-label="Quiz se bahar jaayein" title="Quiz pause karke wapas jaayein">←</button>
       <div class="attempt-heading">
-        <div id="atTitle">Quiz</div>
+        <div class="attempt-title-line">
+          <div id="atTitle">Quiz</div>
+          <div id="atTimer" style="display:none;color:var(--orange);font-weight:900;font-size:0.76rem;font-family:monospace;white-space:nowrap;"><span id="atTimerVal">60:00</span></div>
+        </div>
         <div id="atProgress">Q 1 / 10</div>
-      </div>
-      <div id="atTimer" style="display:none;background:linear-gradient(135deg,#e65100,#ff8f00);color:#fff;padding:4px 10px;border-radius:20px;font-weight:900;font-size:0.82rem;font-family:monospace;white-space:nowrap;">
-        ⏱ <span id="atTimerVal">60:00</span>
       </div>
       <button class="attempt-controls-toggle" id="attemptControlsToggle" onclick="toggleAttemptControls()" aria-label="Quiz controls kholein" aria-expanded="false" aria-controls="attemptControlsPanel" title="Quiz controls">⋯</button>
     </div>
@@ -1574,6 +1574,16 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <button onclick="toggleNightMode()" id="attemptNightModeControl" class="attempt-control-theme" aria-pressed="false">🌙 Night</button>
       <button onclick="toggleReadingMode()" id="attemptReadingModeControl" class="attempt-control-theme" aria-pressed="false">📖 Reading</button>
       <button onclick="openAttemptSettings()" class="attempt-control-settings">⚙ Settings</button>
+      <div class="attempt-controls-section-label">Question Actions</div>
+      <button onclick="skipQ()" id="atSkipBtn" class="attempt-control-action">⏩ Skip</button>
+      <button onclick="markForReview()" id="atMarkBtn" class="attempt-control-action review">🔖 Mark for Review</button>
+      <button onclick="toggleAnswerReveal()" id="atRevealBtn" class="attempt-control-action reveal">👁 Answer Dikhao</button>
+      <button onclick="openOverview();closeAttemptControls();" class="attempt-control-action" aria-label="Question overview" title="Question list">📋 Overview</button>
+      <div class="attempt-controls-section-label">Question Tags</div>
+      <button id="atEasyBtn" class="attempt-control-question-tag easy" onclick="setAttDifficulty('easy')">😊 Easy</button>
+      <button id="atToughBtn" class="attempt-control-question-tag tough" onclick="setAttDifficulty('tough')">😓 Tough</button>
+      <button id="atDoubtBtn" class="attempt-control-question-tag doubt" onclick="setAttDifficulty('doubt')">🤔 Doubtful</button>
+      <button id="atSaveBtn" class="attempt-control-question-tag save" onclick="toggleSaveCurrentQ()">📌 Save</button>
       <button id="revisionInstantToggle" class="attempt-control-qo" onclick="toggleRevisionInstantMode()" aria-pressed="false" title="Revision slideshow mein question aur options ek saath dikhayein">Q+O OFF</button>
     </div>
     <div id="atRevisionStatus" style="display:none;margin:8px 14px 0;padding:7px 10px;background:rgba(106,27,154,0.09);border:1px solid rgba(106,27,154,0.25);border-radius:9px;color:#6a1b9a;font-size:0.74rem;font-weight:800;text-align:center;"></div>
@@ -1596,26 +1606,9 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
         <div id="atPerQTimer" style="display:none;margin-top:10px;text-align:center;font-size:0.82rem;font-weight:800;color:#e65100;flex-shrink:0;">⏱ <span id="atPerQVal">30</span>s bache hain</div>
       </div>
 
-      <!-- Compact, consistently grouped question actions -->
-      <div class="attempt-actions">
-        <button onclick="skipQ()" id="atSkipBtn" style="background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);">⏩ Skip</button>
-        <button onclick="markForReview()" id="atMarkBtn" style="background:rgba(255,152,0,0.08);border:1.5px solid rgba(255,152,0,0.35);color:#e65100;">🔖 Mark for Review</button>
-        <button onclick="toggleAnswerReveal()" id="atRevealBtn" class="attempt-reveal" style="background:rgba(106,27,154,0.08);border:1.5px solid rgba(106,27,154,0.3);color:#6a1b9a;">👁 Answer Dikhao</button>
-      </div>
-
-      <!-- Difficulty + Save row -->
-      <div class="attempt-difficulty">
-        <span class="attempt-difficulty-label">Tag:</span>
-        <button id="atEasyBtn" onclick="setAttDifficulty('easy')" style="border:1.5px solid rgba(46,125,50,0.3);color:var(--green);">😊 Easy</button>
-        <button id="atToughBtn" onclick="setAttDifficulty('tough')" style="border:1.5px solid rgba(198,40,40,0.3);color:var(--red);">😓 Tough</button>
-        <button id="atDoubtBtn" onclick="setAttDifficulty('doubt')" style="border:1.5px solid rgba(230,81,0,0.3);color:var(--orange);">🤔 Doubt</button>
-        <button id="atSaveBtn" onclick="toggleSaveCurrentQ()" style="border:1.5px solid rgba(106,27,154,0.3);color:#6a1b9a;">📌 Save</button>
-      </div>
-
-      <!-- Navigation -->
+      <!-- Only question navigation remains outside the master controls -->
       <div class="attempt-navigation">
         <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev">← Pichla</button>
-        <button class="btn btn-outline btn-sm" onclick="openOverview()" aria-label="Question overview" title="Question list">📋</button>
         <button class="btn btn-primary btn-sm" onclick="navQ(1)" id="atNext">Agla →</button>
       </div>
 
@@ -1630,9 +1623,6 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
             <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--surface2);border:1.5px solid var(--border);margin-right:3px;vertical-align:middle;"></span>Not visited</span>
           </div>
           <div id="overviewGrid" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-          <div style="margin-top:12px;">
-            <button onclick="confirmSubmit()" style="width:100%;padding:10px;background:linear-gradient(135deg,#2e7d32,#388e3c);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:0.85rem;cursor:pointer;">✅ Submit Test</button>
-          </div>
         </div>
       </div>
     </div>
@@ -4134,7 +4124,7 @@ function updateTimerDisplay(){
   var d=document.getElementById('atTimerVal');
   if(d) d.textContent=(m<10?'0'+m:m)+':'+(s<10?'0'+s:s);
   var el=document.getElementById('atTimer');
-  if(el) el.style.background=t<=60?'linear-gradient(135deg,#c62828,#e53935)':'linear-gradient(135deg,#e65100,#ff8f00)';
+  if(el) el.style.color=t<=60?'var(--red)':'var(--orange)';
 }
 function renderCurrentQ(){
   var st=_att; var qs=st.quiz.questions; var q=qs[st.currentQ]; if(!q) return;
