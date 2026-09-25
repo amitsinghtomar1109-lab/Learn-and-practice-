@@ -4260,6 +4260,9 @@ function selectOpt(i){
   if(_att.submitted||_att.revisionMode) return;
   _att.answers[_att.currentQ]=i;
   _att.skipped[_att.currentQ]=false;
+  // Normal quiz mode me option choose karte hi instant feedback dikhao:
+  // correct answer, wrong selection ka cross aur explanation.
+  _att.answerRevealed=true;
   attSaveProgress();
   renderCurrentQ();
 }
