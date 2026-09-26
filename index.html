@@ -222,6 +222,45 @@ body.quiz-immersive #page-attempt.page.active{
   color:var(--orange)!important;font-size:.76rem!important;font-weight:900!important;
   font-family:monospace!important;line-height:1;white-space:nowrap;
 }
+.attempt-admin-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto;}
+.attempt-admin-action{
+  width:30px;height:30px;padding:0;border:1.5px solid var(--border);border-radius:9px;
+  background:var(--surface2);color:var(--text2);display:inline-flex;align-items:center;
+  justify-content:center;font-family:inherit;font-size:.82rem;line-height:1;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.attempt-admin-action.edit{color:var(--accent);border-color:rgba(21,101,192,.28);}
+.attempt-admin-action.delete{color:var(--red);border-color:rgba(198,40,40,.28);}
+.attempt-admin-action:active{transform:scale(.91);}
+.attempt-question-meta-actions{display:flex;align-items:center;gap:6px;min-width:0;}
+.attempt-save-icon{
+  width:31px;height:31px;padding:0;border:1.5px solid rgba(106,27,154,.32);border-radius:9px;
+  background:rgba(106,27,154,.07);color:#6a1b9a;display:inline-flex;align-items:center;
+  justify-content:center;font-family:inherit;font-size:.9rem;line-height:1;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:transform .12s,background .15s,border-color .15s;
+}
+.attempt-save-icon:active{transform:scale(.9);}
+.attempt-save-icon.active{background:rgba(106,27,154,.18);border-color:#6a1b9a;}
+.attempt-admin-overlay{
+  position:fixed;inset:0;z-index:2400;background:rgba(0,0,0,.55);
+  display:flex;align-items:center;justify-content:center;padding:18px;
+}
+.attempt-admin-box{
+  width:100%;max-width:430px;max-height:calc(100vh - 36px);overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 12px 42px rgba(0,0,0,.28);padding:18px;
+}
+.attempt-admin-box h3{margin:0 0 5px;color:var(--text);font-size:1rem;}
+.attempt-admin-box p{margin:0 0 13px;color:var(--text2);font-size:.76rem;line-height:1.5;}
+.attempt-admin-error{min-height:17px;margin-top:6px;color:var(--red);font-size:.72rem;font-weight:700;}
+.attempt-admin-actions-row{display:flex;gap:8px;margin-top:12px;}
+.attempt-admin-actions-row .btn{flex:1;}
+.attempt-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.attempt-edit-grid .field-group{margin-bottom:7px;}
+@media(max-width:380px){
+  .attempt-admin-action{width:28px;height:28px;}
+  .attempt-heading #atTimer{font-size:.68rem!important;}
+}
 .attempt-controls-panel{
   position:fixed;top:calc(env(safe-area-inset-top) + 50px);left:50%;z-index:920;
   transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
@@ -1582,6 +1621,10 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
         </div>
         <div id="atProgress">Q 1 / 10</div>
       </div>
+      <div class="attempt-admin-actions" aria-label="Question edit and delete actions">
+        <button class="attempt-admin-action edit" id="atEditQuestionBtn" onclick="openProtectedAttemptEdit()" aria-label="Question edit karein" title="Question edit karein">✏️</button>
+        <button class="attempt-admin-action delete" id="atDeleteQuestionBtn" onclick="deleteProtectedAttemptQuestion()" aria-label="Question delete karein" title="Question delete karein">🗑</button>
+      </div>
       <button class="attempt-controls-toggle" id="attemptControlsToggle" onclick="toggleAttemptControls()" aria-label="Quiz controls kholein" aria-expanded="false" aria-controls="attemptControlsPanel" title="Quiz controls">⋯</button>
     </div>
     <div class="attempt-controls-panel" id="attemptControlsPanel" hidden>
@@ -1602,7 +1645,6 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <button id="atEasyBtn" class="attempt-control-question-tag easy" onclick="setAttDifficulty('easy')">😊 Easy</button>
       <button id="atToughBtn" class="attempt-control-question-tag tough" onclick="setAttDifficulty('tough')">😓 Tough</button>
       <button id="atDoubtBtn" class="attempt-control-question-tag doubt" onclick="setAttDifficulty('doubt')">🤔 Doubtful</button>
-      <button id="atSaveBtn" class="attempt-control-question-tag save" onclick="toggleSaveCurrentQ()">📌 Save</button>
       <button id="revisionInstantToggle" class="attempt-control-qo" onclick="toggleRevisionInstantMode()" aria-pressed="false" title="Revision slideshow mein question aur options ek saath dikhayein">Q+O OFF</button>
     </div>
     <div class="attempt-content">
@@ -1615,7 +1657,10 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <div class="card attempt-question-card">
         <div class="attempt-question-meta">
           <div style="font-size:0.7rem;font-weight:800;color:var(--text2);" id="atQNum">Question 1</div>
-          <div id="atMarkBadge" style="display:none;background:rgba(255,152,0,0.18);border:1px solid rgba(255,152,0,0.5);color:#e65100;border-radius:20px;padding:2px 10px;font-size:0.68rem;font-weight:800;">🔖 Marked</div>
+           <div class="attempt-question-meta-actions">
+             <button class="attempt-save-icon" id="atQuestionSaveBtn" onclick="toggleSaveCurrentQ()" aria-label="Question save karein" aria-pressed="false" title="Question save karein">🔖</button>
+             <div id="atMarkBadge" style="display:none;background:rgba(255,152,0,0.18);border:1px solid rgba(255,152,0,0.5);color:#e65100;border-radius:20px;padding:2px 10px;font-size:0.68rem;font-weight:800;">🔖 Marked</div>
+           </div>
         </div>
         <div class="attempt-q-body" id="atQBody"></div>
         <div id="atOptions"></div>
@@ -4290,14 +4335,15 @@ function renderCurrentQ(){
       }
     }
   });
-  // Save button state
-  var saveBtn=document.getElementById('atSaveBtn');
+  // Question-card bookmark state
+  var saveBtn=document.getElementById('atQuestionSaveBtn');
   if(saveBtn){
     var qKey=String(st.quizId)+'_'+st.currentQ;
-    var isSaved=STATE.savedQuestions&&STATE.savedQuestions[qKey];
-    saveBtn.textContent=isSaved?'📌 Saved ✓':'📌 Save';
-    saveBtn.style.background=isSaved?'rgba(106,27,154,0.15)':'transparent';
-    saveBtn.style.fontWeight=isSaved?'900':'800';
+    var isSaved=!!(STATE.savedQuestions&&STATE.savedQuestions[qKey]);
+    saveBtn.textContent=isSaved?'🔖✓':'🔖';
+    saveBtn.classList.toggle('active',isSaved);
+    saveBtn.setAttribute('aria-pressed',isSaved?'true':'false');
+    saveBtn.title=isSaved?'Question saved — unsave karein':'Question save karein';
   }
 
   // Per-Q timer
@@ -4655,6 +4701,167 @@ function toggleSaveCurrentQ(){
   cloudSaveSavedQ();
   attSaveProgress();
   renderCurrentQ();
+}
+var ATTEMPT_QUESTION_PASSWORD='56566565';
+function attemptSourceQuiz(){
+  if(!_att||!_att.quizId) return null;
+  return STATE.quizzes.find(function(q){ return String(q.id)===String(_att.quizId); })||null;
+}
+function attemptAdminGate(action, onGranted){
+  if(!_att||!_att.quiz||_att.submitted) return;
+  var old=document.getElementById('attemptAdminPasswordOverlay');
+  if(old) old.remove();
+  var isEdit=action==='edit';
+  var overlay=document.createElement('div');
+  overlay.id='attemptAdminPasswordOverlay';
+  overlay.className='attempt-admin-overlay';
+  overlay.innerHTML=
+    '<div class="attempt-admin-box" role="dialog" aria-modal="true" aria-labelledby="attemptAdminTitle">'+
+      '<h3 id="attemptAdminTitle">'+(isEdit?'✏️ Question Edit':'🗑 Question Delete')+'</h3>'+
+      '<p>Password daalne ke baad hi yeh protected action open hoga.</p>'+
+      '<label class="field-label" for="attemptAdminPassword">Password</label>'+
+      '<input class="inp" id="attemptAdminPassword" type="password" inputmode="numeric" autocomplete="off" placeholder="Password daaliye">'+
+      '<div class="attempt-admin-error" id="attemptAdminError"></div>'+
+      '<div class="attempt-admin-actions-row">'+
+        '<button class="btn btn-outline" id="attemptAdminCancel">Cancel</button>'+
+        '<button class="btn btn-primary" id="attemptAdminUnlock">'+(isEdit?'Edit Kholen':'Delete Kholen')+'</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  var input=overlay.querySelector('#attemptAdminPassword');
+  var error=overlay.querySelector('#attemptAdminError');
+  function close(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+  function verify(){
+    if(String(input.value||'')!==ATTEMPT_QUESTION_PASSWORD){
+      error.textContent='Password galat hai.';
+      input.value=''; input.focus(); return;
+    }
+    close();
+    if(typeof onGranted==='function') onGranted();
+  }
+  overlay.querySelector('#attemptAdminCancel').onclick=close;
+  overlay.querySelector('#attemptAdminUnlock').onclick=verify;
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) close(); });
+  input.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();verify();} if(e.key==='Escape') close(); });
+  setTimeout(function(){ input.focus(); },30);
+}
+function openProtectedAttemptEdit(){
+  if(!attemptSourceQuiz()){ showToast('Is quiz ko edit nahi kiya ja sakta.','error'); return; }
+  attemptAdminGate('edit',openAttemptQuestionEditor);
+}
+function deleteProtectedAttemptQuestion(){
+  if(!attemptSourceQuiz()){ showToast('Is quiz ka source nahi mila.','error'); return; }
+  attemptAdminGate('delete',deleteCurrentAttemptQuestion);
+}
+function openAttemptQuestionEditor(){
+  var q=_att.quiz&&_att.quiz.questions&&_att.quiz.questions[_att.currentQ];
+  if(!q) return;
+  var old=document.getElementById('attemptQuestionEditOverlay');
+  if(old) old.remove();
+  var opts=q.options||[];
+  var overlay=document.createElement('div');
+  overlay.id='attemptQuestionEditOverlay';
+  overlay.className='attempt-admin-overlay';
+  overlay.innerHTML=
+    '<div class="attempt-admin-box" role="dialog" aria-modal="true" aria-labelledby="attemptEditTitle">'+
+      '<h3 id="attemptEditTitle">✏️ Current Question Edit Karo</h3>'+
+      '<p>Question update hone ke baad is question ka answer dobara select karna hoga.</p>'+
+      '<div class="field-group"><label class="field-label" for="attemptEditQText">Question</label><textarea class="inp" id="attemptEditQText" rows="4">'+escHtml(q.q||'')+'</textarea></div>'+
+      '<div class="attempt-edit-grid">'+
+        [0,1,2,3].map(function(i){
+          return '<div class="field-group"><label class="field-label" for="attemptEditOpt'+i+'">Option '+String.fromCharCode(65+i)+'</label><input class="inp" id="attemptEditOpt'+i+'" value="'+escHtml(opts[i]||'')+'"></div>';
+        }).join('')+
+      '</div>'+
+      '<div class="field-group"><label class="field-label" for="attemptEditCorrect">Correct Answer</label>'+
+        '<select class="inp" id="attemptEditCorrect">'+[0,1,2,3].map(function(i){
+          return '<option value="'+i+'" '+(Number(q.correct)===i?'selected':'')+'>'+String.fromCharCode(65+i)+'</option>';
+        }).join('')+'</select></div>'+
+      '<div class="field-group"><label class="field-label" for="attemptEditExpl">Explanation</label><textarea class="inp" id="attemptEditExpl" rows="3">'+escHtml(q.explanation||'')+'</textarea></div>'+
+      '<div class="attempt-admin-error" id="attemptEditError"></div>'+
+      '<div class="attempt-admin-actions-row"><button class="btn btn-outline" id="attemptEditCancel">Cancel</button><button class="btn btn-primary" id="attemptEditSave">💾 Update</button></div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  function close(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+  overlay.querySelector('#attemptEditCancel').onclick=close;
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) close(); });
+  overlay.querySelector('#attemptEditSave').onclick=function(){
+    var text=(overlay.querySelector('#attemptEditQText').value||'').trim();
+    var newOpts=[0,1,2,3].map(function(i){ return (overlay.querySelector('#attemptEditOpt'+i).value||'').trim(); });
+    var error=overlay.querySelector('#attemptEditError');
+    if(!text||newOpts.some(function(v){return !v;})){ error.textContent='Question aur saare options bharna zaroori hai.'; return; }
+    var correct=parseInt(overlay.querySelector('#attemptEditCorrect').value,10);
+    var updated={q:text,options:newOpts,correct:correct,explanation:(overlay.querySelector('#attemptEditExpl').value||'').trim()};
+    var source=attemptSourceQuiz();
+    var currentId=q.id;
+    var sourceIdx=source.questions.findIndex(function(item){return String(item.id)===String(currentId);});
+    if(sourceIdx<0){ error.textContent='Source question nahi mila.'; return; }
+    source.questions[sourceIdx]=Object.assign({},source.questions[sourceIdx],updated);
+    _att.quiz.questions[_att.currentQ]=Object.assign({},_att.quiz.questions[_att.currentQ],updated);
+    _att.answers[_att.currentQ]=null;
+    _att.skipped[_att.currentQ]=false;
+    _att.answerRevealed=false;
+    var savedKey=String(_att.quizId)+'_'+_att.currentQ;
+    if(STATE.savedQuestions&&STATE.savedQuestions[savedKey]){
+      STATE.savedQuestions[savedKey].q=_att.quiz.questions[_att.currentQ];
+      cloudSaveSavedQ();
+    }
+    cloudSaveQuiz(source);
+    attSaveProgress();
+    close();
+    renderCurrentQ();
+    showToast('✅ Question update ho gaya — answer dobara select karein','success');
+  };
+  setTimeout(function(){ var first=overlay.querySelector('#attemptEditQText'); if(first) first.focus(); },30);
+}
+function deleteCurrentAttemptQuestion(){
+  var source=attemptSourceQuiz();
+  var q=_att.quiz&&_att.quiz.questions&&_att.quiz.questions[_att.currentQ];
+  if(!source||!q) return;
+  if(!confirm('Current question permanently delete karna hai?')) return;
+  var deletedIndex=_att.currentQ;
+  var qid=q.id;
+  source.questions=(source.questions||[]).filter(function(item){ return String(item.id)!==String(qid); });
+  cloudSaveQuiz(source);
+  var prefix=String(_att.quizId)+'_';
+  var remapped={};
+  Object.keys(STATE.savedQuestions||{}).forEach(function(key){
+    if(key.indexOf(prefix)!==0){ remapped[key]=STATE.savedQuestions[key]; return; }
+    var oldIndex=parseInt(key.slice(prefix.length),10);
+    if(!isFinite(oldIndex)||oldIndex===deletedIndex) return;
+    var newIndex=oldIndex>deletedIndex?oldIndex-1:oldIndex;
+    var item=STATE.savedQuestions[key];
+    item.qIdx=newIndex;
+    remapped[prefix+newIndex]=item;
+  });
+  STATE.savedQuestions=remapped;
+  cloudSaveSavedQ();
+  _att.quiz.questions.splice(deletedIndex,1);
+  _att.answers.splice(deletedIndex,1);
+  _att.marked.splice(deletedIndex,1);
+  _att.skipped.splice(deletedIndex,1);
+  _att.difficulty.splice(deletedIndex,1);
+  if(_att.revisionMode) attStopRevisionTimer();
+  if(_att.perQTimer) clearInterval(_att.perQTimer);
+  if(!_att.quiz.questions.length){
+    _att.submitted=true;
+    attStopAutoSave();
+    attClearPauseState();
+    showToast('Question delete ho gaya — quiz mein ab koi question nahi hai.','success');
+    setTimeout(function(){ appGoBack(); },250);
+    return;
+  }
+  _att.currentQ=Math.min(deletedIndex,_att.quiz.questions.length-1);
+  _att.answerRevealed=false;
+  _att.revisionComplete=false;
+  if(_att.revisionMode){
+    _att.revisionPhase=getRevisionInstantMode()?'answer':'question';
+    _att.answerRevealed=getRevisionInstantMode();
+    _att.revisionRemaining=getRevisionInstantMode()?getRevisionSlideDuration():getRevisionQuestionDuration();
+  }
+  attSaveProgress();
+  renderCurrentQ();
+  if(_att.revisionMode) attStartRevisionTimer();
+  showToast('🗑 Question delete ho gaya.','success');
 }
 function cloudSaveSavedQ(){
   if(!_db||!_uid) return;
