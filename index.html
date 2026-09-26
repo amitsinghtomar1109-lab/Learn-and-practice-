@@ -1443,6 +1443,16 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       </div>
     </div>
     <div id="practiceFilterCount" style="font-size:0.72rem;color:var(--text2);margin-bottom:8px;padding:0 2px;display:none;"></div>
+    <div class="card" id="focusedRevisionFolder" style="display:none;margin-bottom:12px;border:1.5px solid rgba(106,27,154,0.24);background:linear-gradient(135deg,rgba(106,27,154,0.07),rgba(21,101,192,0.03));">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+        <div style="font-size:1.35rem;line-height:1;">📁</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:900;color:#6a1b9a;font-size:0.92rem;">Focused Revision Quizzes</div>
+          <div style="font-size:0.7rem;color:var(--text2);margin-top:2px;">Analysis se banaye gaye tough, doubtful aur wrong questions yahan alag milenge.</div>
+        </div>
+      </div>
+      <div id="focusedRevisionList"></div>
+    </div>
     <div id="practiceList"></div>
   </div>
 
@@ -1657,6 +1667,12 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       </div>
       <!-- Filter chips for Full Analysis -->
       <div id="rsFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
+      <div id="rsSelectionBar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:rgba(106,27,154,0.07);border:1px solid rgba(106,27,154,0.2);border-radius:9px;">
+        <span id="rsSelectedCount" style="font-size:0.72rem;font-weight:800;color:#6a1b9a;margin-right:auto;">0 selected</span>
+        <button class="btn btn-xs btn-outline" onclick="_rsSelectVisible()">☑ Visible Select</button>
+        <button class="btn btn-xs btn-outline" onclick="_rsClearSelected()">Clear</button>
+        <button class="btn btn-xs btn-primary" onclick="openSelectedQuizBuilderFromResult()">➕ New Quiz</button>
+      </div>
       <!-- Highlighter Toolbar for Result Analysis -->
       <div id="rsHlToolbar" class="hl-toolbar">
         <span class="hl-label">✨ ANNOTATE:</span>
@@ -3929,58 +3945,15 @@ function resetPracticeFilters(){
 // ================================================================
 // PRACTICE LIST
 // ================================================================
-function renderPracticeList(){
-  var container=document.getElementById('practiceList'); if(!container) return;
-  var quizzes=STATE.quizzes.slice();
-
-  // Apply subject/topic filters
-  var selSub = (document.getElementById('practiceSubjectFilter')||{}).value || 'all';
-  var selTop = (document.getElementById('practiceTopicFilter')||{}).value || 'all';
-  if(selSub !== 'all') quizzes = quizzes.filter(function(q){ return q.subjectName === selSub; });
-  if(selTop !== 'all') quizzes = quizzes.filter(function(q){ return q.topicName === selTop; });
-
-  // Apply sort
-  if(_practiceSort === 'name'){
-    quizzes.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
-  } else if(_practiceSort === 'best'){
-    quizzes.sort(function(a,b){
-      var ba=STATE.attempts.filter(function(x){ return x.quizId===a.id; });
-      var bb=STATE.attempts.filter(function(x){ return x.quizId===b.id; });
-      var pa=ba.length?Math.max.apply(null,ba.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
-      var pb=bb.length?Math.max.apply(null,bb.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
-      return pb-pa;
-    });
-  } else if(_practiceSort === 'attempts'){
-    quizzes.sort(function(a,b){
-      var ca=STATE.attempts.filter(function(x){ return x.quizId===a.id; }).length;
-      var cb=STATE.attempts.filter(function(x){ return x.quizId===b.id; }).length;
-      return cb-ca;
-    });
-  } else { // newest
-    quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
-  }
-
-  // Show filter count
-  var fc = document.getElementById('practiceFilterCount');
-  if(fc){
-    var isFiltered = selSub!=='all' || selTop!=='all';
-    if(isFiltered){
-      fc.style.display='block';
-      fc.innerHTML='<span style="background:rgba(21,101,192,0.1);border-radius:20px;padding:2px 10px;color:var(--accent);font-weight:700;">'+quizzes.length+' quiz'+( quizzes.length===1?'':'zes')+' mil'+( quizzes.length===1?'a':'e')+'</span>';
-    } else {
-      fc.style.display='none';
-    }
-  }
-
-  if(!STATE.quizzes.length){
-    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><div>Koi quiz nahi. Pehle Create karo.</div></div>';
-    return;
-  }
-  if(!quizzes.length){
-    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">🔍</div><div>Is filter ke liye koi quiz nahi.<br><span style="font-size:0.78rem;">Filter reset karo ya alag subject/topic chunein.</span></div><div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="resetPracticeFilters()">🔄 Filter Reset Karo</button></div></div>';
-    return;
-  }
-  container.innerHTML = quizzes.map(function(q){
+function isFocusedRevisionQuiz(q){
+  return !!(q&&(
+    q.isFocusedRevision===true ||
+    q.folder==='focused-revision' ||
+    q.quizFolder==='focused-revision'
+  ));
+}
+function renderPracticeQuizCards(quizzes){
+  return quizzes.map(function(q){
     var attempts=STATE.attempts.filter(function(a){ return a.quizId===q.id; });
     var lastAttempt=attempts.length?attempts[attempts.length-1]:null;
     var bestPct=attempts.length?Math.max.apply(null,attempts.map(function(a){ return a.total>0?Math.round(a.score/a.total*100):0; })):null;
@@ -3988,7 +3961,10 @@ function renderPracticeList(){
     return '<div class="card" style="margin-bottom:10px;">'+
       '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">'+
         '<div style="flex:1;min-width:0;">'+
-          '<div style="font-weight:800;font-size:0.92rem;">'+escHtml(q.name)+'</div>'+
+          '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-weight:800;font-size:0.92rem;">'+
+            '<span>'+escHtml(q.name)+'</span>'+
+            (isFocusedRevisionQuiz(q)?'<span style="font-size:0.62rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:2px 7px;">📁 Focused</span>':'')+
+          '</div>'+
           (tags?'<div style="font-size:0.7rem;color:var(--accent);margin-top:2px;display:flex;gap:4px;flex-wrap:wrap;">'+
             (q.subjectName?'<span style="background:rgba(21,101,192,0.1);border-radius:20px;padding:1px 8px;">📚 '+escHtml(q.subjectName)+'</span>':'')+
             (q.sectionName?'<span style="background:rgba(230,81,0,0.1);border-radius:20px;padding:1px 8px;color:var(--orange);">📂 '+escHtml(q.sectionName)+'</span>':'')+
@@ -4007,10 +3983,89 @@ function renderPracticeList(){
           '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
           (attempts.length?'<button class="btn btn-outline btn-xs" onclick="viewLastResult('+q.id+')">📊 Results</button>':'')+
           '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
+          (isFocusedRevisionQuiz(q)?'<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>':'')+
         '</div>'+
       '</div>'+
     '</div>';
   }).join('');
+}
+function renderPracticeList(){
+  var container=document.getElementById('practiceList'); if(!container) return;
+  var allQuizzes=STATE.quizzes.slice();
+  var focusedQuizzes=allQuizzes.filter(isFocusedRevisionQuiz);
+  var quizzes=allQuizzes.filter(function(q){ return !isFocusedRevisionQuiz(q); });
+
+  // Apply subject/topic filters
+  var selSub = (document.getElementById('practiceSubjectFilter')||{}).value || 'all';
+  var selTop = (document.getElementById('practiceTopicFilter')||{}).value || 'all';
+  if(selSub !== 'all') quizzes = quizzes.filter(function(q){ return q.subjectName === selSub; });
+  if(selTop !== 'all') quizzes = quizzes.filter(function(q){ return q.topicName === selTop; });
+  if(selSub !== 'all') focusedQuizzes = focusedQuizzes.filter(function(q){ return q.subjectName === selSub; });
+  if(selTop !== 'all') focusedQuizzes = focusedQuizzes.filter(function(q){ return q.topicName === selTop; });
+
+  // Apply sort
+  if(_practiceSort === 'name'){
+    quizzes.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+    focusedQuizzes.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+  } else if(_practiceSort === 'best'){
+    quizzes.sort(function(a,b){
+      var ba=STATE.attempts.filter(function(x){ return x.quizId===a.id; });
+      var bb=STATE.attempts.filter(function(x){ return x.quizId===b.id; });
+      var pa=ba.length?Math.max.apply(null,ba.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      var pb=bb.length?Math.max.apply(null,bb.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      return pb-pa;
+    });
+    focusedQuizzes.sort(function(a,b){
+      var ba=STATE.attempts.filter(function(x){ return x.quizId===a.id; });
+      var bb=STATE.attempts.filter(function(x){ return x.quizId===b.id; });
+      var pa=ba.length?Math.max.apply(null,ba.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      var pb=bb.length?Math.max.apply(null,bb.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      return pb-pa;
+    });
+  } else if(_practiceSort === 'attempts'){
+    quizzes.sort(function(a,b){
+      var ca=STATE.attempts.filter(function(x){ return x.quizId===a.id; }).length;
+      var cb=STATE.attempts.filter(function(x){ return x.quizId===b.id; }).length;
+      return cb-ca;
+    });
+    focusedQuizzes.sort(function(a,b){
+      var ca=STATE.attempts.filter(function(x){ return x.quizId===a.id; }).length;
+      var cb=STATE.attempts.filter(function(x){ return x.quizId===b.id; }).length;
+      return cb-ca;
+    });
+  } else { // newest
+    quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+    focusedQuizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+  }
+
+  // Show filter count
+  var fc = document.getElementById('practiceFilterCount');
+  if(fc){
+    var isFiltered = selSub!=='all' || selTop!=='all';
+    if(isFiltered){
+      fc.style.display='block';
+       fc.innerHTML='<span style="background:rgba(21,101,192,0.1);border-radius:20px;padding:2px 10px;color:var(--accent);font-weight:700;">'+(quizzes.length+focusedQuizzes.length)+' quiz'+( quizzes.length+focusedQuizzes.length===1?'':'zes')+' mil'+( quizzes.length+focusedQuizzes.length===1?'a':'e')+'</span>';
+    } else {
+      fc.style.display='none';
+    }
+  }
+
+  if(!STATE.quizzes.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><div>Koi quiz nahi. Pehle Create karo.</div></div>';
+    var emptyFolder=document.getElementById('focusedRevisionFolder'); if(emptyFolder) emptyFolder.style.display='none';
+    return;
+  }
+  var folder=document.getElementById('focusedRevisionFolder');
+  if(folder){
+    folder.style.display=focusedQuizzes.length?'block':'none';
+    var folderList=document.getElementById('focusedRevisionList');
+    if(folderList) folderList.innerHTML=renderPracticeQuizCards(focusedQuizzes);
+  }
+  if(!quizzes.length){
+    container.innerHTML='<div class="card" style="text-align:center;color:var(--text2);padding:30px;"><div style="font-size:2rem;margin-bottom:8px;">🔍</div><div>Is filter ke liye koi quiz nahi.<br><span style="font-size:0.78rem;">Filter reset karo ya alag subject/topic chunein.</span></div><div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="resetPracticeFilters()">🔄 Filter Reset Karo</button></div></div>';
+    return;
+  }
+  container.innerHTML=renderPracticeQuizCards(quizzes);
 }
 
 // ================================================================
@@ -4494,6 +4549,8 @@ function submitAttempt(auto){
     quizName: st.quiz.name,
     answers: st.answers.slice(),
     difficulty: st.difficulty.slice(),
+    marked: st.marked.slice(),
+    skipped: st.skipped.slice(),
     score: score,
     total: qs.length,
     timeTaken: timeTaken,
@@ -4624,6 +4681,7 @@ function toggleDetailAnswers(){
   }
 }
 var _adFilter = 'all';
+var _adSelected = {};
 function viewAttemptDetail(attemptId){
   var at=STATE.attempts.find(function(a){ return String(a.id)===String(attemptId); }); if(!at) return;
   var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(at.quizId); });
@@ -4631,6 +4689,7 @@ function viewAttemptDetail(attemptId){
   if(quiz) _lastQuiz=JSON.parse(JSON.stringify(quiz));
   _detailAnswersHidden=false;
   _adFilter='all';
+  _adSelected={};
   navTo('attemptdetail', {title:'📊 Detail'}, true);
   document.getElementById('topbarTitle').textContent='📊 Detail';
   document.getElementById('adSubtitle').textContent=escHtml(at.quizName);
@@ -4693,7 +4752,13 @@ function renderAttemptDetail(at, quiz){
     }).join('');
 
     html+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;"><div class="card-title" style="margin:0;">🔍 Question-wise Analysis</div></div>'+
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+filterChips+'</div>';
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'+filterChips+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding:8px 10px;background:rgba(106,27,154,0.07);border:1px solid rgba(106,27,154,0.2);border-radius:9px;">'+
+        '<span id="adSelectedCount" style="font-size:0.72rem;font-weight:800;color:#6a1b9a;margin-right:auto;">'+_adSelectedIndices().length+' selected</span>'+
+        '<button class="btn btn-xs btn-outline" onclick="_adSelectVisible()">☑ Visible Select</button>'+
+        '<button class="btn btn-xs btn-outline" onclick="_adClearSelected()">Clear</button>'+
+        '<button class="btn btn-xs btn-primary" onclick="openSelectedQuizBuilderFromDetail()">➕ New Quiz</button>'+
+      '</div>';
 
     var filtered=qs.map(function(q,i){return {q:q,i:i};}).filter(function(item){
       var q=item.q; var i=item.i;
@@ -4728,6 +4793,7 @@ function renderAttemptDetail(at, quiz){
         var hidden=_detailAnswersHidden;
         return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'+
           '<div style="display:flex;gap:8px;align-items:flex-start;">'+
+            '<input type="checkbox" onchange="_adToggleSelect('+i+',this.checked)" '+(_adSelected[i]?'checked':'')+' aria-label="Question '+(i+1)+' select karein" style="width:18px;height:18px;accent-color:#6a1b9a;cursor:pointer;flex-shrink:0;margin-top:2px;">'+
             '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
             '<div style="flex:1;">'+
               '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">'+
@@ -4935,8 +5001,193 @@ function showResult(attempt, quiz){
   } else if(cc){ cc.style.display='none'; }
 
   var ac=document.getElementById('analysisCard'); if(ac) ac.style.display='none';
+  _rsSelected={};
 }
 var _rsFilter = 'all';
+var _rsSelected = {};
+var _selectedQuizSource = null;
+var _selectedQuizIndices = [];
+
+function _rsVisibleIndices(){
+  if(!_lastAttempt||!_lastQuiz) return [];
+  var qs=_lastQuiz.questions||[];
+  var answers=_lastAttempt.answers||[];
+  var diffArr=_lastAttempt.difficulty||[];
+  var markedArr=_lastAttempt.marked||[];
+  var visible=[];
+  qs.forEach(function(q,i){
+    var ua=answers[i]; var isSkip=ua===null;
+    var qKey=String(_lastAttempt.quizId)+'_'+i;
+    var show=true;
+    if(_rsFilter==='correct') show=!isSkip&&ua===q.correct;
+    else if(_rsFilter==='wrong') show=!isSkip&&ua!==q.correct;
+    else if(_rsFilter==='skipped') show=isSkip;
+    else if(_rsFilter==='marked') show=!!markedArr[i];
+    else if(_rsFilter==='tough') show=diffArr[i]==='tough';
+    else if(_rsFilter==='doubt') show=diffArr[i]==='doubt';
+    else if(_rsFilter==='saved') show=!!(STATE.savedQuestions&&STATE.savedQuestions[qKey]);
+    if(show) visible.push(i);
+  });
+  return visible;
+}
+function _rsSelectedIndices(){
+  return Object.keys(_rsSelected).filter(function(k){ return _rsSelected[k]; }).map(function(k){ return Number(k); }).sort(function(a,b){ return a-b; });
+}
+function _rsUpdateSelectionCount(){
+  var el=document.getElementById('rsSelectedCount');
+  if(el) el.textContent=_rsSelectedIndices().length+' selected';
+}
+function _rsToggleSelect(idx, checked){
+  if(checked) _rsSelected[idx]=true;
+  else delete _rsSelected[idx];
+  _rsUpdateSelectionCount();
+}
+function _rsSelectVisible(){
+  _rsVisibleIndices().forEach(function(i){ _rsSelected[i]=true; });
+  _renderFullAnalysis();
+}
+function _rsClearSelected(){
+  _rsSelected={};
+  _renderFullAnalysis();
+}
+
+function _adVisibleIndices(){
+  if(!_lastAttempt||!_lastQuiz) return [];
+  var qs=_lastQuiz.questions||[];
+  var answers=_lastAttempt.answers||[];
+  var diffArr=_lastAttempt.difficulty||[];
+  var markedArr=_lastAttempt.marked||[];
+  var visible=[];
+  qs.forEach(function(q,i){
+    var ua=answers[i]; var isSkip=ua===null;
+    var qKey=String(_lastAttempt.quizId)+'_'+i;
+    var show=true;
+    if(_adFilter==='correct') show=!isSkip&&ua===q.correct;
+    else if(_adFilter==='wrong') show=!isSkip&&ua!==q.correct;
+    else if(_adFilter==='skipped') show=isSkip;
+    else if(_adFilter==='marked') show=!!markedArr[i];
+    else if(_adFilter==='tough') show=diffArr[i]==='tough';
+    else if(_adFilter==='doubt') show=diffArr[i]==='doubt';
+    else if(_adFilter==='saved') show=!!(STATE.savedQuestions&&STATE.savedQuestions[qKey]);
+    if(show) visible.push(i);
+  });
+  return visible;
+}
+function _adSelectedIndices(){
+  return Object.keys(_adSelected).filter(function(k){ return _adSelected[k]; }).map(function(k){ return Number(k); }).sort(function(a,b){ return a-b; });
+}
+function _adToggleSelect(idx, checked){
+  if(checked) _adSelected[idx]=true;
+  else delete _adSelected[idx];
+  renderAttemptDetail(_lastAttempt, _lastQuiz);
+}
+function _adSelectVisible(){
+  _adVisibleIndices().forEach(function(i){ _adSelected[i]=true; });
+  renderAttemptDetail(_lastAttempt, _lastQuiz);
+}
+function _adClearSelected(){
+  _adSelected={};
+  renderAttemptDetail(_lastAttempt, _lastQuiz);
+}
+
+function openSelectedQuizBuilderFromResult(){
+  var indices=_rsSelectedIndices();
+  if(!indices.length){ showToast('Pehle kam se kam ek question select karo!','error'); return; }
+  openSelectedQuizBuilder(_lastQuiz,indices);
+}
+function openSelectedQuizBuilderFromDetail(){
+  var indices=_adSelectedIndices();
+  if(!indices.length){ showToast('Pehle kam se kam ek question select karo!','error'); return; }
+  openSelectedQuizBuilder(_lastQuiz,indices);
+}
+function openSelectedQuizBuilder(sourceQuiz, indices){
+  if(!sourceQuiz||!indices.length) return;
+  _selectedQuizSource=JSON.parse(JSON.stringify(sourceQuiz));
+  _selectedQuizIndices=indices.slice();
+  var old=document.getElementById('selectedQuizBuilderOverlay');
+  if(old) old.remove();
+  var ov=document.createElement('div');
+  ov.id='selectedQuizBuilderOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.52);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
+  ov.innerHTML=
+    '<div style="background:var(--surface);border-radius:14px;padding:18px;max-width:430px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--accent);margin-bottom:6px;">➕ Selected Questions se New Quiz</div>'+
+      '<div style="font-size:0.76rem;color:var(--text2);margin-bottom:14px;line-height:1.5;">'+
+        '<b>'+indices.length+'</b> questions select hain. Inhe ek focused revision quiz me save kar sakte ho.'+
+      '</div>'+
+      '<div class="field-group">'+
+        '<label class="field-label">New Quiz Naam:</label>'+
+        '<input type="text" class="inp" id="selectedQuizName" placeholder="Jaise: Tough GK Revision 1">'+
+      '</div>'+
+      '<div class="field-group">'+
+        '<label class="field-label">Destination Folder:</label>'+
+        '<select class="inp" id="selectedQuizDestination">'+
+          '<option value="focused-revision">📁 Focused Revision Quizzes</option>'+
+          '<option value="main">📚 Main Quiz Library</option>'+
+        '</select>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:14px;">'+
+        '<button class="btn btn-outline" style="flex:1;" onclick="closeSelectedQuizBuilder()">Cancel</button>'+
+        '<button class="btn btn-primary" style="flex:1;" onclick="createQuizFromSelectedQuestions()">✅ Create Quiz</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('selectedQuizName').value=(sourceQuiz.name||'Quiz')+' - Focused Revision';
+  document.getElementById('selectedQuizName').focus();
+}
+function closeSelectedQuizBuilder(){
+  var ov=document.getElementById('selectedQuizBuilderOverlay');
+  if(ov) ov.remove();
+  _selectedQuizSource=null;
+  _selectedQuizIndices=[];
+}
+function createQuizFromSelectedQuestions(){
+  var source=_selectedQuizSource;
+  var name=(document.getElementById('selectedQuizName').value||'').trim();
+  var destination=(document.getElementById('selectedQuizDestination').value||'focused-revision');
+  if(!source||!_selectedQuizIndices.length){ closeSelectedQuizBuilder(); return; }
+  if(!name){ showToast('Quiz naam daalo!','error'); return; }
+  var questions=_selectedQuizIndices.map(function(idx){
+    var q=source.questions[idx];
+    if(!q) return null;
+    return {
+      id:Date.now()+Math.random(),
+      q:q.q,
+      options:(q.options||[]).slice(),
+      correct:q.correct,
+      explanation:q.explanation||''
+    };
+  }).filter(Boolean);
+  if(!questions.length){ showToast('Selected questions nahi mile!','error'); return; }
+  var now=Date.now();
+  var newQuiz={
+    id:now,
+    docId:'quiz_'+now,
+    name:name,
+    subjectName:source.subjectName||'',
+    sectionName:source.sectionName||'',
+    topicName:source.topicName||'',
+    timer:{type:'none',value:0},
+    questions:questions,
+    folder:destination,
+    folderName:destination==='focused-revision'?'Focused Revision Quizzes':'Main Quiz Library',
+    isFocusedRevision:destination==='focused-revision',
+    sourceQuizId:source.id||null,
+    sourceQuizName:source.name||'',
+    createdAt:new Date().toLocaleDateString('hi-IN'),
+    createdAtMs:now
+  };
+  STATE.quizzes.push(newQuiz);
+  cloudSaveQuiz(newQuiz);
+  closeSelectedQuizBuilder();
+  _rsSelected={};
+  _adSelected={};
+  showToast('✅ '+questions.length+' questions ki new quiz save ho gayi!','success');
+  if(getActivePage()==='practice'){
+    initPracticeFilters();
+    renderPracticeList();
+  }
+}
 function showFullAnalysis(){
   var ac=document.getElementById('analysisCard');
   if(!ac||!_lastAttempt||!_lastQuiz) return;
@@ -4987,6 +5238,7 @@ function _renderFullAnalysis(){
       return '<button onclick="_rsSetFilter(\''+f.k+'\')" style="padding:4px 10px;border-radius:20px;border:1.5px solid '+(active?f.color:'var(--border)')+';background:'+(active?f.color+'22':'transparent')+';color:'+(active?f.color:'var(--text2)')+';font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap;">'+f.label+' <span style="opacity:0.7;">('+counts[f.k]+')</span></button>';
     }).join('');
   }
+  _rsUpdateSelectionCount();
 
   var filtered=qs.map(function(q,i){return {q:q,i:i};}).filter(function(item){
     var q=item.q; var i=item.i;
@@ -5022,6 +5274,7 @@ function _renderFullAnalysis(){
     var isMarked=!!(markedArr[i]);
     return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'+
       '<div style="display:flex;gap:8px;align-items:flex-start;">'+
+        '<input type="checkbox" onchange="_rsToggleSelect('+i+',this.checked)" '+(_rsSelected[i]?'checked':'')+' aria-label="Question '+(i+1)+' select karein" style="width:18px;height:18px;accent-color:#6a1b9a;cursor:pointer;flex-shrink:0;margin-top:2px;">'+
         '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
         '<div style="flex:1;">'+
           '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">'+
