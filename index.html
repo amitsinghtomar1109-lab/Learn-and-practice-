@@ -319,13 +319,13 @@ body.quiz-immersive #page-attempt.page.active{
 .attempt-level-next{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;
   min-height:44px;overflow:hidden;border:1.5px solid var(--border);border-radius:10px;
-  box-shadow:var(--shadow);background:var(--surface);isolation:isolate;
+  box-shadow:var(--shadow);background:var(--surface);isolation:isolate;position:relative;
 }
 .attempt-level-next[hidden]{display:none!important;}
 .attempt-level-segment{
   position:relative;display:flex;align-items:center;justify-content:center;gap:5px;
   min-width:0;padding:6px 4px;border:0;border-right:1px solid rgba(255,255,255,.42);
-  color:#fff;font-family:inherit;font-size:.72rem;font-weight:900;line-height:1.1;
+  font-family:inherit;font-size:.72rem;font-weight:900;line-height:1.1;
   cursor:pointer;-webkit-tap-highlight-color:transparent;transition:filter .15s,transform .12s;
 }
 .attempt-level-segment:last-child{border-right:0;}
@@ -333,13 +333,29 @@ body.quiz-immersive #page-attempt.page.active{
 .attempt-level-segment:hover{filter:brightness(1.06);}
 .attempt-level-segment .level-number{
   display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-  border-radius:50%;background:rgba(255,255,255,.22);font-size:.74rem;flex-shrink:0;
+  border-radius:50%;font-size:.74rem;flex-shrink:0;
 }
-.attempt-level-segment .level-next{white-space:nowrap;}
-.attempt-level-segment.level-3{background:linear-gradient(135deg,#b71c1c,#e53935);}
-.attempt-level-segment.level-2{background:linear-gradient(135deg,#e68a00,#f9a825);color:#3e2600;}
-.attempt-level-segment.level-2 .level-number{background:rgba(255,255,255,.42);}
-.attempt-level-segment.level-1{background:linear-gradient(135deg,#2e7d32,#43a047);}
+.attempt-level-segment.level-3{background:rgba(198,40,40,.16);color:#b71c1c;}
+.attempt-level-segment.level-3 .level-number{background:rgba(198,40,40,.20);}
+.attempt-level-segment.level-2{background:rgba(255,193,7,.20);color:#8a5b00;}
+.attempt-level-segment.level-2 .level-number{background:rgba(255,193,7,.32);}
+.attempt-level-segment.level-1{background:rgba(46,125,50,.16);color:#2e7d32;}
+.attempt-level-segment.level-1 .level-number{background:rgba(46,125,50,.20);}
+.attempt-level-next-label{
+  position:absolute;left:50%;top:50%;z-index:2;transform:translate(-50%,-50%);
+  padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.78);
+  color:var(--text);font-size:.72rem;font-weight:900;line-height:1;
+  pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.10);
+}
+.attempt-pill-btn{
+  align-self:center;min-width:34px!important;width:34px;min-height:20px!important;height:20px;
+  padding:0 7px!important;border:1px solid rgba(106,27,154,.32);border-radius:999px;
+  background:rgba(106,27,154,.08);color:#6a1b9a;font-family:inherit;font-size:.7rem!important;
+  line-height:1;cursor:pointer;box-shadow:none;transition:transform .12s,background .15s,border-color .15s;
+}
+.attempt-pill-btn:active{transform:scale(.9);}
+.attempt-pill-btn.active{background:rgba(46,125,50,.16);border-color:rgba(46,125,50,.48);color:var(--green);}
+.attempt-pill-btn[hidden]{display:none!important;}
 @media(max-width:380px){
   .attempt-level-segment{gap:3px;font-size:.66rem;padding-left:2px;padding-right:2px;}
   .attempt-level-segment .level-number{width:18px;height:18px;font-size:.68rem;}
@@ -1691,15 +1707,17 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
         <div class="attempt-next-stack">
           <div class="attempt-level-next" id="atLevelNext" role="group" aria-label="Question level choose karke next question par jaayein">
             <button class="attempt-level-segment level-3" type="button" onclick="nextWithDifficulty('tough')" aria-label="Level 3 Tough mark karke next question" title="3 — Tough">
-              <span class="level-number">3</span><span class="level-next">Next</span>
+              <span class="level-number">3</span>
             </button>
             <button class="attempt-level-segment level-2" type="button" onclick="nextWithDifficulty('doubt')" aria-label="Level 2 Doubtful mark karke next question" title="2 — Doubtful">
-              <span class="level-number">2</span><span class="level-next">Next</span>
+              <span class="level-number">2</span>
             </button>
             <button class="attempt-level-segment level-1" type="button" onclick="nextWithDifficulty('easy')" aria-label="Level 1 Easy mark karke next question" title="1 — Easy">
-              <span class="level-number">1</span><span class="level-next">Next</span>
+              <span class="level-number">1</span>
             </button>
+            <span class="attempt-level-next-label" aria-hidden="true">Next</span>
           </div>
+          <button class="attempt-pill-btn" id="atPillBtn" onclick="pillCheckCurrentQ()" aria-label="Answer reveal karke question ko Marked, Saved aur Tough karein" title="💊 Answer dikhao + Marked, Saved, Tough">💊</button>
         </div>
       </div>
 
@@ -4336,6 +4354,16 @@ function renderCurrentQ(){
   var prev=document.getElementById('atPrev'); if(prev) prev.disabled=st.currentQ===0;
   var levelNext=document.getElementById('atLevelNext');
   if(levelNext) levelNext.hidden=!!_att.revisionMode;
+  var pillBtn=document.getElementById('atPillBtn');
+  if(pillBtn){
+    var pillKey=String(st.quizId)+'_'+st.currentQ;
+    var pillSaved=!!(STATE.savedQuestions&&STATE.savedQuestions[pillKey]);
+    var pillDone=!_att.revisionMode&&_att.answerRevealed&&!!st.marked[st.currentQ]&&st.difficulty[st.currentQ]==='tough'&&pillSaved;
+    pillBtn.hidden=!!_att.revisionMode;
+    pillBtn.textContent=pillDone?'💊✓':'💊';
+    pillBtn.classList.toggle('active',pillDone);
+    pillBtn.title=pillDone?'Pill action applied':'💊 Answer dikhao + Marked, Saved, Tough';
+  }
 
   // Difficulty buttons state
   var diff=st.difficulty[st.currentQ];
