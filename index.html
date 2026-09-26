@@ -276,6 +276,19 @@ body.quiz-immersive #page-attempt.page.active{
 #page-attempt #atExplanation > div{font-size:.83rem!important;line-height:1.6;padding:9px 11px!important;}
 .attempt-navigation{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
 .attempt-navigation button{min-width:0;min-height:40px;padding:7px 8px;font-size:.75rem;}
+.attempt-next-stack{display:flex;flex-direction:column;align-items:stretch;gap:3px;min-width:0;}
+.attempt-next-stack > #atNext{width:100%;}
+.attempt-pill-btn{
+  align-self:center;min-width:34px!important;width:34px;min-height:20px!important;height:20px;
+  padding:0 7px!important;border:1px solid rgba(106,27,154,.32);border-radius:999px;
+  background:rgba(106,27,154,.08);color:#6a1b9a;font-family:inherit;font-size:.7rem!important;
+  line-height:1;cursor:pointer;box-shadow:none;transition:transform .12s,background .15s,border-color .15s;
+}
+.attempt-pill-btn:active{transform:scale(.9);}
+.attempt-pill-btn.active{
+  background:rgba(46,125,50,.16);border-color:rgba(46,125,50,.48);color:var(--green);
+}
+.attempt-pill-btn[hidden]{display:none!important;}
 #page-attempt #overviewPanel{margin-top:12px!important;}
 #page-attempt #overviewPanel .card{padding:14px;}
 @media(max-width:380px){
@@ -1613,7 +1626,10 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <!-- Only question navigation remains outside the master controls -->
       <div class="attempt-navigation">
         <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev">← Pichla</button>
-        <button class="btn btn-primary btn-sm" onclick="navQ(1)" id="atNext">Agla →</button>
+        <div class="attempt-next-stack">
+          <button class="btn btn-primary btn-sm" onclick="navQ(1)" id="atNext">Agla →</button>
+          <button class="attempt-pill-btn" id="atPillBtn" onclick="pillCheckCurrentQ()" aria-label="Answer reveal karke question ko Marked, Saved aur Tough karein" title="💊 Answer dikhao + Marked, Saved, Tough">💊</button>
+        </div>
       </div>
 
       <!-- Q Overview Panel -->
@@ -4248,6 +4264,16 @@ function renderCurrentQ(){
 
   var prev=document.getElementById('atPrev'); if(prev) prev.disabled=st.currentQ===0;
   var next=document.getElementById('atNext'); if(next) next.textContent=(st.currentQ===total-1)?'Finish →':'Agla →';
+  var pillBtn=document.getElementById('atPillBtn');
+  if(pillBtn){
+    var pillKey=String(st.quizId)+'_'+st.currentQ;
+    var pillSaved=!!(STATE.savedQuestions&&STATE.savedQuestions[pillKey]);
+    var pillDone=!_att.revisionMode&&_att.answerRevealed&&!!st.marked[st.currentQ]&&st.difficulty[st.currentQ]==='tough'&&pillSaved;
+    pillBtn.hidden=!!_att.revisionMode;
+    pillBtn.textContent=pillDone?'💊✓':'💊';
+    pillBtn.classList.toggle('active',pillDone);
+    pillBtn.title=pillDone?'Pill action applied':'💊 Answer dikhao + Marked, Saved, Tough';
+  }
 
   // Difficulty buttons state
   var diff=st.difficulty[st.currentQ];
@@ -4345,6 +4371,31 @@ function toggleAnswerReveal(){
   _att.answerRevealed=!_att.answerRevealed;
   attSaveProgress();
   renderCurrentQ();
+}
+function pillCheckCurrentQ(){
+  if(!_att||_att.submitted||_att.revisionMode) return;
+  var idx=_att.currentQ;
+  var q=_att.quiz.questions[idx];
+  if(!q) return;
+  // The pill is a one-tap study action: reveal the answer and keep this
+  // question in all three follow-up buckets for later revision.
+  _att.answerRevealed=true;
+  _att.marked[idx]=true;
+  _att.difficulty[idx]='tough';
+  if(!STATE.savedQuestions) STATE.savedQuestions={};
+  var qKey=String(_att.quizId)+'_'+idx;
+  if(!STATE.savedQuestions[qKey]){
+    STATE.savedQuestions[qKey]={
+      quizId:_att.quizId,
+      quizName:_att.quiz.name,
+      qIdx:idx,
+      q:q
+    };
+    cloudSaveSavedQ();
+  }
+  attSaveProgress();
+  renderCurrentQ();
+  showToast('💊 Answer show — Marked, Saved aur Tough tag ho gaya','success');
 }
 function attStopRevisionTimer(){
   if(_att&&_att.revisionTimer){
