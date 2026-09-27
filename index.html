@@ -2985,12 +2985,96 @@ function loadSharedQuiz(shareId){
     });
 }
 
+function findImportedSharedQuiz(sharedId){
+  return (STATE.quizzes||[]).find(function(q){
+    return String(q.sourceSharedQuizId||'')===String(sharedId);
+  })||null;
+}
+
+function openImportSharedQuizForm(){
+  if(!_sharedQuizData){ showToast('Quiz data nahi mila!','error'); return; }
+  var old=document.getElementById('sharedQuizImportOverlay');
+  if(old) old.remove();
+  var src=_sharedQuizData;
+  var ov=document.createElement('div');
+  ov.id='sharedQuizImportOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
+  ov.innerHTML=
+    '<div style="background:var(--surface);border-radius:14px;padding:18px;max-width:440px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--accent);margin-bottom:6px;">📥 Import in My Deck</div>'+
+      '<div style="font-size:0.76rem;color:var(--text2);line-height:1.5;margin-bottom:14px;">Quiz ki ek personal copy aapki Master Library me save hogi. Is copy par aapki attempt progress alag se pause/resume hogi.</div>'+
+      '<div class="field-group"><label class="field-label">Quiz ka naam</label><input class="inp" id="sharedImportName" type="text" maxlength="120"></div>'+
+      '<div class="field-group"><label class="field-label">Subject</label><input class="inp" id="sharedImportSubject" type="text" maxlength="80" placeholder="Jaise: General Knowledge"></div>'+
+      '<div class="field-group"><label class="field-label">Section / Exam</label><input class="inp" id="sharedImportSection" type="text" maxlength="80" placeholder="Optional"></div>'+
+      '<div class="field-group"><label class="field-label">Topic</label><input class="inp" id="sharedImportTopic" type="text" maxlength="80" placeholder="Optional"></div>'+
+      '<div style="display:flex;gap:8px;margin-top:14px;">'+
+        '<button class="btn btn-outline" style="flex:1;" onclick="closeImportSharedQuizForm()">Cancel</button>'+
+        '<button class="btn btn-primary" style="flex:1;" onclick="saveImportedSharedQuiz()">📥 Import Quiz</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('sharedImportName').value=src.name||'Imported Quiz';
+  document.getElementById('sharedImportSubject').value=src.subjectName||'';
+  document.getElementById('sharedImportSection').value=src.sectionName||'';
+  document.getElementById('sharedImportTopic').value=src.topicName||'';
+  document.getElementById('sharedImportName').focus();
+}
+function closeImportSharedQuizForm(){
+  var ov=document.getElementById('sharedQuizImportOverlay');
+  if(ov) ov.remove();
+}
+function saveImportedSharedQuiz(){
+  if(!_sharedQuizData) return;
+  var name=(document.getElementById('sharedImportName').value||'').trim();
+  var subject=(document.getElementById('sharedImportSubject').value||'').trim();
+  var section=(document.getElementById('sharedImportSection').value||'').trim();
+  var topic=(document.getElementById('sharedImportTopic').value||'').trim();
+  if(!name){ showToast('Quiz ka naam daaliye!','error'); return; }
+  var existing=findImportedSharedQuiz(_sharedQuizData.id);
+  if(existing){
+    closeImportSharedQuizForm();
+    showToast('Yeh quiz pehle se aapki library me hai.','info');
+    startAttempt(existing.id,false);
+    return;
+  }
+  var now=Date.now();
+  var src=_sharedQuizData;
+  var imported={
+    id:now,
+    docId:'quiz_'+now,
+    name:name,
+    subjectName:subject,
+    sectionName:section,
+    topicName:topic,
+    timer:JSON.parse(JSON.stringify(src.timer||{type:'none',value:0})),
+    questions:(src.questions||[]).map(function(q){
+      return {id:q.id||Date.now()+Math.random(),q:q.q||'',options:(q.options||[]).slice(),correct:Number(q.correct)||0,explanation:q.explanation||''};
+    }),
+    folder:'main',
+    folderName:'Main Quiz Library',
+    isImported:true,
+    sourceSharedQuizId:src.id,
+    sourceSharedQuizName:src.name||'',
+    sourceSharedByName:src.sharedByName||'',
+    sourceSharedByEmail:src.sharedByEmail||'',
+    createdAt:new Date().toLocaleDateString('hi-IN'),
+    createdAtMs:now
+  };
+  if(!imported.questions.length){ showToast('Is quiz me questions nahi hain!','error'); return; }
+  STATE.quizzes.push(imported);
+  cloudSaveQuiz(imported);
+  closeImportSharedQuizForm();
+  showToast('✅ Quiz Master Library me import ho gayi!','success');
+  renderSharedQuizLanding(src);
+}
+
 function renderSharedQuizLanding(quiz){
   var el = document.getElementById('sharedQuizContent');
   if(!el) return;
   var tags = [quiz.subjectName, quiz.sectionName, quiz.topicName].filter(Boolean).join(' › ');
   var timerLabel = quiz.timer&&quiz.timer.type!=='none'?(quiz.timer.type==='full'?quiz.timer.value+' min':quiz.timer.value+'s/Q'):'No Timer';
   var isLoggedIn = !!_uid && !(_user&&_user.isAnonymous);
+  var importedQuiz=isLoggedIn?findImportedSharedQuiz(quiz.id):null;
 
   el.innerHTML =
     '<div class="card" style="background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(21,101,192,0.02));border:1.5px solid rgba(21,101,192,0.2);margin-bottom:14px;">'+
@@ -3008,12 +3092,21 @@ function renderSharedQuizLanding(quiz){
     '</div>'+
     (isLoggedIn ?
       '<div class="card">'+
-        '<div style="font-weight:800;font-size:0.92rem;color:var(--green);margin-bottom:8px;">✅ Aap login hain — attempt karo!</div>'+
-        '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:14px;">Aapka result alag document mein save hoga. Aap apni attempt history "🔗 Shared Attempts" mein dekh sakte hain.</div>'+
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
-          '<button class="btn btn-primary" style="flex:1;" onclick="startSharedAttempt(false)">▶ Attempt Start Karo</button>'+
-          '<button class="btn btn-outline" style="flex:1;" onclick="startSharedAttempt(true)">🔀 Shuffled</button>'+
+        '<div style="font-weight:800;font-size:0.92rem;color:var(--green);margin-bottom:8px;">✅ Aap login hain — quiz choose karke attempt karo</div>'+
+        '<div style="font-size:0.78rem;color:var(--text2);margin-bottom:14px;">Import karne par quiz aapki Master Library me save hogi aur beech me pause ki hui progress isi account se resume hogi.</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'+
+          (importedQuiz?
+            '<span style="flex:1;min-width:190px;padding:9px 10px;border-radius:9px;background:rgba(46,125,50,0.09);border:1px solid rgba(46,125,50,0.25);color:var(--green);font-size:0.75rem;font-weight:800;">✅ Imported: '+escHtml(importedQuiz.name)+'</span>':
+            '<button class="btn btn-outline" style="flex:1;min-width:190px;color:var(--accent);border-color:rgba(21,101,192,0.35);" onclick="openImportSharedQuizForm()">📥 Import in My Deck</button>')+
         '</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+          (importedQuiz?
+            '<button class="btn btn-primary" style="flex:1;" onclick="startAttempt('+JSON.stringify(importedQuiz.id)+',false)">▶ My Deck se Start</button>'+
+            '<button class="btn btn-outline" style="flex:1;" onclick="startAttempt('+JSON.stringify(importedQuiz.id)+',true)">🔀 Shuffled</button>':
+            '<button class="btn btn-primary" style="flex:1;" onclick="startSharedAttempt(false)">▶ Direct Attempt</button>'+
+            '<button class="btn btn-outline" style="flex:1;" onclick="startSharedAttempt(true)">🔀 Shuffled</button>')+
+        '</div>'+
+        '<div style="font-size:0.68rem;color:var(--text2);margin-top:9px;">Direct attempt ki history Shared Attempts me rahegi; My Deck copy ki progress Master Library ke normal attempts me save hogi.</div>'+
       '</div>'
     :
       '<div class="card" style="text-align:center;padding:24px 16px;">'+
@@ -3406,6 +3499,16 @@ function renderSettingsPage(){
         '<div class="settings-row-info"><div class="settings-row-title">Subject / Topic Manager</div><div class="settings-row-sub">Subjects, sections, topics manage karo</div></div>'+
         '<div style="color:var(--text2);">›</div>'+
       '</div>'+
+      '<div class="settings-row" style="cursor:pointer;" onclick="openProtectedBackupAction(\'download\')">'+
+        '<div class="settings-row-icon" style="background:rgba(21,101,192,0.1);color:var(--accent);">⬇️</div>'+
+        '<div class="settings-row-info"><div class="settings-row-title">Download Data Backup</div><div class="settings-row-sub">Quizzes, attempts, imported data aur settings ka backup</div></div>'+
+        '<div style="color:var(--text2);">🔒 ›</div>'+
+      '</div>'+
+      '<div class="settings-row" style="cursor:pointer;" onclick="openProtectedBackupAction(\'restore\')">'+
+        '<div class="settings-row-icon" style="background:rgba(230,81,0,0.1);color:var(--orange);">⬆️</div>'+
+        '<div class="settings-row-info"><div class="settings-row-title">Restore Data Backup</div><div class="settings-row-sub">Backup file se apna data wapas merge karo</div></div>'+
+        '<div style="color:var(--text2);">🔒 ›</div>'+
+      '</div>'+
       '<div class="settings-row" style="cursor:pointer;" onclick="toggleDebugConsole()">'+
         '<div class="settings-row-icon" style="background:rgba(46,125,50,0.1);color:var(--green);">🛠</div>'+
         '<div class="settings-row-info"><div class="settings-row-title">Debug Console</div><div class="settings-row-sub">Developer logs aur bulk import console</div></div>'+
@@ -3428,6 +3531,221 @@ function renderSettingsPage(){
         '<div class="settings-row-info"><div class="settings-row-title" style="color:var(--red);">Sign Out</div><div class="settings-row-sub">Account se logout karo</div></div>'+
       '</div>'+
     '</div>';
+}
+
+// ================================================================
+// PASSWORD-PROTECTED USER DATA BACKUP / RESTORE
+// The password protects opening these actions in this client-only app.
+// Firestore rules still remain the real account-level access control.
+// ================================================================
+var DATA_BACKUP_PASSWORD='12345';
+var DATA_BACKUP_LOCAL_KEYS=[
+  'ts_sm_entries','readerTextSize','readerSpacing','readingMode','nightMode',
+  'revisionSlideDuration','revisionQuestionDuration','revisionHideOptions',
+  'revisionInstantMode','fcFocusMode'
+];
+function _backupDeepCopy(value){
+  try{ return JSON.parse(JSON.stringify(value==null?null:value)); }catch(e){ return value; }
+}
+function _backupReadLocalData(){
+  var out={};
+  try{
+    DATA_BACKUP_LOCAL_KEYS.forEach(function(key){
+      var value=localStorage.getItem(key);
+      if(value!==null) out[key]=value;
+    });
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(key&&key.indexOf('ts_att_')===0){
+        out[key]=localStorage.getItem(key);
+      }
+    }
+  }catch(e){}
+  return out;
+}
+function _backupDataSnapshot(){
+  var quizSessions={};
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var sessionKey=localStorage.key(i);
+      if(sessionKey&&sessionKey.indexOf('ts_att_')===0&&sessionKey!=='ts_att_paused'){
+        var sessionRaw=localStorage.getItem(sessionKey);
+        if(sessionRaw) quizSessions[sessionKey]=JSON.parse(sessionRaw);
+      }
+    }
+  }catch(e){}
+  return {
+    format:'test-series-user-backup',
+    version:2,
+    exportedAt:new Date().toISOString(),
+    accountUid:_uid||null,
+    quizzes:_backupDeepCopy(STATE.quizzes||[]),
+    attempts:_backupDeepCopy(STATE.attempts||[]),
+    sharedAttempts:_backupDeepCopy(STATE.sharedAttempts||[]),
+    savedQuestions:_backupDeepCopy(STATE.savedQuestions||{}),
+    subjectEntries:_backupDeepCopy(_smGetEntries()),
+    flashcardDecks:_backupDeepCopy(typeof _fcDecks!=='undefined'?_fcDecks:[]),
+    flashcardSavedCards:_backupDeepCopy(typeof _fcSavedCards!=='undefined'?_fcSavedCards:[]),
+    localSettings:_backupReadLocalData(),
+    quizSessions:quizSessions
+  };
+}
+function openProtectedBackupAction(action){
+  if(!_uid||!_db){ showToast('Pehle account me login kijiye.','error'); return; }
+  var old=document.getElementById('dataBackupPasswordOverlay');
+  if(old) old.remove();
+  var isRestore=action==='restore';
+  var ov=document.createElement('div');
+  ov.id='dataBackupPasswordOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.58);display:flex;align-items:center;justify-content:center;padding:16px;';
+  ov.innerHTML=
+    '<div style="background:var(--surface);border-radius:14px;padding:18px;max-width:390px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--accent);margin-bottom:6px;">🔒 '+(isRestore?'Restore Backup':'Download Backup')+'</div>'+
+      '<div style="font-size:0.77rem;color:var(--text2);line-height:1.55;margin-bottom:13px;">Is protected feature ko kholne ke liye password daaliye.</div>'+
+      '<label class="field-label" for="dataBackupPassword">Password</label>'+
+      '<input class="inp" id="dataBackupPassword" type="password" inputmode="numeric" autocomplete="off" placeholder="Password">'+
+      '<div id="dataBackupPasswordError" style="min-height:18px;color:var(--red);font-size:0.72rem;font-weight:700;margin-top:5px;"></div>'+
+      '<div style="display:flex;gap:8px;margin-top:10px;">'+
+        '<button class="btn btn-outline" style="flex:1;" onclick="closeProtectedBackupAction()">Cancel</button>'+
+        '<button class="btn btn-primary" style="flex:1;" onclick="unlockProtectedBackupAction(\''+action+'\')">Unlock</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  var input=document.getElementById('dataBackupPassword');
+  if(input){
+    input.focus();
+    input.addEventListener('keydown',function(e){ if(e.key==='Enter') unlockProtectedBackupAction(action); });
+  }
+}
+function closeProtectedBackupAction(){
+  var ov=document.getElementById('dataBackupPasswordOverlay');
+  if(ov) ov.remove();
+}
+function unlockProtectedBackupAction(action){
+  var input=document.getElementById('dataBackupPassword');
+  var error=document.getElementById('dataBackupPasswordError');
+  if(!input||input.value!==DATA_BACKUP_PASSWORD){
+    if(error) error.textContent='Password galat hai.';
+    if(input){ input.value=''; input.focus(); }
+    return;
+  }
+  closeProtectedBackupAction();
+  if(action==='download') downloadUserDataBackup();
+  else chooseUserDataBackupFile();
+}
+function downloadUserDataBackup(){
+  var data=_backupDataSnapshot();
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var link=document.createElement('a');
+  var stamp=new Date().toISOString().slice(0,10);
+  link.href=URL.createObjectURL(blob);
+  link.download='test-series-backup-'+stamp+'.json';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(function(){ URL.revokeObjectURL(link.href); link.remove(); },1000);
+  showToast('✅ Password verify hua — backup download ho gaya!','success');
+}
+function chooseUserDataBackupFile(){
+  var old=document.getElementById('userDataBackupFileInput');
+  if(old) old.remove();
+  var input=document.createElement('input');
+  input.type='file';
+  input.accept='.json,application/json';
+  input.id='userDataBackupFileInput';
+  input.style.display='none';
+  input.onchange=function(){
+    var file=input.files&&input.files[0];
+    if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var data=JSON.parse(reader.result);
+        restoreUserDataBackup(data);
+      }catch(e){ showToast('Backup file valid JSON nahi hai.','error'); }
+      input.remove();
+    };
+    reader.onerror=function(){ showToast('Backup file read nahi ho payi.','error'); input.remove(); };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(input);
+  input.click();
+}
+function _backupMergeById(target, incoming){
+  var map={};
+  (target||[]).forEach(function(item){ if(item&&item.id!=null) map[String(item.id)]=item; });
+  (incoming||[]).forEach(function(item){ if(item&&item.id!=null) map[String(item.id)]=item; });
+  return Object.keys(map).map(function(key){ return map[key]; });
+}
+function restoreUserDataBackup(data){
+  if(!data||data.format!=='test-series-user-backup'){
+    showToast('Yeh Test Series backup file nahi hai.','error'); return;
+  }
+  var qCount=Array.isArray(data.quizzes)?data.quizzes.length:0;
+  var aCount=Array.isArray(data.attempts)?data.attempts.length:0;
+  var sCount=Array.isArray(data.sharedAttempts)?data.sharedAttempts.length:0;
+  if(!qCount&&!aCount&&!sCount&&!data.savedQuestions){
+    showToast('Backup me restore karne layak data nahi mila.','error'); return;
+  }
+  if(!confirm('Backup me '+qCount+' quizzes aur '+(aCount+sCount)+' attempts hain. Existing data ko delete nahi kiya jayega; same IDs update honge. Restore/merge karein?')) return;
+  var incomingQuizzes=Array.isArray(data.quizzes)?data.quizzes:[];
+  var incomingAttempts=Array.isArray(data.attempts)?data.attempts:[];
+  var incomingShared=Array.isArray(data.sharedAttempts)?data.sharedAttempts:[];
+  STATE.quizzes=_backupMergeById(STATE.quizzes||[],incomingQuizzes);
+  STATE.attempts=_backupMergeById(STATE.attempts||[],incomingAttempts);
+  STATE.sharedAttempts=_backupMergeById(STATE.sharedAttempts||[],incomingShared);
+  STATE.quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+  STATE.attempts.sort(function(a,b){ return (a.id||0)-(b.id||0); });
+  STATE.sharedAttempts.sort(function(a,b){ return (b.id||0)-(a.id||0); });
+  var saved=Object.assign({},STATE.savedQuestions||{},data.savedQuestions||{});
+  STATE.savedQuestions=saved;
+  var entries=_smGetEntries().concat(Array.isArray(data.subjectEntries)?data.subjectEntries:[]);
+  var entryMap={};
+  entries.forEach(function(e){
+    if(!e) return;
+    var key=[e.subject||'',e.section||'',e.topic||''].join('|');
+    entryMap[key]=e;
+  });
+  var mergedEntries=Object.keys(entryMap).map(function(k){return entryMap[k];});
+  _smSaveEntries(mergedEntries);
+  if(data.localSettings){
+    Object.keys(data.localSettings).forEach(function(key){
+      try{ localStorage.setItem(key,data.localSettings[key]); }catch(e){}
+    });
+  }
+  var writes=[];
+  incomingQuizzes.forEach(function(q){
+    if(q&&q.id!=null) writes.push(_db.collection('users').doc(_uid).collection('ts_quizzes').doc(String(q.id)).set(q));
+  });
+  incomingAttempts.forEach(function(a){
+    if(a&&a.id!=null) writes.push(_db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a));
+  });
+  incomingShared.forEach(function(a){
+    if(a&&a.id!=null) writes.push(_db.collection('users').doc(_uid).collection('ts_shared_attempts').doc(String(a.id)).set(a));
+  });
+  cloudSaveSavedQ();
+  if(typeof _fcDecks!=='undefined'&&Array.isArray(data.flashcardDecks)){
+    _fcDecks=_backupMergeById(_fcDecks,data.flashcardDecks);
+    data.flashcardDecks.forEach(function(deck){ if(deck&&deck.id!=null) writes.push(fcSaveDeck(deck)); });
+  }
+  if(typeof _fcSavedCards!=='undefined'&&Array.isArray(data.flashcardSavedCards)){
+    _fcSavedCards=_backupMergeById(_fcSavedCards,data.flashcardSavedCards);
+    data.flashcardSavedCards.forEach(function(card){
+      if(card&&card.id!=null) writes.push(_db.collection('users').doc(_uid).collection('fc_saved').doc(String(card.id)).set(card));
+    });
+  }
+  if(data.quizSessions&&typeof data.quizSessions==='object'){
+    Object.keys(data.quizSessions).forEach(function(key){
+      var session=data.quizSessions[key];
+      if(!session||!session.quizId) return;
+      try{ localStorage.setItem(key,JSON.stringify(session)); }catch(e){}
+      if(!session.isShared) writes.push(cloudSaveQuizSession(session));
+    });
+  }
+  Promise.all(writes.map(function(p){ return Promise.resolve(p).catch(function(e){ console.warn('restore write',e); }); }))
+    .then(function(){
+      renderSettingsPage();
+      showToast('✅ Backup merge karke restore ho gaya!','success');
+    });
 }
 
 // ---- Progress Page (chart moved off home page) ----
