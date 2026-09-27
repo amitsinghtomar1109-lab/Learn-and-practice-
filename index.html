@@ -413,10 +413,51 @@ body.quiz-immersive #page-attempt.page.active{
 .analysis-question-body{flex:1;min-width:0;}
 .analysis-question-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:4px;}
 .analysis-question-actions button{min-width:32px;}
+.result-summary-card{
+  background:linear-gradient(135deg,rgba(21,101,192,.07),rgba(46,125,50,.05));
+  border:1.5px solid rgba(21,101,192,.16);margin-bottom:12px;
+}
+.result-summary-row{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.result-summary-score{
+  display:flex;align-items:center;gap:8px;min-width:118px;
+}
+.result-summary-emoji{font-size:1.65rem;line-height:1;}
+.result-summary-caption{
+  color:var(--text2);font-size:.64rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:.35px;
+}
+.result-summary-number{font-size:1.25rem;font-weight:900;line-height:1.15;}
+.result-summary-metric{
+  padding-left:12px;border-left:1px solid var(--border);min-width:62px;
+}
+.result-summary-metric-value{font-size:.95rem;font-weight:900;line-height:1.2;}
+.result-summary-metric-label{font-size:.62rem;color:var(--text2);font-weight:700;margin-top:2px;}
+.result-master-toggle{margin-left:auto;white-space:nowrap;}
+.result-master-panel{
+  display:none;margin-top:12px;padding:10px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:10px;
+}
+.result-master-panel.open{display:block;}
+.result-master-actions{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;
+}
+.result-master-actions .btn{flex:1 1 118px;}
+.result-master-panel .analysis-toolbar,
+.result-master-panel .analysis-filter-row,
+.result-master-panel .analysis-selection-bar{
+  margin-bottom:8px;
+}
+.result-master-panel .analysis-selection-bar{margin-bottom:0;}
+.result-master-panel .analysis-filter-row{padding:0;}
 @media(max-width:520px){
   .analysis-toolbar{padding:8px;}
   .analysis-search-wrap{flex-basis:100%;min-width:0;}
   .analysis-selection-bar .btn{font-size:.66rem;padding-left:7px;padding-right:7px;}
+  .result-summary-row{gap:9px;}
+  .result-summary-metric{padding-left:9px;}
+  .result-master-toggle{margin-left:0;flex:1 1 100%;}
 }
 
 .page-header{
@@ -1795,73 +1836,68 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       </div>
     </div>
 
-    <!-- Score Card -->
-    <div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(21,101,192,0.08),rgba(46,125,50,0.06));border:1.5px solid rgba(21,101,192,0.18);margin-bottom:14px;">
-      <div style="font-size:3rem;margin-bottom:4px;" id="rsEmoji">🎯</div>
-      <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="rsScore">0/0</div>
-      <div style="font-size:1.1rem;font-weight:800;color:var(--green);" id="rsAcc">0%</div>
-      <div style="font-size:0.78rem;color:var(--text2);margin-top:6px;" id="rsTime">Time: --</div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="reattempt()">🔄 Reattempt</button>
-        <button class="btn btn-outline btn-sm" onclick="showFullAnalysis()">📊 Full Analysis</button>
-        <button class="btn btn-outline btn-sm" onclick="showSection('history')" style="color:#6a1b9a;border-color:rgba(106,27,154,0.3);">📜 History</button>
+    <!-- Compact result summary; all secondary controls live in Master Panel -->
+    <div class="card result-summary-card">
+      <div class="result-summary-row">
+        <div class="result-summary-score">
+          <div class="result-summary-emoji" id="rsEmoji">🎯</div>
+          <div>
+            <div class="result-summary-caption">Result</div>
+            <div class="result-summary-number" id="rsScore">0/0</div>
+          </div>
+        </div>
+        <div class="result-summary-metric">
+          <div class="result-summary-metric-value" id="rsAcc">0%</div>
+          <div class="result-summary-metric-label">Accuracy</div>
+        </div>
+        <div class="result-summary-metric">
+          <div class="result-summary-metric-value" id="rsTime">--</div>
+          <div class="result-summary-metric-label">Time</div>
+        </div>
+        <button class="btn btn-outline btn-sm result-master-toggle" id="rsMasterToggle" onclick="toggleResultMasterPanel()" aria-expanded="false" aria-controls="rsMasterPanel">☰ Master Panel</button>
       </div>
+      <div class="result-master-panel" id="rsMasterPanel">
+        <div class="result-master-actions">
+          <button class="btn btn-primary btn-sm" onclick="reattempt()">🔄 Reattempt</button>
+          <button class="btn btn-outline btn-sm" onclick="showSection('history')">📜 History</button>
+          <button class="btn btn-outline btn-sm analysis-export-btn" onclick="exportAnalysisDoc()">⬇️ Export DOC</button>
+        </div>
+        <div class="analysis-toolbar">
+          <div class="analysis-search-wrap">
+            <input class="inp" id="rsSearchInput" type="search" placeholder="Question, option ya explanation search karein..." onkeydown="if(event.key==='Enter')rsSearchAnalysis()">
+            <button class="btn btn-primary btn-sm analysis-search-btn" onclick="rsSearchAnalysis()">🔎 Search</button>
+            <button class="btn btn-outline btn-sm" onclick="rsClearSearch()" title="Search clear karein">✕</button>
+          </div>
+          <div class="analysis-search-status" id="rsSearchStatus"></div>
+        </div>
+        <div class="analysis-filter-row">
+          <span class="analysis-filter-label">Filter:</span>
+          <div id="rsFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="analysis-selection-bar" id="rsSelectionBar">
+          <span id="rsSelectedCount" style="font-size:0.72rem;font-weight:800;color:#6a1b9a;">0 selected</span>
+          <button class="btn btn-xs btn-outline" onclick="_rsSelectVisible()">☑ Visible Select</button>
+          <button class="btn btn-xs btn-outline" onclick="_rsClearSelected()">Clear</button>
+          <button class="btn btn-xs btn-primary" onclick="openSelectedQuizBuilderFromResult()">➕ New Quiz</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full Analysis -->
+    <div class="card" id="analysisCard" style="display:block;">
+      <div class="analysis-card-header">
+        <div>
+          <div class="card-title analysis-card-title">🔍 Question-wise Analysis</div>
+          <div class="analysis-card-subtitle">Questions direct yahan dikh rahe hain · extra controls Master Panel mein</div>
+        </div>
+      </div>
+      <div id="analysisContent"></div>
     </div>
 
     <!-- Comparison Card -->
     <div class="card" id="compCard" style="display:none;">
       <div class="card-title">📈 Last 3 Attempts Comparison</div>
       <div id="compContent"></div>
-    </div>
-
-    <!-- Full Analysis -->
-    <div class="card" id="analysisCard" style="display:none;">
-      <div class="analysis-card-header">
-        <div>
-          <div class="card-title analysis-card-title">🔍 Question-wise Analysis</div>
-          <div class="analysis-card-subtitle">Filter, search, select aur export — sab controls ek jagah</div>
-        </div>
-        <button class="btn btn-outline btn-sm analysis-export-btn" onclick="exportAnalysisDoc()">⬇️ Export DOC</button>
-      </div>
-      <div class="analysis-toolbar">
-        <div class="analysis-search-wrap">
-          <input class="inp" id="rsSearchInput" type="search" placeholder="Question, option ya explanation search karein..." onkeydown="if(event.key==='Enter')rsSearchAnalysis()">
-          <button class="btn btn-primary btn-sm analysis-search-btn" onclick="rsSearchAnalysis()">🔎 Search</button>
-          <button class="btn btn-outline btn-sm" onclick="rsClearSearch()" title="Search clear karein">✕</button>
-        </div>
-        <div class="analysis-search-status" id="rsSearchStatus"></div>
-      </div>
-      <div class="analysis-filter-row">
-        <span class="analysis-filter-label">Filter:</span>
-        <div id="rsFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-      </div>
-      <div class="analysis-selection-bar" id="rsSelectionBar">
-        <span id="rsSelectedCount" style="font-size:0.72rem;font-weight:800;color:#6a1b9a;">0 selected</span>
-        <button class="btn btn-xs btn-outline" onclick="_rsSelectVisible()">☑ Visible Select</button>
-        <button class="btn btn-xs btn-outline" onclick="_rsClearSelected()">Clear</button>
-        <button class="btn btn-xs btn-primary" onclick="openSelectedQuizBuilderFromResult()">➕ New Quiz</button>
-      </div>
-      <!-- Highlighter Toolbar for Result Analysis -->
-      <div id="rsHlToolbar" class="hl-toolbar">
-        <span class="hl-label">✨ ANNOTATE:</span>
-        <button class="hl-tbtn" id="rsHlBtn" onclick="hlToggle('rs','highlight')" title="Highlight karo">🖊</button>
-        <button class="hl-tbtn" id="rsEraserBtn" onclick="hlToggle('rs','eraser')" title="Highlight hatao">🧹</button>
-        <div class="hl-sep"></div>
-        <div id="rsHlColors" style="display:flex;align-items:center;gap:3px;flex-shrink:0;display:none;">
-          <div class="hl-cdot sel" data-c="#ffe000" style="background:#ffe000;" onclick="hlSetColor('rs','#ffe000',this)" title="Yellow"></div>
-          <div class="hl-cdot" data-c="#ff6f00" style="background:#ff6f00;" onclick="hlSetColor('rs','#ff6f00',this)" title="Orange"></div>
-          <div class="hl-cdot" data-c="#e91e63" style="background:#e91e63;" onclick="hlSetColor('rs','#e91e63',this)" title="Pink"></div>
-          <div class="hl-cdot" data-c="#00c853" style="background:#00c853;" onclick="hlSetColor('rs','#00c853',this)" title="Green"></div>
-          <div class="hl-cdot" data-c="#29b6f6" style="background:#29b6f6;" onclick="hlSetColor('rs','#29b6f6',this)" title="Blue"></div>
-          <div class="hl-cdot" data-c="#ce93d8" style="background:#ce93d8;" onclick="hlSetColor('rs','#ce93d8',this)" title="Purple"></div>
-        </div>
-        <div class="hl-sep"></div>
-        <button class="hl-tbtn" id="rsUndoBtn" onclick="hlUndo('rs')" title="Undo" style="opacity:0.35;">↩</button>
-        <button class="hl-tbtn" id="rsRedoBtn" onclick="hlRedo('rs')" title="Redo" style="opacity:0.35;">↪</button>
-        <div class="hl-sep"></div>
-        <button class="hl-save-btn" id="rsSaveHlBtn" onclick="hlSave('rs')" title="Highlights save karo">💾 Save</button>
-      </div>
-      <div id="analysisContent"></div>
     </div>
   </div>
 
@@ -2066,15 +2102,6 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
 </div>
 
 <div id="toast"></div>
-
-<!-- ── Floating HL Sidebar Button ── -->
-<button id="floatHlBtn" onclick="hlToggleFloatPanel()" title="Highlight Tools">🖊</button>
-
-<!-- ── Floating HL Panel ── -->
-<div id="floatHlPanel">
-  <div style="font-size:0.68rem;font-weight:800;color:var(--text2);margin-bottom:8px;letter-spacing:.5px;">✨ HIGHLIGHT TOOLS</div>
-  <div id="floatHlPanelBody"></div>
-</div>
 
 <!-- ── Highlights Review Modal ── -->
 <div id="hlReviewModal" onclick="if(event.target===this)closeHlReview()">
@@ -5350,7 +5377,14 @@ function showResult(attempt, quiz){
   document.getElementById('rsEmoji').textContent=emoji;
   var sd=document.getElementById('rsScore'); sd.textContent=attempt.score+'/'+attempt.total; sd.style.color=color;
   var ad=document.getElementById('rsAcc'); ad.textContent=pct+'%'; ad.style.color=color;
-  document.getElementById('rsTime').textContent='⏱ Time: '+(attempt.timeStr||'--');
+  document.getElementById('rsTime').textContent=(attempt.timeStr||'--');
+  var masterPanel=document.getElementById('rsMasterPanel');
+  var masterToggle=document.getElementById('rsMasterToggle');
+  if(masterPanel) masterPanel.classList.remove('open');
+  if(masterToggle){
+    masterToggle.setAttribute('aria-expanded','false');
+    masterToggle.textContent='☰ Master Panel';
+  }
 
   // Comparison
   var allAttempts=STATE.attempts.filter(function(a){ return a.quizId===quiz.id; });
@@ -5378,8 +5412,25 @@ function showResult(attempt, quiz){
     '</div>';
   } else if(cc){ cc.style.display='none'; }
 
-  var ac=document.getElementById('analysisCard'); if(ac) ac.style.display='none';
+  var ac=document.getElementById('analysisCard');
+  if(ac) ac.style.display='block';
   _rsSelected={};
+  _rsFilter='all';
+  _rsSearch='';
+  var searchInput=document.getElementById('rsSearchInput');
+  if(searchInput) searchInput.value='';
+  _renderFullAnalysis();
+}
+function toggleResultMasterPanel(){
+  var panel=document.getElementById('rsMasterPanel');
+  var toggle=document.getElementById('rsMasterToggle');
+  if(!panel) return;
+  var open=!panel.classList.contains('open');
+  panel.classList.toggle('open',open);
+  if(toggle){
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.textContent=open?'✕ Close Panel':'☰ Master Panel';
+  }
 }
 var _rsFilter = 'all';
 var _rsSelected = {};
@@ -5601,6 +5652,23 @@ function rsClearSearch(){
   if(input) input.value='';
   _renderFullAnalysis();
 }
+function _rtfEscape(value){
+  var text=String(value==null?'':value), out='';
+  for(var i=0;i<text.length;i++){
+    var code=text.charCodeAt(i);
+    if(code===92) out+='\\\\';
+    else if(code===123) out+='\\{';
+    else if(code===125) out+='\\}';
+    else if(code===10) out+='\\line ';
+    else if(code===13) { /* Ignore CR; LF is handled above. */ }
+    else if(code>=32&&code<=126) out+=text.charAt(i);
+    else {
+      var signed=code>32767?code-65536:code;
+      out+='\\u'+signed+'?';
+    }
+  }
+  return out;
+}
 function exportAnalysisDoc(){
   if(!_lastAttempt||!_lastQuiz){
     showToast('Pehle analysis open karo!','error');
@@ -5610,11 +5678,15 @@ function exportAnalysisDoc(){
   var answers=_lastAttempt.answers||[];
   var diffArr=_lastAttempt.difficulty||[];
   var markedArr=_lastAttempt.marked||[];
-  var doc='<!doctype html><html><head><meta charset="utf-8"><title>'+
-    escHtml((_lastQuiz.name||'Quiz')+' - Analysis')+
-    '</title><style>body{font-family:Arial,sans-serif;color:#222;line-height:1.5}h1{color:#1565c0}h2{margin-top:24px;color:#1565c0;border-bottom:1px solid #bdd5ea;padding-bottom:5px}.meta{color:#555;font-size:12px}.tag{display:inline-block;padding:3px 7px;margin:2px;border-radius:10px;background:#edf3f8;font-size:12px}.correct{color:#2e7d32;font-weight:bold}.wrong{color:#c62828;font-weight:bold}.answer{background:#f4f9fe;padding:7px;border-radius:5px;margin:3px 0}.explanation{background:#eef6ff;border-left:4px solid #1565c0;padding:8px;margin-top:8px}</style></head><body>'+
-    '<h1>'+escHtml(_lastQuiz.name||'Quiz')+' — Question Analysis</h1>'+
-    '<p class="meta">Score: '+(_lastAttempt.score||0)+'/'+(_lastAttempt.total||qs.length)+' | Completed: '+escHtml(_lastAttempt.completedAt||'')+'</p>';
+  /*
+   * Use RTF rather than an HTML file renamed to .doc. RTF is a real
+   * Word-readable document format and keeps Hindi/Unicode text intact.
+   */
+  var doc='{\\rtf1\\ansi\\deff0\\uc1\\viewkind4\n'+
+    '{\\fonttbl{\\f0 Arial;}{\\f1 Nirmala UI;}}\n'+
+    '\\f0\\fs30\\b '+_rtfEscape((_lastQuiz.name||'Quiz')+' — Question Analysis')+'\\b0\\par\n'+
+    '\\fs20 Score: '+_rtfEscape(String(_lastAttempt.score||0)+'/'+String(_lastAttempt.total||qs.length))+
+    '    Completed: '+_rtfEscape(_lastAttempt.completedAt||'')+'\\par\\par\n';
   qs.forEach(function(q,i){
     var ua=answers[i];
     var skipped=ua===null||typeof ua==='undefined';
@@ -5625,27 +5697,31 @@ function exportAnalysisDoc(){
     var status=skipped?'Skipped':correct?'Correct':'Wrong';
     var userResponse=skipped?'Not answered / Skipped':(q.options&&q.options[ua])||'Unknown option';
     var correctResponse=(q.options&&q.options[q.correct])||'';
-    var tags=[status,level,markedArr[i]?'Marked':'',saved?'Saved':''].filter(Boolean);
-    doc+='<h2>Q'+(i+1)+'. '+escHtml(q.q||'')+'</h2>'+
-      '<p>'+tags.map(function(t){return '<span class="tag">'+escHtml(t)+'</span>';}).join('')+'</p>'+
-      '<p><b>Your response:</b> <span class="'+(correct?'correct':skipped?'':'wrong')+'">'+escHtml(userResponse)+'</span><br>'+
-      '<b>Correct answer:</b> '+escHtml(correctResponse)+'</p>'+
-      '<div><b>Options:</b>'+((q.options||[]).map(function(opt,oi){
-        var isC=oi===q.correct, isU=oi===ua;
-        return '<div class="answer '+(isC?'correct':isU?'wrong':'')+'">'+
-          String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isC?' ✓':'')+(isU&&!isC?' ✗':'')+'</div>';
-      }).join(''))+'</div>'+
-      (q.explanation?'<div class="explanation"><b>Explanation:</b> '+escHtml(q.explanation)+'</div>':'');
+    var tags=[status,level,markedArr[i]?'Marked':'',saved?'Saved':''].filter(Boolean).join(' | ');
+    doc+='\\fs25\\b Q'+(i+1)+'. '+_rtfEscape(q.q||'')+'\\b0\\par\n'+
+      '\\fs18 Tags: '+_rtfEscape(tags)+'\\par\n'+
+      'Your response: '+_rtfEscape(userResponse)+'\\par\n'+
+      'Correct answer: '+_rtfEscape(correctResponse)+'\\par\n'+
+      '\\b Options:\\b0\\par\n';
+    (q.options||[]).forEach(function(opt,oi){
+      var isC=oi===q.correct, isU=oi===ua;
+      doc+=String.fromCharCode(65+oi)+'. '+_rtfEscape(opt)+
+        (isC?'  [Correct]':'')+(isU&&!isC?'  [Your response]':'')+'\\par\n';
+    });
+    if(q.explanation){
+      doc+='\\b Explanation:\\b0 '+_rtfEscape(q.explanation)+'\\par\n';
+    }
+    doc+='\\par\n';
   });
-  doc+='</body></html>';
-  var blob=new Blob([doc],{type:'application/msword;charset=utf-8'});
+  doc+='}';
+  var blob=new Blob([doc],{type:'application/rtf;charset=utf-8'});
   var link=document.createElement('a');
   link.href=URL.createObjectURL(blob);
   link.download=String(_lastQuiz.name||'quiz').replace(/[^\w\u0900-\u097F-]+/g,'_')+'_analysis.doc';
   document.body.appendChild(link);
   link.click();
   setTimeout(function(){URL.revokeObjectURL(link.href);link.remove();},1000);
-  showToast('📄 Analysis DOC download ho gaya','success');
+  showToast('📄 Valid Word DOC download ho gaya','success');
 }
 function _rsSetFilter(f){
   _rsFilter=f;
@@ -5742,7 +5818,7 @@ function _renderFullAnalysis(){
             (isSaved?'<span style="font-size:0.65rem;font-weight:800;color:#6a1b9a;background:rgba(106,27,154,0.1);border-radius:10px;padding:1px 7px;">📌 Saved</span>':'')+
             (isMarked?'<span style="font-size:0.65rem;font-weight:800;color:#e65100;background:rgba(255,152,0,0.12);border-radius:10px;padding:1px 7px;">🔖 Marked</span>':'')+
           '</div>'+
-          '<div class="hl-zone" id="rsQ_'+i+'" data-hlzone="rs_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+renderQuestionText(q.q)+'</div>'+
+          '<div id="rsQ_'+i+'" style="font-weight:700;font-size:0.84rem;line-height:1.5;margin-bottom:6px;">'+renderQuestionText(q.q)+'</div>'+
           '<div style="display:flex;flex-direction:column;gap:4px;">'+
             q.options.map(function(opt,oi){
               var isCOpt=oi===q.correct; var isUOpt=oi===userAns;
@@ -5756,14 +5832,12 @@ function _renderFullAnalysis(){
             }).join('')+
           '</div>'+
           (isSkipped?'<div style="font-size:0.72rem;color:#9e9e9e;margin-top:4px;">⏭ Skipped</div>':'')+
-          (q.explanation?'<div class="hl-zone" id="rs_exp_'+i+'" data-hlzone="rs_exp_'+i+'" style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
+          (q.explanation?'<div id="rs_exp_'+i+'" style="font-size:0.72rem;color:#1565c0;margin-top:6px;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>':'')+
           '<div style="font-size:0.72rem;margin-top:4px;color:'+statusColor+';font-weight:700;">'+statusIcon+' '+(isSkipped?'Skipped':isCorrect?'Correct':'Wrong')+'</div>'+
         '</div>'+
       '</div>'+
     '</div>';
   }).join('');
-  hlRestoreAll('rs');
-  hlAttachListeners('rs', acContent);
 }
 function reattempt(){
   if(!_lastQuiz) return;
