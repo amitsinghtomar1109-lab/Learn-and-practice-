@@ -369,6 +369,55 @@ body.quiz-immersive #page-attempt.page.active{
   .attempt-question-card{padding:12px!important;}
   .attempt-controls-panel{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
+.analysis-card-header{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  margin-bottom:12px;flex-wrap:wrap;
+}
+.analysis-card-title{margin:0!important;}
+.analysis-card-subtitle{font-size:.68rem;color:var(--text2);margin-top:3px;}
+.analysis-toolbar{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding:10px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:10px;
+}
+.analysis-search-wrap{
+  display:flex;align-items:center;gap:6px;flex:1 1 260px;min-width:220px;
+}
+.analysis-search-wrap .inp{flex:1;min-width:0;margin:0;}
+.analysis-search-btn{white-space:nowrap;}
+.analysis-search-status{
+  width:100%;font-size:.68rem;color:var(--text2);min-height:16px;
+}
+.analysis-filter-row{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-bottom:10px;padding:2px 0;
+}
+.analysis-filter-label{
+  color:var(--text2);font-size:.68rem;font-weight:800;margin-right:2px;
+}
+.analysis-selection-bar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-bottom:10px;padding:9px 10px;background:rgba(106,27,154,.07);
+  border:1px solid rgba(106,27,154,.2);border-radius:9px;
+}
+.analysis-selection-bar #rsSelectedCount{margin-right:auto;}
+.analysis-export-btn{
+  color:#00695c!important;border-color:rgba(0,105,92,.35)!important;
+  background:rgba(0,105,92,.06)!important;
+}
+.analysis-question-item{
+  padding:13px 0;border-bottom:1px solid var(--border);scroll-margin-top:84px;
+}
+.analysis-question-item:last-child{border-bottom:0;}
+.analysis-question-head{display:flex;gap:8px;align-items:flex-start;}
+.analysis-question-body{flex:1;min-width:0;}
+.analysis-question-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:4px;}
+.analysis-question-actions button{min-width:32px;}
+@media(max-width:520px){
+  .analysis-toolbar{padding:8px;}
+  .analysis-search-wrap{flex-basis:100%;min-width:0;}
+  .analysis-selection-bar .btn{font-size:.66rem;padding-left:7px;padding-right:7px;}
+}
 
 .page-header{
   display:flex; align-items:flex-start; justify-content:space-between;
@@ -1767,13 +1816,27 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
 
     <!-- Full Analysis -->
     <div class="card" id="analysisCard" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
-        <div class="card-title" style="margin:0;">🔍 Question-wise Analysis</div>
+      <div class="analysis-card-header">
+        <div>
+          <div class="card-title analysis-card-title">🔍 Question-wise Analysis</div>
+          <div class="analysis-card-subtitle">Filter, search, select aur export — sab controls ek jagah</div>
+        </div>
+        <button class="btn btn-outline btn-sm analysis-export-btn" onclick="exportAnalysisDoc()">⬇️ Export DOC</button>
       </div>
-      <!-- Filter chips for Full Analysis -->
-      <div id="rsFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
-      <div id="rsSelectionBar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:rgba(106,27,154,0.07);border:1px solid rgba(106,27,154,0.2);border-radius:9px;">
-        <span id="rsSelectedCount" style="font-size:0.72rem;font-weight:800;color:#6a1b9a;margin-right:auto;">0 selected</span>
+      <div class="analysis-toolbar">
+        <div class="analysis-search-wrap">
+          <input class="inp" id="rsSearchInput" type="search" placeholder="Question, option ya explanation search karein..." onkeydown="if(event.key==='Enter')rsSearchAnalysis()">
+          <button class="btn btn-primary btn-sm analysis-search-btn" onclick="rsSearchAnalysis()">🔎 Search</button>
+          <button class="btn btn-outline btn-sm" onclick="rsClearSearch()" title="Search clear karein">✕</button>
+        </div>
+        <div class="analysis-search-status" id="rsSearchStatus"></div>
+      </div>
+      <div class="analysis-filter-row">
+        <span class="analysis-filter-label">Filter:</span>
+        <div id="rsFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <div class="analysis-selection-bar" id="rsSelectionBar">
+        <span id="rsSelectedCount" style="font-size:0.72rem;font-weight:800;color:#6a1b9a;">0 selected</span>
         <button class="btn btn-xs btn-outline" onclick="_rsSelectVisible()">☑ Visible Select</button>
         <button class="btn btn-xs btn-outline" onclick="_rsClearSelected()">Clear</button>
         <button class="btn btn-xs btn-primary" onclick="openSelectedQuizBuilderFromResult()">➕ New Quiz</button>
@@ -5322,6 +5385,14 @@ var _rsFilter = 'all';
 var _rsSelected = {};
 var _selectedQuizSource = null;
 var _selectedQuizIndices = [];
+var _rsSearch = '';
+
+function _rsQuestionMatches(q){
+  var query=String(_rsSearch||'').trim().toLowerCase();
+  if(!query) return true;
+  var haystack=[q&&q.q||''].concat(q&&q.options||[]).concat([q&&q.explanation||'']).join(' ').toLowerCase();
+  return haystack.indexOf(query)!==-1;
+}
 
 function _rsVisibleIndices(){
   if(!_lastAttempt||!_lastQuiz) return [];
@@ -5333,6 +5404,7 @@ function _rsVisibleIndices(){
   qs.forEach(function(q,i){
     var ua=answers[i]; var isSkip=ua===null;
     var qKey=String(_lastAttempt.quizId)+'_'+i;
+    if(!_rsQuestionMatches(q)) return;
     var show=true;
     if(_rsFilter==='correct') show=!isSkip&&ua===q.correct;
     else if(_rsFilter==='wrong') show=!isSkip&&ua!==q.correct;
@@ -5510,8 +5582,70 @@ function showFullAnalysis(){
   if(!ac||!_lastAttempt||!_lastQuiz) return;
   ac.style.display='block';
   _rsFilter='all';
+  _rsSearch='';
+  var searchInput=document.getElementById('rsSearchInput');
+  if(searchInput) searchInput.value='';
   _renderFullAnalysis();
   ac.scrollIntoView({behavior:'smooth'});
+}
+function rsSearchAnalysis(){
+  var input=document.getElementById('rsSearchInput');
+  _rsSearch=input?(input.value||'').trim():'';
+  _renderFullAnalysis();
+  var first=document.querySelector('#analysisContent [data-rs-index]');
+  if(first) first.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function rsClearSearch(){
+  _rsSearch='';
+  var input=document.getElementById('rsSearchInput');
+  if(input) input.value='';
+  _renderFullAnalysis();
+}
+function exportAnalysisDoc(){
+  if(!_lastAttempt||!_lastQuiz){
+    showToast('Pehle analysis open karo!','error');
+    return;
+  }
+  var qs=_lastQuiz.questions||[];
+  var answers=_lastAttempt.answers||[];
+  var diffArr=_lastAttempt.difficulty||[];
+  var markedArr=_lastAttempt.marked||[];
+  var doc='<!doctype html><html><head><meta charset="utf-8"><title>'+
+    escHtml((_lastQuiz.name||'Quiz')+' - Analysis')+
+    '</title><style>body{font-family:Arial,sans-serif;color:#222;line-height:1.5}h1{color:#1565c0}h2{margin-top:24px;color:#1565c0;border-bottom:1px solid #bdd5ea;padding-bottom:5px}.meta{color:#555;font-size:12px}.tag{display:inline-block;padding:3px 7px;margin:2px;border-radius:10px;background:#edf3f8;font-size:12px}.correct{color:#2e7d32;font-weight:bold}.wrong{color:#c62828;font-weight:bold}.answer{background:#f4f9fe;padding:7px;border-radius:5px;margin:3px 0}.explanation{background:#eef6ff;border-left:4px solid #1565c0;padding:8px;margin-top:8px}</style></head><body>'+
+    '<h1>'+escHtml(_lastQuiz.name||'Quiz')+' — Question Analysis</h1>'+
+    '<p class="meta">Score: '+(_lastAttempt.score||0)+'/'+(_lastAttempt.total||qs.length)+' | Completed: '+escHtml(_lastAttempt.completedAt||'')+'</p>';
+  qs.forEach(function(q,i){
+    var ua=answers[i];
+    var skipped=ua===null||typeof ua==='undefined';
+    var correct=!skipped&&ua===q.correct;
+    var qKey=String(_lastAttempt.quizId)+'_'+i;
+    var saved=!!(STATE.savedQuestions&&STATE.savedQuestions[qKey]);
+    var level=diffArr[i]?({easy:'Easy (Level 1)',doubt:'Doubtful (Level 2)',tough:'Tough (Level 3)'}[diffArr[i]]||''):'';
+    var status=skipped?'Skipped':correct?'Correct':'Wrong';
+    var userResponse=skipped?'Not answered / Skipped':(q.options&&q.options[ua])||'Unknown option';
+    var correctResponse=(q.options&&q.options[q.correct])||'';
+    var tags=[status,level,markedArr[i]?'Marked':'',saved?'Saved':''].filter(Boolean);
+    doc+='<h2>Q'+(i+1)+'. '+escHtml(q.q||'')+'</h2>'+
+      '<p>'+tags.map(function(t){return '<span class="tag">'+escHtml(t)+'</span>';}).join('')+'</p>'+
+      '<p><b>Your response:</b> <span class="'+(correct?'correct':skipped?'':'wrong')+'">'+escHtml(userResponse)+'</span><br>'+
+      '<b>Correct answer:</b> '+escHtml(correctResponse)+'</p>'+
+      '<div><b>Options:</b>'+((q.options||[]).map(function(opt,oi){
+        var isC=oi===q.correct, isU=oi===ua;
+        return '<div class="answer '+(isC?'correct':isU?'wrong':'')+'">'+
+          String.fromCharCode(65+oi)+'. '+escHtml(opt)+(isC?' ✓':'')+(isU&&!isC?' ✗':'')+'</div>';
+      }).join(''))+'</div>'+
+      (q.explanation?'<div class="explanation"><b>Explanation:</b> '+escHtml(q.explanation)+'</div>':'');
+  });
+  doc+='</body></html>';
+  var blob=new Blob([doc],{type:'application/msword;charset=utf-8'});
+  var link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.download=String(_lastQuiz.name||'quiz').replace(/[^\w\u0900-\u097F-]+/g,'_')+'_analysis.doc';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(function(){URL.revokeObjectURL(link.href);link.remove();},1000);
+  showToast('📄 Analysis DOC download ho gaya','success');
 }
 function _rsSetFilter(f){
   _rsFilter=f;
@@ -5563,6 +5697,7 @@ function _renderFullAnalysis(){
     var q=item.q; var i=item.i;
     var ua=answers[i]; var isSkip=ua===null;
     var qKey=String(_lastAttempt.quizId)+'_'+i;
+    if(!_rsQuestionMatches(q)) return false;
     if(_rsFilter==='all') return true;
     if(_rsFilter==='correct') return !isSkip&&ua===q.correct;
     if(_rsFilter==='wrong') return !isSkip&&ua!==q.correct;
@@ -5575,6 +5710,11 @@ function _renderFullAnalysis(){
     return true;
   });
 
+  var searchStatus=document.getElementById('rsSearchStatus');
+  if(searchStatus){
+    if(_rsSearch) searchStatus.textContent=filtered.length+' matching question'+(filtered.length===1?'':'s')+' found for "'+_rsSearch+'"';
+    else searchStatus.textContent=filtered.length+' questions visible';
+  }
   if(!filtered.length){
     acContent.innerHTML='<div style="text-align:center;padding:24px;color:var(--text2);font-size:0.82rem;">Is filter me koi question nahi.</div>';
     return;
@@ -5592,7 +5732,7 @@ function _renderFullAnalysis(){
     var qKey=String(_lastAttempt.quizId)+'_'+i;
     var isSaved=STATE.savedQuestions&&STATE.savedQuestions[qKey];
     var isMarked=!!(markedArr[i]);
-    return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'+
+    return '<div class="analysis-question-item" data-rs-index="'+i+'">'+
       '<div style="display:flex;gap:8px;align-items:flex-start;">'+
         '<input type="checkbox" onchange="_rsToggleSelect('+i+',this.checked)" '+(_rsSelected[i]?'checked':'')+' aria-label="Question '+(i+1)+' select karein" style="width:18px;height:18px;accent-color:#6a1b9a;cursor:pointer;flex-shrink:0;margin-top:2px;">'+
         '<div style="background:'+statusColor+';color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">'+(i+1)+'</div>'+
