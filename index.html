@@ -1764,6 +1764,9 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <button onclick="markForReview()" id="atMarkBtn" class="attempt-control-action review">🔖 Mark for Review</button>
       <button onclick="toggleAnswerReveal()" id="atRevealBtn" class="attempt-control-action reveal">👁 Answer Dikhao</button>
       <button onclick="openOverview();closeAttemptControls();" class="attempt-control-action" aria-label="Question overview" title="Question list">📋 Overview</button>
+      <button onclick="attShuffleQuestionsNow();" class="attempt-control-action" title="Aage ke questions ka order badlein">🔀 Questions Shuffle</button>
+      <button onclick="attShuffleOptionsNow(false);" class="attempt-control-action" title="Is question ke options ka order badlein">🔀 Options Shuffle (Is Q)</button>
+      <button onclick="attShuffleOptionsNow(true);" class="attempt-control-action" title="Saare questions ke options ka order badlein">🔀 Options Shuffle (Sab Q)</button>
       <div class="attempt-controls-section-label">Question Tags</div>
       <button id="atEasyBtn" class="attempt-control-question-tag easy" onclick="setAttDifficulty('easy')">😊 Easy</button>
       <button id="atToughBtn" class="attempt-control-question-tag tough" onclick="setAttDifficulty('tough')">😓 Tough</button>
@@ -3102,9 +3105,9 @@ function renderSharedQuizLanding(quiz){
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
           (importedQuiz?
             '<button class="btn btn-primary" style="flex:1;" onclick="startAttempt('+JSON.stringify(importedQuiz.id)+',false)">▶ My Deck se Start</button>'+
-            '<button class="btn btn-outline" style="flex:1;" onclick="startAttempt('+JSON.stringify(importedQuiz.id)+',true)">🔀 Shuffled</button>':
+            '<button class="btn btn-outline" style="flex:1;" onclick="openShuffleChooser('+JSON.stringify(importedQuiz.id).replace(/"/g,'&quot;')+')">🔀 Shuffled</button>':
             '<button class="btn btn-primary" style="flex:1;" onclick="startSharedAttempt(false)">▶ Direct Attempt</button>'+
-            '<button class="btn btn-outline" style="flex:1;" onclick="startSharedAttempt(true)">🔀 Shuffled</button>')+
+            '<button class="btn btn-outline" style="flex:1;" onclick="openShuffleChooser(\'shared\')">🔀 Shuffled</button>')+
         '</div>'+
         '<div style="font-size:0.68rem;color:var(--text2);margin-top:9px;">Direct attempt ki history Shared Attempts me rahegi; My Deck copy ki progress Master Library ke normal attempts me save hogi.</div>'+
       '</div>'
@@ -3139,14 +3142,7 @@ function startSharedAttempt(shuffleQs){
   if(!_uid||(_user&&_user.isAnonymous)){ showToast('Pehle Google se login karo!','error'); return; }
 
   var quiz = JSON.parse(JSON.stringify(_sharedQuizData));
-  if(shuffleQs){
-    quiz.questions = shuffle(quiz.questions);
-    quiz.questions.forEach(function(q){
-      var ct = q.options[q.correct];
-      q.options = shuffle(q.options);
-      q.correct = q.options.indexOf(ct);
-    });
-  }
+  attApplyShuffleMode(quiz, shuffleQs);
 
   // Set up attempt state using existing _att, mark as shared
   if(_att.timer) clearInterval(_att.timer);
@@ -4185,7 +4181,7 @@ function renderCreateList(){
           (bestPct!==null?'<div style="background:'+(bestPct>=75?'rgba(46,125,50,0.12)':bestPct>=50?'rgba(230,81,0,0.1)':'rgba(198,40,40,0.1)')+';border-radius:20px;padding:2px 10px;font-weight:900;font-size:0.82rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';text-align:center;">Best: '+bestPct+'%</div>':'')+
           '<button class="btn btn-primary btn-xs" onclick="openQuizQuestions('+q.id+')">✏️ Edit</button>'+
           '<button class="btn btn-green btn-xs" onclick="startAttempt('+q.id+',false)">▶ Attempt</button>'+
-          '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" style="font-size:0.7rem;">🔀 Shuffled</button>'+
+          '<button class="btn btn-outline btn-xs" onclick="openShuffleChooser('+q.id+')" style="font-size:0.7rem;">🔀 Shuffled</button>'+
           '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
           '<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>'+
         '</div>'+
@@ -4493,7 +4489,7 @@ function renderPracticeQuizCards(quizzes){
         '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">'+
           (bestPct!==null?'<div style="text-align:center;font-weight:900;font-size:0.88rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';">Best '+bestPct+'%</div>':'')+
           '<button class="btn btn-primary btn-sm" onclick="startAttempt('+q.id+',false)" '+(!(q.questions||[]).length?'disabled style="opacity:0.5;"':'')+'>▶ Start</button>'+
-          '<button class="btn btn-outline btn-xs" onclick="startAttempt('+q.id+',true)" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
+          '<button class="btn btn-outline btn-xs" onclick="openShuffleChooser('+q.id+')" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
           (attempts.length?'<button class="btn btn-outline btn-xs" onclick="viewLastResult('+q.id+')">📊 Results</button>':'')+
           '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
           (isFocusedRevisionQuiz(q)?'<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>':'')+
@@ -4617,14 +4613,7 @@ function attBeginFreshAttempt(quiz, shuffleQs){
   attStopRevisionTimer();
 
   var qCopy=JSON.parse(JSON.stringify(quiz));
-  if(shuffleQs){
-    qCopy.questions=shuffle(qCopy.questions);
-    qCopy.questions.forEach(function(q){
-      var ct=q.options[q.correct];
-      q.options=shuffle(q.options);
-      q.correct=q.options.indexOf(ct);
-    });
-  }
+  attApplyShuffleMode(qCopy, shuffleQs);
 
   _att={
     quizId:quiz.id, quiz:qCopy,
@@ -4679,6 +4668,130 @@ function attShowResumeChoice(quiz, saved, shuffleQs){
     cleanup();
     attResumeFromPause(saved);
   };
+}
+
+// ================================================================
+// SHUFFLE HELPERS — Questions order + Options order (alag-alag)
+// ================================================================
+// mode: true / 'both' => dono shuffle | {q:bool,o:bool} => jo select ho
+function attNormShuffleMode(mode){
+  if(mode===true||mode==='both') return {q:true,o:true};
+  if(mode&&typeof mode==='object') return {q:!!mode.q,o:!!mode.o};
+  return {q:false,o:false};
+}
+// Ek question ke options ka order badalta hai; correct index sahi rakhta hai.
+// Permutation return karta hai (new index -> old index) taaki answers remap ho saken.
+function attShuffleQOptions(q){
+  if(!q||!Array.isArray(q.options)||q.options.length<2) return null;
+  var idx=q.options.map(function(_,i){ return i; });
+  var perm=shuffle(idx);
+  // Agar order same aa gaya to ek baar dobara try karo (visible change ke liye)
+  if(perm.every(function(v,i){ return v===i; })) perm=shuffle(idx);
+  var oldOpts=q.options;
+  q.options=perm.map(function(oi){ return oldOpts[oi]; });
+  if(typeof q.correct==='number') q.correct=perm.indexOf(q.correct);
+  return perm;
+}
+function attApplyShuffleMode(quiz, mode){
+  var m=attNormShuffleMode(mode);
+  if(!quiz||!Array.isArray(quiz.questions)) return;
+  if(m.q) quiz.questions=shuffle(quiz.questions);
+  if(m.o) quiz.questions.forEach(function(q){ attShuffleQOptions(q); });
+}
+// Quiz shuru karne se pehle chooser popup
+function openShuffleChooser(quizId){
+  var old=document.getElementById('shuffleChooserOverlay');
+  if(old) old.remove();
+  var ov=document.createElement('div');
+  ov.id='shuffleChooserOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.52);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML=
+    '<div style="background:var(--surface,#fff);border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="font-weight:900;font-size:1rem;color:var(--text);margin-bottom:10px;">🔀 Shuffle Options</div>'+
+      '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;">'+
+        '<input type="checkbox" id="shufQ" checked style="width:18px;height:18px;margin-top:2px;">'+
+        '<span style="font-size:0.85rem;color:var(--text);"><b>Questions shuffle</b><br><span style="font-size:0.72rem;color:var(--text2);">Questions ka serial (order) badal jayega</span></span>'+
+      '</label>'+
+      '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:14px;cursor:pointer;">'+
+        '<input type="checkbox" id="shufO" checked style="width:18px;height:18px;margin-top:2px;">'+
+        '<span style="font-size:0.85rem;color:var(--text);"><b>Options shuffle</b><br><span style="font-size:0.72rem;color:var(--text2);">Har question ke options (A, B, C, D) ka order badal jayega</span></span>'+
+      '</label>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button id="shufCancelBtn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border,#bdd5ea);background:transparent;color:var(--text2,#37526d);font-weight:700;cursor:pointer;">Cancel</button>'+
+        '<button id="shufStartBtn" class="btn btn-primary" style="flex:1;padding:11px;">▶ Start</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  document.getElementById('shufCancelBtn').onclick=function(){ ov.remove(); };
+  document.getElementById('shufStartBtn').onclick=function(){
+    var mode={q:document.getElementById('shufQ').checked, o:document.getElementById('shufO').checked};
+    ov.remove();
+    if(quizId==='shared') startSharedAttempt(mode);
+    else startAttempt(quizId, mode);
+  };
+}
+// Quiz ke dauran: current question ke baad wale questions ka order badlo
+function attShuffleQuestionsNow(){
+  if(!_att||_att.submitted){ return; }
+  if(_att.revisionMode){ showToast('Revision mode me shuffle nahi ho sakta','info'); return; }
+  var qs=_att.quiz.questions||[];
+  var start=_att.currentQ+1;
+  var n=qs.length-start;
+  if(n<2){ showToast('Shuffle karne ke liye aage kam se kam 2 questions chahiye','info'); return; }
+  if(!confirm('Current question ke baad ke '+n+' questions ka order shuffle karna hai?\n(Pehle ke attempt/mark/tags apne question ke saath rahenge)')) return;
+  var idx=[]; for(var i=start;i<qs.length;i++) idx.push(i);
+  var order=shuffle(idx); // order[k] = purana index jo ab position idx[k] par aayega
+  var pick=function(arr){ var copy=arr.slice(); order.forEach(function(oldI,k){ copy[idx[k]]=arr[oldI]; }); return copy; };
+  _att.quiz.questions=pick(qs);
+  _att.answers=pick(_att.answers);
+  _att.marked=pick(_att.marked);
+  _att.skipped=pick(_att.skipped);
+  _att.difficulty=pick(_att.difficulty);
+  // Saved questions ke keys (quizId_index) bhi naye index par le jao
+  var prefix=String(_att.quizId)+'_';
+  var oldToNew={};
+  order.forEach(function(oldI,k){ oldToNew[oldI]=idx[k]; });
+  var remapped={}, changed=false;
+  Object.keys(STATE.savedQuestions||{}).forEach(function(key){
+    if(key.indexOf(prefix)!==0){ remapped[key]=STATE.savedQuestions[key]; return; }
+    var oi=parseInt(key.slice(prefix.length),10);
+    if(isFinite(oi)&&oldToNew.hasOwnProperty(oi)&&oldToNew[oi]!==oi){
+      var item=STATE.savedQuestions[key]; item.qIdx=oldToNew[oi];
+      remapped[prefix+oldToNew[oi]]=item; changed=true;
+    } else { remapped[key]=STATE.savedQuestions[key]; }
+  });
+  STATE.savedQuestions=remapped;
+  if(changed) cloudSaveSavedQ();
+  _att.perQQuestion=-1; _att.perQLeft=null;
+  attSaveProgress();
+  closeAttemptControls();
+  renderCurrentQ();
+  showToast('🔀 Aage ke '+n+' questions shuffle ho gaye!','success');
+}
+// Quiz ke dauran: options ka order badlo (sirf current Q ya saare Q)
+function attShuffleOptionsNow(allQ){
+  if(!_att||_att.submitted) return;
+  if(_att.revisionMode){ showToast('Revision mode me shuffle nahi ho sakta','info'); return; }
+  var qs=_att.quiz.questions||[];
+  var targets=allQ?qs.map(function(_,i){ return i; }):[_att.currentQ];
+  var done=0, savedChanged=false;
+  targets.forEach(function(i){
+    var q=qs[i]; var oldAns=_att.answers[i];
+    var perm=attShuffleQOptions(q);
+    if(!perm) return;
+    done++;
+    if(oldAns!==null&&oldAns!==undefined) _att.answers[i]=perm.indexOf(oldAns);
+    // Saved copy me bhi naya option order rakho
+    var sk=String(_att.quizId)+'_'+i;
+    if(STATE.savedQuestions&&STATE.savedQuestions[sk]){ STATE.savedQuestions[sk].q=q; savedChanged=true; }
+  });
+  if(!done){ showToast('Shuffle karne layak options nahi mile','info'); return; }
+  if(savedChanged) cloudSaveSavedQ();
+  attSaveProgress();
+  closeAttemptControls();
+  renderCurrentQ();
+  showToast(allQ?'🔀 Saare questions ke options shuffle ho gaye!':'🔀 Is question ke options shuffle ho gaye!','success');
 }
 function updateTimerDisplay(){
   // Revision mode uses the same compact header slot for its countdown.
