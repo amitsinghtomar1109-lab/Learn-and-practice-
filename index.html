@@ -1759,15 +1759,15 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <button onclick="toggleNightMode()" id="attemptNightModeControl" class="attempt-control-theme" aria-pressed="false">🌙 Night</button>
       <button onclick="toggleReadingMode()" id="attemptReadingModeControl" class="attempt-control-theme" aria-pressed="false">📖 Reading</button>
       <button onclick="openAttemptSettings()" class="attempt-control-settings">⚙ Settings</button>
-      <div class="attempt-controls-section-label">Question Actions</div>
+      <div class="attempt-controls-section-label" id="attemptQuestionActionsLabel">Question Actions</div>
       <button onclick="skipQ()" id="atSkipBtn" class="attempt-control-action">⏩ Skip</button>
       <button onclick="markForReview()" id="atMarkBtn" class="attempt-control-action review">🔖 Mark for Review</button>
       <button onclick="toggleAnswerReveal()" id="atRevealBtn" class="attempt-control-action reveal">👁 Answer Dikhao</button>
       <button onclick="openOverview();closeAttemptControls();" class="attempt-control-action" aria-label="Question overview" title="Question list">📋 Overview</button>
-      <button onclick="attShuffleQuestionsNow();" class="attempt-control-action" title="Aage ke questions ka order badlein">🔀 Questions Shuffle</button>
-      <button onclick="attShuffleOptionsNow(false);" class="attempt-control-action" title="Is question ke options ka order badlein">🔀 Options Shuffle (Is Q)</button>
-      <button onclick="attShuffleOptionsNow(true);" class="attempt-control-action" title="Saare questions ke options ka order badlein">🔀 Options Shuffle (Sab Q)</button>
-      <div class="attempt-controls-section-label">Question Tags</div>
+      <button id="atShuffleQuestionsBtn" onclick="attShuffleQuestionsNow();" class="attempt-control-action" title="Aage ke questions ka order badlein">🔀 Questions Shuffle</button>
+      <button id="atShuffleOptionsBtn" onclick="attShuffleOptionsNow(false);" class="attempt-control-action" title="Is question ke options ka order badlein">🔀 Options Shuffle (Is Q)</button>
+      <button id="atShuffleAllOptionsBtn" onclick="attShuffleOptionsNow(true);" class="attempt-control-action" title="Saare questions ke options ka order badlein">🔀 Options Shuffle (Sab Q)</button>
+      <div class="attempt-controls-section-label" id="attemptQuestionTagsLabel">Question Tags</div>
       <button id="atEasyBtn" class="attempt-control-question-tag easy" onclick="setAttDifficulty('easy')">😊 Easy</button>
       <button id="atToughBtn" class="attempt-control-question-tag tough" onclick="setAttDifficulty('tough')">😓 Tough</button>
       <button id="atDoubtBtn" class="attempt-control-question-tag doubt" onclick="setAttDifficulty('doubt')">🤔 Doubtful</button>
@@ -1797,7 +1797,8 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <!-- Only question navigation remains outside the master controls -->
       <div class="attempt-navigation">
         <button class="btn btn-outline btn-sm" onclick="navQ(-1)" id="atPrev">← Pichla</button>
-        <div class="attempt-next-stack">
+      <div class="attempt-next-stack">
+          <button class="btn btn-primary btn-sm" id="atExamNext" onclick="navQ(1)" hidden>Next →</button>
           <div class="attempt-level-next" id="atLevelNext" role="group" aria-label="Question level choose karke next question par jaayein">
             <button class="attempt-level-segment level-3" type="button" onclick="nextWithDifficulty('tough')" aria-label="Level 3 Tough mark karke next question" title="3 — Tough">
               <span class="level-number">3</span>
@@ -2750,7 +2751,10 @@ function cloudDeleteQuiz(id){
 function cloudSaveAttempt(a){
   if(!_db||!_uid) return;
   // First get existing attempts for this quiz, then delete oldest if >=3, then save new
-  var existingForQuiz=STATE.attempts.filter(function(x){ return x.quizId===a.quizId; });
+  var attemptMode=a.attemptMode||'practice';
+  var existingForQuiz=STATE.attempts.filter(function(x){
+    return x.quizId===a.quizId&&(x.attemptMode||'practice')===attemptMode;
+  });
   existingForQuiz.sort(function(x,y){ return (x.id||0)-(y.id||0); });
   // If already 3 or more, delete oldest to make room
   var deletePromises=[];
@@ -2775,27 +2779,27 @@ function cloudSaveAttempt(a){
 // first (so refresh/offline is safe); Firestore makes the same session
 // available after login on another tab/device.
 // ================================================================
-function attSessionDocId(quizId){
-  return 'quiz_'+String(quizId);
+function attSessionDocId(quizId, attemptMode){
+  return 'quiz_'+String(quizId)+(attemptMode==='exam'?'_exam':'');
 }
 function cloudSaveQuizSession(state){
   if(!_db||!_uid||!state||state.isShared) return Promise.resolve(false);
   return _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
-    .doc(attSessionDocId(state.quizId)).set(state, {merge:true})
+    .doc(attSessionDocId(state.quizId,state.attemptMode)).set(state, {merge:true})
     .then(function(){ return true; })
     .catch(function(e){ console.warn('quiz session save err:',e); return false; });
 }
-function cloudLoadQuizSession(quizId){
+function cloudLoadQuizSession(quizId, attemptMode){
   if(!_db||!_uid) return Promise.resolve(null);
   return _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
-    .doc(attSessionDocId(quizId)).get()
+    .doc(attSessionDocId(quizId,attemptMode)).get()
     .then(function(d){ return d.exists ? d.data() : null; })
     .catch(function(e){ console.warn('quiz session load err:',e); return null; });
 }
-function cloudDeleteQuizSession(quizId){
+function cloudDeleteQuizSession(quizId, attemptMode){
   if(!_db||!_uid) return;
   _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
-    .doc(attSessionDocId(quizId)).delete().catch(function(e){
+    .doc(attSessionDocId(quizId,attemptMode)).delete().catch(function(e){
       console.warn('quiz session delete err:',e);
     });
 }
@@ -3897,21 +3901,23 @@ function smDeleteEntry(idx){
 // ================================================================
 // AUTO SAVE, PAUSE & RESUME (quiz state + timer save on back/refresh)
 // ================================================================
-// Previous versions used one global localStorage key and a browser confirm.
-// That meant another quiz could overwrite the saved quiz and a cloud-only
-// session was invisible after refresh/device change. Sessions are now keyed
-// per quiz and mirrored to Firestore.
+// Sessions are keyed by quiz and mode so Exam progress never replaces the
+// existing practice/revision session, locally or in Firestore.
 var _attPauseKey = 'ts_att_paused';
 var _attCloudSaveTimer = null;
 var _attAutosaveTimer = null;
 
-function attLocalKey(quizId){
-  return _attPauseKey+'_'+String(quizId);
+function attModeName(mode){
+  return mode==='exam'?'exam':'practice';
+}
+function attLocalKey(quizId, attemptMode){
+  return _attPauseKey+'_'+String(quizId)+(attModeName(attemptMode)==='exam'?'_exam':'');
 }
 function attBuildState(paused){
   if(!_att||!_att.quizId||_att.submitted) return null;
   return {
     quizId:_att.quizId,
+    attemptMode:attModeName(_att.attemptMode),
     quiz:_att.quiz,
     answers:(_att.answers||[]).slice(),
     marked:(_att.marked||[]).slice(),
@@ -3933,10 +3939,12 @@ function attBuildState(paused){
 }
 function attWriteState(state, immediateCloud){
   if(!state) return;
-  try{ localStorage.setItem(attLocalKey(state.quizId), JSON.stringify(state)); }catch(e){}
-  // Keep the legacy key as a migration breadcrumb only for the current
-  // session; readers below also understand old saved data.
-  try{ localStorage.setItem(_attPauseKey, JSON.stringify(state)); }catch(e){}
+  var mode=attModeName(state.attemptMode);
+  try{ localStorage.setItem(attLocalKey(state.quizId,mode), JSON.stringify(state)); }catch(e){}
+  // The legacy global key belongs to the original practice flow only.
+  if(mode==='practice'){
+    try{ localStorage.setItem(_attPauseKey, JSON.stringify(state)); }catch(e){}
+  }
   if(state.isShared) return;
   if(immediateCloud){
     if(_attCloudSaveTimer){ clearTimeout(_attCloudSaveTimer); _attCloudSaveTimer=null; }
@@ -3960,46 +3968,57 @@ function attSavePauseState(){
   attWriteState(state, true);
   return state;
 }
-function attClearPauseState(quizId){
+function attClearPauseState(quizId, attemptMode){
   var id=quizId||(_att&&_att.quizId);
   if(!id) return;
-  try{ localStorage.removeItem(attLocalKey(id)); }catch(e){}
-  try{
-    var legacy=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
-    if(!legacy||String(legacy.quizId)===String(id)) localStorage.removeItem(_attPauseKey);
-  }catch(e){}
-  if(!(_att&&_att.isShared)) cloudDeleteQuizSession(id);
+  var mode=attModeName(typeof attemptMode!=='undefined'?attemptMode:
+    ((_att&&String(_att.quizId)===String(id))?_att.attemptMode:'practice'));
+  try{ localStorage.removeItem(attLocalKey(id,mode)); }catch(e){}
+  if(mode==='practice'){
+    try{
+      var legacy=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
+      if(!legacy||String(legacy.quizId)===String(id)) localStorage.removeItem(_attPauseKey);
+    }catch(e){}
+  }
+  if(!(_att&&_att.isShared)) cloudDeleteQuizSession(id,mode);
 }
-function attReadLocalState(quizId){
+function attReadLocalState(quizId, attemptMode){
+  var mode=attModeName(attemptMode);
   try{
-    var raw=localStorage.getItem(attLocalKey(quizId));
-    // Migrate the old single-key format when it belongs to this quiz.
-    if(!raw){
+    var raw=localStorage.getItem(attLocalKey(quizId,mode));
+    // Migrate the old single-key format into practice only.
+    if(!raw&&mode==='practice'){
       var old=JSON.parse(localStorage.getItem(_attPauseKey)||'null');
       if(old&&String(old.quizId)===String(quizId)){
+        old.attemptMode='practice';
         raw=JSON.stringify(old);
-        localStorage.setItem(attLocalKey(quizId),raw);
+        localStorage.setItem(attLocalKey(quizId,mode),raw);
       }
     }
     var s=raw?JSON.parse(raw):null;
     if(!s||!s.quizId) return null;
+    s.attemptMode=attModeName(s.attemptMode);
+    if(s.attemptMode!==mode) return null;
     if(Date.now()-(s.savedAt||0)>7*24*60*60*1000){
-      attClearPauseState(quizId);
+      attClearPauseState(quizId,mode);
       return null;
     }
     return s;
   }catch(e){ return null; }
 }
-function attHasPausedState(quizId){
-  var s=attReadLocalState(quizId);
-  return s&&String(s.quizId)===String(quizId)?s:null;
+function attHasPausedState(quizId, attemptMode){
+  var s=attReadLocalState(quizId,attemptMode);
+  return s&&String(s.quizId)===String(quizId)&&s.attemptMode===attModeName(attemptMode)?s:null;
 }
-function attLoadSavedState(quizId){
-  var local=attHasPausedState(quizId);
-  return cloudLoadQuizSession(quizId).then(function(cloud){
+function attLoadSavedState(quizId, attemptMode){
+  var mode=attModeName(attemptMode);
+  var local=attHasPausedState(quizId,mode);
+  return cloudLoadQuizSession(quizId,mode).then(function(cloud){
     if(cloud&&cloud.quizId&&String(cloud.quizId)===String(quizId)&&
+       attModeName(cloud.attemptMode)===mode&&
        (!local||(cloud.savedAt||0)>(local.savedAt||0))){
-      try{ localStorage.setItem(attLocalKey(quizId),JSON.stringify(cloud)); }catch(e){}
+      cloud.attemptMode=mode;
+      try{ localStorage.setItem(attLocalKey(quizId,mode),JSON.stringify(cloud)); }catch(e){}
       return cloud;
     }
     return local;
@@ -4037,14 +4056,15 @@ function attStartFullTimer(){
   }
 }
 function attResumeFromPause(saved){
+  var mode=attModeName(saved&&saved.attemptMode);
   var quiz=STATE.quizzes.find(function(q){return String(q.id)===String(saved.quizId);});
-  if(!quiz||!saved.quiz){ attClearPauseState(saved&&saved.quizId); return false; }
+  if(!quiz||!saved.quiz){ attClearPauseState(saved&&saved.quizId,mode); return false; }
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
   attStopRevisionTimer();
   var total=(saved.quiz.questions||[]).length;
   _att={
-    quizId:saved.quizId, quiz:saved.quiz,
+    quizId:saved.quizId, quiz:saved.quiz, attemptMode:mode,
     answers:(saved.answers||[]).slice(0,total),
     marked:(saved.marked||[]).slice(0,total),
     skipped:(saved.skipped||[]).slice(0,total),
@@ -4064,9 +4084,9 @@ function attResumeFromPause(saved){
   while(_att.marked.length<total) _att.marked.push(false);
   while(_att.skipped.length<total) _att.skipped.push(false);
   while(_att.difficulty.length<total) _att.difficulty.push(null);
-  navTo('attempt',{title:'📝 '+_att.quiz.name},true);
-  document.getElementById('topbarTitle').textContent='📝 '+_att.quiz.name;
-  if(getRevisionInstantMode()&&_att.revisionMode&&_att.revisionPhase!=='answer'&&!_att.revisionComplete){
+  navTo('attempt',{title:(mode==='exam'?'🧪 Exam · ':'📝 ')+_att.quiz.name},true);
+  document.getElementById('topbarTitle').textContent=(mode==='exam'?'🧪 Exam · ':'📝 ')+_att.quiz.name;
+  if(mode!=='exam'&&getRevisionInstantMode()&&_att.revisionMode&&_att.revisionPhase!=='answer'&&!_att.revisionComplete){
     _att.revisionPhase='answer';
     _att.answerRevealed=true;
     _att.revisionRemaining=getRevisionSlideDuration();
@@ -4074,10 +4094,38 @@ function attResumeFromPause(saved){
   attStartFullTimer();
   attStartAutoSave();
   renderCurrentQ();
-  if(_att.revisionMode) attStartRevisionTimer();
+  if(_att.revisionMode&&mode!=='exam') attStartRevisionTimer();
   attSaveProgress();
   showToast('▶ Quiz resume ho gayi — wahin se jahan chhodi thi!','success');
   return true;
+}
+
+function attIsExamMode(){
+  return !!(_att&&_att.attemptMode==='exam');
+}
+function updateAttemptModeUI(){
+  var exam=attIsExamMode();
+  document.body.classList.toggle('quiz-exam-mode',exam);
+  var hiddenInExam=[
+    'atRevisionBtn','atRevealBtn','atPillBtn','atEasyBtn','atToughBtn','atDoubtBtn',
+    'revisionInstantToggle','atShuffleQuestionsBtn','atShuffleOptionsBtn','atShuffleAllOptionsBtn',
+    'atQuestionSaveBtn','atEditQuestionBtn','atDeleteQuestionBtn','attemptQuestionTagsLabel'
+  ];
+  hiddenInExam.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display=exam?'none':'';
+  });
+  var examNext=document.getElementById('atExamNext');
+  var levelNext=document.getElementById('atLevelNext');
+  if(examNext){
+    examNext.hidden=!exam;
+    examNext.style.display=exam?'':'none';
+  }
+  if(levelNext) levelNext.hidden=exam||!!(_att&&_att.revisionMode);
+  var title=document.getElementById('atTitle');
+  if(title&&_att&&_att.quiz) title.textContent=(exam?'🧪 Exam · ':'')+_att.quiz.name;
+  var topTitle=document.getElementById('topbarTitle');
+  if(topTitle&&_att&&_att.quiz) topTitle.textContent=(exam?'🧪 Exam · ':'📝 ')+_att.quiz.name;
 }
 
 // ================================================================
@@ -4181,6 +4229,7 @@ function renderCreateList(){
           (bestPct!==null?'<div style="background:'+(bestPct>=75?'rgba(46,125,50,0.12)':bestPct>=50?'rgba(230,81,0,0.1)':'rgba(198,40,40,0.1)')+';border-radius:20px;padding:2px 10px;font-weight:900;font-size:0.82rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';text-align:center;">Best: '+bestPct+'%</div>':'')+
           '<button class="btn btn-primary btn-xs" onclick="openQuizQuestions('+q.id+')">✏️ Edit</button>'+
           '<button class="btn btn-green btn-xs" onclick="startAttempt('+q.id+',false)">▶ Attempt</button>'+
+          '<button class="btn btn-outline btn-xs" style="color:#6a1b9a;border-color:rgba(106,27,154,.35);" onclick="startAttempt('+q.id+',false,\'exam\')">🧪 Exam Mode</button>'+
           '<button class="btn btn-outline btn-xs" onclick="openShuffleChooser('+q.id+')" style="font-size:0.7rem;">🔀 Shuffled</button>'+
           '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
           '<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>'+
@@ -4489,6 +4538,7 @@ function renderPracticeQuizCards(quizzes){
         '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">'+
           (bestPct!==null?'<div style="text-align:center;font-weight:900;font-size:0.88rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';">Best '+bestPct+'%</div>':'')+
           '<button class="btn btn-primary btn-sm" onclick="startAttempt('+q.id+',false)" '+(!(q.questions||[]).length?'disabled style="opacity:0.5;"':'')+'>▶ Start</button>'+
+          '<button class="btn btn-outline btn-xs" style="color:#6a1b9a;border-color:rgba(106,27,154,.35);" onclick="startAttempt('+q.id+',false,\'exam\')" '+(!(q.questions||[]).length?'disabled':'')+'>🧪 Exam Mode</button>'+
           '<button class="btn btn-outline btn-xs" onclick="openShuffleChooser('+q.id+')" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
           (attempts.length?'<button class="btn btn-outline btn-xs" onclick="viewLastResult('+q.id+')">📊 Results</button>':'')+
           '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
@@ -4591,7 +4641,8 @@ var _att = {
 // Global saved questions set (key = quizId+'_'+qIdx)
 if(!STATE.savedQuestions) STATE.savedQuestions = {};
 
-function startAttempt(quizId, shuffleQs){
+function startAttempt(quizId, shuffleQs, attemptMode){
+  attemptMode=attModeName(attemptMode);
   var quiz=STATE.quizzes.find(function(q){ return q.id===quizId; });
   if(!quiz){ showToast('Quiz nahi mili!','error'); return; }
   if(!(quiz.questions||[]).length){ showToast('Is quiz mein koi question nahi!','error'); return; }
@@ -4599,14 +4650,15 @@ function startAttempt(quizId, shuffleQs){
   // async so a session saved on another tab/device is not missed.
   var launch=function(saved){
     if(saved){
-      attShowResumeChoice(quiz, saved, shuffleQs);
+      attShowResumeChoice(quiz, saved, shuffleQs, attemptMode);
     } else {
-      attBeginFreshAttempt(quiz, shuffleQs);
+      attBeginFreshAttempt(quiz, shuffleQs, attemptMode);
     }
   };
-  attLoadSavedState(quizId).then(launch);
+  attLoadSavedState(quizId,attemptMode).then(launch);
 }
-function attBeginFreshAttempt(quiz, shuffleQs){
+function attBeginFreshAttempt(quiz, shuffleQs, attemptMode){
+  attemptMode=attModeName(attemptMode);
   attStopAutoSave();
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
@@ -4616,7 +4668,7 @@ function attBeginFreshAttempt(quiz, shuffleQs){
   attApplyShuffleMode(qCopy, shuffleQs);
 
   _att={
-    quizId:quiz.id, quiz:qCopy,
+    quizId:quiz.id, quiz:qCopy, attemptMode:attemptMode,
     answers:qCopy.questions.map(function(){ return null; }),
     marked:qCopy.questions.map(function(){ return false; }),
     skipped:qCopy.questions.map(function(){ return false; }),
@@ -4629,14 +4681,16 @@ function attBeginFreshAttempt(quiz, shuffleQs){
     sessionId:'att_'+Date.now()+'_'+Math.random().toString(36).slice(2)
   };
 
-  navTo('attempt', {title:'📝 '+quiz.name}, true);
-  document.getElementById('topbarTitle').textContent = '📝 '+quiz.name;
+  var attemptTitle=(attemptMode==='exam'?'🧪 Exam · ':'📝 ')+quiz.name;
+  navTo('attempt', {title:attemptTitle}, true);
+  document.getElementById('topbarTitle').textContent = attemptTitle;
   attStartFullTimer();
   attStartAutoSave();
   renderCurrentQ();
   attSaveProgress();
 }
-function attShowResumeChoice(quiz, saved, shuffleQs){
+function attShowResumeChoice(quiz, saved, shuffleQs, attemptMode){
+  attemptMode=attModeName(attemptMode);
   var old=document.getElementById('attResumeOverlay');
   if(old) old.remove();
   var total=(saved.quiz&&saved.quiz.questions||[]).length;
@@ -4649,7 +4703,7 @@ function attShowResumeChoice(quiz, saved, shuffleQs){
     '<div style="background:var(--surface,#fff);border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'+
       '<div style="font-weight:900;font-size:1rem;color:var(--text);margin-bottom:8px;">⏸ Last Session Mili</div>'+
       '<div style="font-size:0.86rem;color:var(--text2);margin-bottom:16px;line-height:1.6;">'+
-        '<b>'+escHtml(quiz.name)+'</b> ki adhoori practice saved hai.<br>'+
+         '<b>'+escHtml(quiz.name)+'</b> ki adhoori '+(attemptMode==='exam'?'Exam':'practice')+' progress saved hai.<br>'+
         '<b>'+answered+'</b> questions attempt kiye gaye, <b>'+remaining+'</b> baaki hain.<br><br>'+
         'Aap wahi session continue kar sakte hain ya bilkul naya session shuru kar sakte hain.'+
       '</div>'+
@@ -4662,7 +4716,7 @@ function attShowResumeChoice(quiz, saved, shuffleQs){
   function cleanup(){ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); }
   document.getElementById('attNewSessionBtn').onclick=function(){
     cleanup();
-    attBeginFreshAttempt(quiz, shuffleQs);
+    attBeginFreshAttempt(quiz, shuffleQs, attemptMode);
   };
   document.getElementById('attLastSessionBtn').onclick=function(){
     cleanup();
@@ -4733,7 +4787,7 @@ function openShuffleChooser(quizId){
 }
 // Quiz ke dauran: current question ke baad wale questions ka order badlo
 function attShuffleQuestionsNow(){
-  if(!_att||_att.submitted){ return; }
+  if(!_att||_att.submitted||attIsExamMode()){ return; }
   if(_att.revisionMode){ showToast('Revision mode me shuffle nahi ho sakta','info'); return; }
   var qs=_att.quiz.questions||[];
   var start=_att.currentQ+1;
@@ -4771,7 +4825,7 @@ function attShuffleQuestionsNow(){
 }
 // Quiz ke dauran: options ka order badlo (sirf current Q ya saare Q)
 function attShuffleOptionsNow(allQ){
-  if(!_att||_att.submitted) return;
+  if(!_att||_att.submitted||attIsExamMode()) return;
   if(_att.revisionMode){ showToast('Revision mode me shuffle nahi ho sakta','info'); return; }
   var qs=_att.quiz.questions||[];
   var targets=allQ?qs.map(function(_,i){ return i; }):[_att.currentQ];
@@ -4807,12 +4861,13 @@ function updateTimerDisplay(){
 }
 function renderCurrentQ(){
   var st=_att; var qs=st.quiz.questions; var q=qs[st.currentQ]; if(!q) return;
+  updateAttemptModeUI();
   var total=qs.length;
   var answered=st.answers.filter(function(a){ return a!==null; }).length;
   var markedCount=st.marked.filter(Boolean).length;
   var progText='Q '+(st.currentQ+1)+' / '+total+' | '+answered+' answered';
   if(markedCount) progText+=' | 🔖 '+markedCount+' marked';
-  document.getElementById('atTitle').textContent=st.quiz.name;
+  document.getElementById('atTitle').textContent=(attIsExamMode()?'🧪 Exam · ':'')+st.quiz.name;
   document.getElementById('atProgress').textContent=progText;
   document.getElementById('atBar').style.width=Math.round(((st.currentQ+1)/total)*100)+'%';
   document.getElementById('atQNum').textContent='Question '+(st.currentQ+1)+' of '+total;
@@ -4834,7 +4889,7 @@ function renderCurrentQ(){
 
   var optsEl=document.getElementById('atOptions');
   var revisionQuestionOnly=_att.revisionMode&&_att.revisionPhase!=='answer';
-  var revealed=_att.answerRevealed||(_att.revisionMode&&!revisionQuestionOnly);
+  var revealed=!attIsExamMode()&&(_att.answerRevealed||(_att.revisionMode&&!revisionQuestionOnly));
   var hideRevisionOptions=_att.revisionMode&&getRevisionHideOtherOptions();
   optsEl.innerHTML=revisionQuestionOnly ? '' : q.options.map(function(opt,i){
     if(hideRevisionOptions&&i!==q.correct) return '';
@@ -4865,7 +4920,7 @@ function renderCurrentQ(){
   // Show explanation if revealed
   var explEl=document.getElementById('atExplanation');
   if(explEl){
-    if(revealed&&q.explanation){
+    if(!attIsExamMode()&&revealed&&q.explanation){
       explEl.innerHTML='<div style="font-size:0.75rem;color:#1565c0;margin-top:8px;padding:7px 10px;background:rgba(21,101,192,0.08);border-radius:8px;border-left:3px solid #1565c0;">💡 '+escHtml(q.explanation)+'</div>';
     } else {
       explEl.innerHTML='';
@@ -4874,13 +4929,13 @@ function renderCurrentQ(){
 
   var prev=document.getElementById('atPrev'); if(prev) prev.disabled=st.currentQ===0;
   var levelNext=document.getElementById('atLevelNext');
-  if(levelNext) levelNext.hidden=!!_att.revisionMode;
+  if(levelNext) levelNext.hidden=attIsExamMode()||!!_att.revisionMode;
   var pillBtn=document.getElementById('atPillBtn');
   if(pillBtn){
     var pillKey=String(st.quizId)+'_'+st.currentQ;
     var pillSaved=!!(STATE.savedQuestions&&STATE.savedQuestions[pillKey]);
     var pillDone=!_att.revisionMode&&_att.answerRevealed&&!!st.marked[st.currentQ]&&st.difficulty[st.currentQ]==='tough'&&pillSaved;
-    pillBtn.hidden=!!_att.revisionMode;
+    pillBtn.hidden=attIsExamMode()||!!_att.revisionMode;
     pillBtn.textContent=pillDone?'💊✓':'💊';
     pillBtn.classList.toggle('active',pillDone);
     pillBtn.title=pillDone?'Pill action applied':'💊 Answer dikhao + Marked, Saved, Tough';
@@ -4955,7 +5010,7 @@ function selectOpt(i){
   _att.skipped[_att.currentQ]=false;
   // Normal quiz mode me option choose karte hi instant feedback dikhao:
   // correct answer, wrong selection ka cross aur explanation.
-  _att.answerRevealed=true;
+  _att.answerRevealed=!attIsExamMode();
   attSaveProgress();
   renderCurrentQ();
 }
@@ -4980,12 +5035,13 @@ function markForReview(){
   showToast(_att.marked[_att.currentQ]?'🔖 Marked for review!':'Unmark ho gaya','info');
 }
 function toggleAnswerReveal(){
+  if(attIsExamMode()) return;
   _att.answerRevealed=!_att.answerRevealed;
   attSaveProgress();
   renderCurrentQ();
 }
 function pillCheckCurrentQ(){
-  if(!_att||_att.submitted||_att.revisionMode) return;
+  if(!_att||_att.submitted||_att.revisionMode||attIsExamMode()) return;
   var idx=_att.currentQ;
   var q=_att.quiz.questions[idx];
   if(!q) return;
@@ -5090,7 +5146,7 @@ function attStartRevisionTimer(){
   },1000);
 }
 function toggleRevisionMode(){
-  if(!_att||_att.submitted) return;
+  if(!_att||_att.submitted||attIsExamMode()) return;
   _att.revisionMode=!_att.revisionMode;
   if(_att.revisionMode){
     if(_att.perQTimer) clearInterval(_att.perQTimer);
@@ -5218,6 +5274,7 @@ function submitAttempt(auto){
     id: Date.now(),
     quizId: st.quizId,
     quizName: st.quiz.name,
+    attemptMode:attModeName(st.attemptMode),
     answers: st.answers.slice(),
     difficulty: st.difficulty.slice(),
     marked: st.marked.slice(),
@@ -5247,7 +5304,7 @@ function submitAttempt(auto){
 }
 
 function setAttDifficulty(diff){
-  if(_att.submitted) return;
+  if(_att.submitted||attIsExamMode()) return;
   var cur=_att.difficulty[_att.currentQ];
   _att.difficulty[_att.currentQ]=(cur===diff)?null:diff; // toggle
   attSaveProgress();
@@ -5257,7 +5314,7 @@ function setAttDifficulty(diff){
   else showToast('Tag hata diya','info');
 }
 function toggleSaveCurrentQ(){
-  if(_att.submitted) return;
+  if(_att.submitted||attIsExamMode()) return;
   var qKey=String(_att.quizId)+'_'+_att.currentQ;
   if(!STATE.savedQuestions) STATE.savedQuestions={};
   if(STATE.savedQuestions[qKey]){
@@ -5320,14 +5377,17 @@ function attemptAdminGate(action, onGranted){
   setTimeout(function(){ input.focus(); },30);
 }
 function openProtectedAttemptEdit(){
+  if(attIsExamMode()) return;
   if(!attemptSourceQuiz()){ showToast('Is quiz ko edit nahi kiya ja sakta.','error'); return; }
   attemptAdminGate('edit',openAttemptQuestionEditor);
 }
 function deleteProtectedAttemptQuestion(){
+  if(attIsExamMode()) return;
   if(!attemptSourceQuiz()){ showToast('Is quiz ka source nahi mila.','error'); return; }
   attemptAdminGate('delete',deleteCurrentAttemptQuestion);
 }
 function openAttemptQuestionEditor(){
+  if(attIsExamMode()) return;
   var q=_att.quiz&&_att.quiz.questions&&_att.quiz.questions[_att.currentQ];
   if(!q) return;
   var old=document.getElementById('attemptQuestionEditOverlay');
@@ -5475,6 +5535,7 @@ function renderHistory(){
     // Difficulty stats from saved attempt
     var toughCount=at.toughCount||0, doubtCount=at.doubtCount||0, savedCount=at.savedCount||0;
     var tags='';
+    if(at.attemptMode==='exam') tags+='<span style="font-size:0.65rem;background:rgba(106,27,154,0.1);color:#6a1b9a;border-radius:10px;padding:2px 7px;font-weight:800;">🧪 Exam</span>';
     if(toughCount) tags+='<span style="font-size:0.65rem;background:rgba(198,40,40,0.1);color:var(--red);border-radius:10px;padding:2px 7px;font-weight:700;">😓 '+toughCount+' Tough</span>';
     if(doubtCount) tags+='<span style="font-size:0.65rem;background:rgba(230,81,0,0.1);color:var(--orange);border-radius:10px;padding:2px 7px;font-weight:700;">🤔 '+doubtCount+' Doubt</span>';
     if(savedCount) tags+='<span style="font-size:0.65rem;background:rgba(106,27,154,0.1);color:#6a1b9a;border-radius:10px;padding:2px 7px;font-weight:700;">📌 '+savedCount+' Saved</span>';
@@ -5496,7 +5557,7 @@ function renderHistory(){
         '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'+
           '<div style="font-weight:900;font-size:1.1rem;color:'+color+';">'+pct+'%</div>'+
           '<button class="btn btn-outline btn-xs" onclick="viewAttemptDetail(\''+at.id+'\')">👁 Detail</button>'+
-          '<button class="btn btn-green btn-xs" onclick="reattemptFromHistory(\''+at.quizId+'\')">🔄 Retry</button>'+
+          '<button class="btn btn-green btn-xs" onclick="reattemptFromHistory(\''+at.quizId+'\',\''+(at.attemptMode==='exam'?'exam':'practice')+'\')">🔄 Retry</button>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -5542,11 +5603,12 @@ function renderAttemptDetail(at, quiz){
   // Score summary card
   html+='<div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(21,101,192,0.07),rgba(46,125,50,0.05));border:1.5px solid rgba(21,101,192,0.15);margin-bottom:12px;">'+
     '<div style="font-size:2.5rem;margin-bottom:4px;">'+(pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅')+'</div>'+
+    (at.attemptMode==='exam'?'<div style="font-size:0.75rem;font-weight:900;color:#6a1b9a;">🧪 Exam Mode</div>':'')+
     '<div style="font-size:1.8rem;font-weight:900;color:'+color+';">'+at.score+'/'+at.total+'</div>'+
     '<div style="font-size:1rem;font-weight:800;color:'+color+';">'+pct+'%</div>'+
     '<div style="font-size:0.78rem;color:var(--text2);margin-top:4px;">⏱ '+(at.timeStr||'--')+'&nbsp;·&nbsp;'+escHtml(at.completedAt||'')+'</div>'+
     '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">'+
-      '<button class="btn btn-primary btn-sm" onclick="reattemptFromHistory(\''+at.quizId+'\')">🔄 Reattempt</button>'+
+      '<button class="btn btn-primary btn-sm" onclick="reattemptFromHistory(\''+at.quizId+'\',\''+(at.attemptMode==='exam'?'exam':'practice')+'\')">🔄 Reattempt</button>'+
     '</div>'+
   '</div>';
 
@@ -5688,10 +5750,10 @@ function deleteQFromDetail(quizId, qid){
   var at=_lastAttempt;
   if(at){ renderAttemptDetail(at, quiz); }
 }
-function reattemptFromHistory(quizId){
+function reattemptFromHistory(quizId, attemptMode){
   var quiz=STATE.quizzes.find(function(q){ return String(q.id)===String(quizId); });
   if(!quiz){ showToast('Quiz nahi mili — shayad delete ho gayi!','error'); return; }
-  startAttempt(quiz.id, false);
+  startAttempt(quiz.id, false, attemptMode);
 }
 
 // ================================================================
@@ -5799,7 +5861,7 @@ function renderVaultPage(){
 function showResult(attempt, quiz){
   navTo('result', {title:'📊 Result'}, true);
   document.getElementById('topbarTitle').textContent='📊 Result';
-  document.getElementById('rsSubtitle').textContent=escHtml(quiz.name);
+  document.getElementById('rsSubtitle').textContent=(attempt.attemptMode==='exam'?'🧪 Exam Mode · ':'🎯 Practice · ')+quiz.name;
 
   var pct=attempt.total>0?Math.round(attempt.score/attempt.total*100):0;
   var emoji=pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅';
@@ -5818,7 +5880,9 @@ function showResult(attempt, quiz){
   }
 
   // Comparison
-  var allAttempts=STATE.attempts.filter(function(a){ return a.quizId===quiz.id; });
+  var allAttempts=STATE.attempts.filter(function(a){
+    return a.quizId===quiz.id&&(a.attemptMode||'practice')===(attempt.attemptMode||'practice');
+  });
   var last3=allAttempts.slice(-3);
   var cc=document.getElementById('compCard');
   var ccContent=document.getElementById('compContent');
@@ -6272,7 +6336,7 @@ function _renderFullAnalysis(){
 }
 function reattempt(){
   if(!_lastQuiz) return;
-  startAttempt(_lastQuiz.id, false);
+  startAttempt(_lastQuiz.id, false, _lastAttempt&&_lastAttempt.attemptMode);
 }
 function viewLastResult(quizId){
   var attempts=STATE.attempts.filter(function(a){ return a.quizId===quizId; });
