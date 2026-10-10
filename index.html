@@ -1846,13 +1846,13 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
         <div class="result-summary-score">
           <div class="result-summary-emoji" id="rsEmoji">🎯</div>
           <div>
-            <div class="result-summary-caption">Result</div>
+            <div class="result-summary-caption" id="rsScoreCaption">Result</div>
             <div class="result-summary-number" id="rsScore">0/0</div>
           </div>
         </div>
         <div class="result-summary-metric">
           <div class="result-summary-metric-value" id="rsAcc">0%</div>
-          <div class="result-summary-metric-label">Accuracy</div>
+          <div class="result-summary-metric-label" id="rsAccCaption">Accuracy</div>
         </div>
         <div class="result-summary-metric">
           <div class="result-summary-metric-value" id="rsTime">--</div>
@@ -1860,6 +1860,7 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
         </div>
         <button class="btn btn-outline btn-sm result-master-toggle" id="rsMasterToggle" onclick="toggleResultMasterPanel()" aria-expanded="false" aria-controls="rsMasterPanel">☰ Master Panel</button>
       </div>
+      <div id="rsMarkingBreakdown" style="display:none;margin-top:9px;padding:8px 10px;border-radius:8px;background:rgba(106,27,154,0.07);color:var(--text2);font-size:0.72rem;line-height:1.5;"></div>
       <div class="result-master-panel" id="rsMasterPanel">
         <div class="result-master-actions">
           <button class="btn btn-primary btn-sm" onclick="reattempt()">🔄 Reattempt</button>
@@ -2748,6 +2749,24 @@ function cloudDeleteQuiz(id){
   _db.collection('users').doc(_uid).collection('ts_attempts')
     .where('quizId','==',id).get().then(function(s){ s.forEach(function(d){ d.ref.delete(); }); }).catch(function(){});
 }
+function attemptMaxMarks(attempt){
+  if(!attempt) return 0;
+  var total=Number(attempt.total)||0;
+  return attempt.attemptMode==='exam'?(Number(attempt.maxMarks)||total*3):total;
+}
+function attemptPercent(attempt){
+  var max=attemptMaxMarks(attempt);
+  return max>0?Math.round((Number(attempt.score)||0)/max*100):0;
+}
+function attemptScoreText(attempt){
+  if(!attempt) return '0/0';
+  return String(Number(attempt.score)||0)+'/'+
+    (attempt.attemptMode==='exam'?attemptMaxMarks(attempt):Number(attempt.total)||0)+
+    (attempt.attemptMode==='exam'?' marks':'');
+}
+function attemptProgressWidth(attempt){
+  return Math.max(0,Math.min(100,attemptPercent(attempt)));
+}
 function cloudSaveAttempt(a){
   if(!_db||!_uid) return;
   // First get existing attempts for this quiz, then delete oldest if >=3, then save new
@@ -3286,7 +3305,7 @@ function fcOpenUserPanel(){
   var el1=document.getElementById('upStat1'); if(el1) el1.textContent=q.length;
   var el2=document.getElementById('upStat2'); if(el2) el2.textContent=a.length;
   var avg=0;
-  if(a.length){ avg=Math.round(a.reduce(function(s,x){ return s+(x.total>0?Math.round(x.score/x.total*100):0); },0)/a.length); }
+  if(a.length){ avg=Math.round(a.reduce(function(s,x){ return s+attemptPercent(x); },0)/a.length); }
   var el3=document.getElementById('upStat3'); if(el3) el3.textContent=avg+'%';
   var p = document.getElementById('userPanel'); var o = document.getElementById('userPanelOverlay');
   if(p) p.classList.add('open'); if(o) o.classList.add('open');
@@ -3754,7 +3773,7 @@ function renderProgressPage(){
   var s1=document.getElementById('progStat1'); if(s1) s1.textContent=q.length;
   var s2=document.getElementById('progStat2'); if(s2) s2.textContent=a.length;
   var avg=0;
-  if(a.length){ avg=Math.round(a.reduce(function(s,x){ return s+(x.total>0?Math.round(x.score/x.total*100):0); },0)/a.length); }
+  if(a.length){ avg=Math.round(a.reduce(function(s,x){ return s+attemptPercent(x); },0)/a.length); }
   var s3=document.getElementById('progStat3'); if(s3) s3.textContent=avg+'%';
 
   var chartBox = document.getElementById('progressChartBody');
@@ -3764,13 +3783,14 @@ function renderProgressPage(){
       chartBox.innerHTML = '<div style="text-align:center;color:var(--text2);padding:20px;font-size:0.82rem;">Abhi koi attempt nahi hai. Practice karke progress yahan dikhega.</div>';
     } else {
       chartBox.innerHTML = recent.map(function(at){
-        var pct = at.total>0?Math.round(at.score/at.total*100):0;
+        var pct = attemptPercent(at);
+        var barPct = attemptProgressWidth(at);
         var color = pct>=75?'linear-gradient(90deg,#2e7d32,#66bb6a)':pct>=50?'linear-gradient(90deg,#e65100,#ffa726)':'linear-gradient(90deg,#c62828,#ef5350)';
         var label = (at.quizName||'Quiz');
         if(label.length>10) label = label.substring(0,9)+'…';
         return '<div class="progress-bar-row">'+
           '<div class="progress-bar-label" title="'+escHtml(at.quizName||'')+'">'+escHtml(label)+'</div>'+
-          '<div class="progress-bar-track"><div class="progress-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div>'+
+          '<div class="progress-bar-track"><div class="progress-bar-fill" style="width:'+barPct+'%;background:'+color+';"></div></div>'+
           '<div class="progress-bar-val">'+pct+'%</div>'+
         '</div>';
       }).join('');
@@ -3783,13 +3803,13 @@ function renderProgressPage(){
     if(recent.length){
       rc.style.display='block';
       rl.innerHTML = recent.map(function(at){
-        var pct=at.total>0?Math.round(at.score/at.total*100):0;
+        var pct=attemptPercent(at);
         var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
           '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(at.quizName)+'</div>' +
           '<div style="font-size:0.7rem;color:var(--text2);">'+(at.completedAt||'')+'</div></div>' +
           '<div style="font-weight:900;font-size:0.95rem;color:'+color+';">'+pct+'%</div>' +
-          '<div style="font-size:0.72rem;color:var(--text2);">'+at.score+'/'+at.total+'</div>' +
+          '<div style="font-size:0.72rem;color:var(--text2);">'+attemptScoreText(at)+'</div>' +
         '</div>';
       }).join('');
     } else { rc.style.display='none'; }
@@ -4210,7 +4230,7 @@ function renderCreateList(){
   }
   container.innerHTML = quizzes.map(function(q){
     var attempts=STATE.attempts.filter(function(a){ return a.quizId===q.id; });
-    var bestPct=attempts.length?Math.max.apply(null,attempts.map(function(a){ return a.total>0?Math.round(a.score/a.total*100):0; })):null;
+    var bestPct=attempts.length?Math.max.apply(null,attempts.map(attemptPercent)):null;
     var tags=[q.subjectName,q.sectionName,q.topicName].filter(Boolean).join(' › ');
     var timerLabel=q.timer&&q.timer.type!=='none'?(q.timer.type==='full'?q.timer.value+' min':q.timer.value+'s/Q'):'No Timer';
     return '<div class="card" style="margin-bottom:10px;">' +
@@ -4514,7 +4534,7 @@ function renderPracticeQuizCards(quizzes){
   return quizzes.map(function(q){
     var attempts=STATE.attempts.filter(function(a){ return a.quizId===q.id; });
     var lastAttempt=attempts.length?attempts[attempts.length-1]:null;
-    var bestPct=attempts.length?Math.max.apply(null,attempts.map(function(a){ return a.total>0?Math.round(a.score/a.total*100):0; })):null;
+    var bestPct=attempts.length?Math.max.apply(null,attempts.map(attemptPercent)):null;
     var tags=[q.subjectName,q.topicName].filter(Boolean).join(' › ');
     return '<div class="card" style="margin-bottom:10px;">'+
       '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;">'+
@@ -4533,7 +4553,7 @@ function renderPracticeQuizCards(quizzes){
             (q.timer&&q.timer.type!=='none'?'<span>⏱ '+(q.timer.type==='full'?q.timer.value+' min':q.timer.value+'s/Q')+'</span>':'<span>No Timer</span>')+
             '<span>📋 '+attempts.length+' attempts</span>'+
           '</div>'+
-          (lastAttempt?'<div style="font-size:0.72rem;color:var(--text2);margin-top:4px;">Last: '+(lastAttempt.total>0?Math.round(lastAttempt.score/lastAttempt.total*100):0)+'% ('+( lastAttempt.completedAt||'')+')</div>':'')+
+          (lastAttempt?'<div style="font-size:0.72rem;color:var(--text2);margin-top:4px;">Last: '+attemptPercent(lastAttempt)+'% ('+( lastAttempt.completedAt||'')+')</div>':'')+
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">'+
           (bestPct!==null?'<div style="text-align:center;font-weight:900;font-size:0.88rem;color:'+(bestPct>=75?'var(--green)':bestPct>=50?'#e65100':'var(--red)')+';">Best '+bestPct+'%</div>':'')+
@@ -4570,15 +4590,15 @@ function renderPracticeList(){
     quizzes.sort(function(a,b){
       var ba=STATE.attempts.filter(function(x){ return x.quizId===a.id; });
       var bb=STATE.attempts.filter(function(x){ return x.quizId===b.id; });
-      var pa=ba.length?Math.max.apply(null,ba.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
-      var pb=bb.length?Math.max.apply(null,bb.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      var pa=ba.length?Math.max.apply(null,ba.map(attemptPercent)):-1;
+      var pb=bb.length?Math.max.apply(null,bb.map(attemptPercent)):-1;
       return pb-pa;
     });
     focusedQuizzes.sort(function(a,b){
       var ba=STATE.attempts.filter(function(x){ return x.quizId===a.id; });
       var bb=STATE.attempts.filter(function(x){ return x.quizId===b.id; });
-      var pa=ba.length?Math.max.apply(null,ba.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
-      var pb=bb.length?Math.max.apply(null,bb.map(function(x){ return x.total>0?Math.round(x.score/x.total*100):0; })):-1;
+      var pa=ba.length?Math.max.apply(null,ba.map(attemptPercent)):-1;
+      var pb=bb.length?Math.max.apply(null,bb.map(attemptPercent)):-1;
       return pb-pa;
     });
   } else if(_practiceSort === 'attempts'){
@@ -5264,8 +5284,16 @@ function submitAttempt(auto){
   if(_att.timer) clearInterval(_att.timer);
   if(_att.perQTimer) clearInterval(_att.perQTimer);
 
-  var st=_att; var qs=st.quiz.questions; var score=0;
-  qs.forEach(function(q,i){ if(st.answers[i]===q.correct) score++; });
+  var st=_att; var qs=st.quiz.questions;
+  var correctCount=0, wrongCount=0, unansweredCount=0;
+  qs.forEach(function(q,i){
+    var answer=st.answers[i];
+    if(answer===null||typeof answer==='undefined') unansweredCount++;
+    else if(answer===q.correct) correctCount++;
+    else wrongCount++;
+  });
+  var isExam=attModeName(st.attemptMode)==='exam';
+  var score=isExam?(correctCount*3-wrongCount):correctCount;
   var timeTaken=Math.round((Date.now()-st.startTime)/1000);
   var m=Math.floor(timeTaken/60), s=timeTaken%60;
   var timeStr=(m>0?m+' min ':'')+s+' sec';
@@ -5281,6 +5309,10 @@ function submitAttempt(auto){
     skipped: st.skipped.slice(),
     score: score,
     total: qs.length,
+    maxMarks: isExam?qs.length*3:qs.length,
+    correctCount: correctCount,
+    wrongCount: wrongCount,
+    unansweredCount: unansweredCount,
     timeTaken: timeTaken,
     timeStr: timeStr,
     toughCount: st.difficulty.filter(function(d){ return d==='tough'; }).length,
@@ -5529,13 +5561,17 @@ function renderHistory(){
     return;
   }
   container.innerHTML=attempts.map(function(at){
-    var pct=at.total>0?Math.round(at.score/at.total*100):0;
+    var pct=attemptPercent(at);
+    var barPct=attemptProgressWidth(at);
     var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
     var badge=pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅';
     // Difficulty stats from saved attempt
     var toughCount=at.toughCount||0, doubtCount=at.doubtCount||0, savedCount=at.savedCount||0;
     var tags='';
-    if(at.attemptMode==='exam') tags+='<span style="font-size:0.65rem;background:rgba(106,27,154,0.1);color:#6a1b9a;border-radius:10px;padding:2px 7px;font-weight:800;">🧪 Exam</span>';
+    if(at.attemptMode==='exam'){
+      tags+='<span style="font-size:0.65rem;background:rgba(106,27,154,0.1);color:#6a1b9a;border-radius:10px;padding:2px 7px;font-weight:800;">🧪 Exam</span>';
+      tags+='<span style="font-size:0.65rem;background:rgba(21,101,192,0.08);color:var(--accent);border-radius:10px;padding:2px 7px;font-weight:700;">✅ '+(at.correctCount||0)+' × 3 · ❌ '+(at.wrongCount||0)+' × −1</span>';
+    }
     if(toughCount) tags+='<span style="font-size:0.65rem;background:rgba(198,40,40,0.1);color:var(--red);border-radius:10px;padding:2px 7px;font-weight:700;">😓 '+toughCount+' Tough</span>';
     if(doubtCount) tags+='<span style="font-size:0.65rem;background:rgba(230,81,0,0.1);color:var(--orange);border-radius:10px;padding:2px 7px;font-weight:700;">🤔 '+doubtCount+' Doubt</span>';
     if(savedCount) tags+='<span style="font-size:0.65rem;background:rgba(106,27,154,0.1);color:#6a1b9a;border-radius:10px;padding:2px 7px;font-weight:700;">📌 '+savedCount+' Saved</span>';
@@ -5546,12 +5582,12 @@ function renderHistory(){
           '<div style="font-weight:800;font-size:0.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(at.quizName)+'</div>'+
           '<div style="font-size:0.7rem;color:var(--text2);margin-top:2px;">'+escHtml(at.completedAt||'')+'&nbsp;·&nbsp;⏱ '+(at.timeStr||'--')+'</div>'+
           '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">'+
-            '<span style="font-size:0.7rem;background:rgba(46,125,50,0.1);color:var(--green);border-radius:10px;padding:2px 8px;font-weight:700;">✅ '+at.score+'/'+at.total+'</span>'+
+            '<span style="font-size:0.7rem;background:rgba(46,125,50,0.1);color:var(--green);border-radius:10px;padding:2px 8px;font-weight:700;">🏅 '+attemptScoreText(at)+'</span>'+
             tags+
           '</div>'+
           // Progress bar
           '<div style="height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-top:6px;">'+
-            '<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:4px;transition:width 0.5s;"></div>'+
+            '<div style="height:100%;width:'+barPct+'%;background:'+color+';border-radius:4px;transition:width 0.5s;"></div>'+
           '</div>'+
         '</div>'+
         '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'+
@@ -5597,14 +5633,15 @@ function _adSetFilter(f){
 }
 function renderAttemptDetail(at, quiz){
   var container=document.getElementById('adContent'); if(!container) return;
-  var pct=at.total>0?Math.round(at.score/at.total*100):0;
+  var pct=attemptPercent(at);
   var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
   var html='';
   // Score summary card
   html+='<div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(21,101,192,0.07),rgba(46,125,50,0.05));border:1.5px solid rgba(21,101,192,0.15);margin-bottom:12px;">'+
     '<div style="font-size:2.5rem;margin-bottom:4px;">'+(pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅')+'</div>'+
     (at.attemptMode==='exam'?'<div style="font-size:0.75rem;font-weight:900;color:#6a1b9a;">🧪 Exam Mode</div>':'')+
-    '<div style="font-size:1.8rem;font-weight:900;color:'+color+';">'+at.score+'/'+at.total+'</div>'+
+    '<div style="font-size:1.8rem;font-weight:900;color:'+color+';">'+attemptScoreText(at)+'</div>'+
+    (at.attemptMode==='exam'?'<div style="font-size:0.75rem;color:var(--text2);">✅ '+(at.correctCount||0)+' sahi · ❌ '+(at.wrongCount||0)+' galat · ⏭ '+(at.unansweredCount||0)+' unanswered</div>':'')+
     '<div style="font-size:1rem;font-weight:800;color:'+color+';">'+pct+'%</div>'+
     '<div style="font-size:0.78rem;color:var(--text2);margin-top:4px;">⏱ '+(at.timeStr||'--')+'&nbsp;·&nbsp;'+escHtml(at.completedAt||'')+'</div>'+
     '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">'+
@@ -5863,12 +5900,26 @@ function showResult(attempt, quiz){
   document.getElementById('topbarTitle').textContent='📊 Result';
   document.getElementById('rsSubtitle').textContent=(attempt.attemptMode==='exam'?'🧪 Exam Mode · ':'🎯 Practice · ')+quiz.name;
 
-  var pct=attempt.total>0?Math.round(attempt.score/attempt.total*100):0;
+  var pct=attemptPercent(attempt);
   var emoji=pct>=90?'🏆':pct>=75?'🎯':pct>=50?'👍':'😅';
   var color=pct>=75?'var(--green)':pct>=50?'#e65100':'var(--red)';
 
   document.getElementById('rsEmoji').textContent=emoji;
-  var sd=document.getElementById('rsScore'); sd.textContent=attempt.score+'/'+attempt.total; sd.style.color=color;
+  var scoreCaption=document.getElementById('rsScoreCaption');
+  if(scoreCaption) scoreCaption.textContent=attempt.attemptMode==='exam'?'Exam Marks':'Result';
+  var accCaption=document.getElementById('rsAccCaption');
+  if(accCaption) accCaption.textContent=attempt.attemptMode==='exam'?'Score %':'Accuracy';
+  var markingBreakdown=document.getElementById('rsMarkingBreakdown');
+  if(markingBreakdown){
+    if(attempt.attemptMode==='exam'){
+      markingBreakdown.style.display='block';
+      markingBreakdown.innerHTML='🧮 Marking: <b>'+Number(attempt.correctCount||0)+' sahi × 3 − '+Number(attempt.wrongCount||0)+' galat × 1 = '+Number(attempt.score||0)+' marks</b> · '+Number(attempt.unansweredCount||0)+' unanswered = 0 marks';
+    } else {
+      markingBreakdown.style.display='none';
+      markingBreakdown.innerHTML='';
+    }
+  }
+  var sd=document.getElementById('rsScore'); sd.textContent=attemptScoreText(attempt); sd.style.color=color;
   var ad=document.getElementById('rsAcc'); ad.textContent=pct+'%'; ad.style.color=color;
   document.getElementById('rsTime').textContent=(attempt.timeStr||'--');
   var masterPanel=document.getElementById('rsMasterPanel');
@@ -5890,7 +5941,8 @@ function showResult(attempt, quiz){
     cc.style.display='block';
     ccContent.innerHTML='<div style="display:flex;flex-direction:column;gap:10px;">'+
       last3.slice().reverse().map(function(a,ri){
-        var p=a.total>0?Math.round(a.score/a.total*100):0;
+        var p=attemptPercent(a);
+        var pWidth=attemptProgressWidth(a);
         var isCur=a.id===attempt.id;
         var bc=p>=75?'#2e7d32':p>=50?'#e65100':'#c62828';
         return '<div style="padding:10px 12px;border-radius:10px;background:'+(isCur?'rgba(21,101,192,0.08)':'var(--surface2)')+';border:1.5px solid '+(isCur?'rgba(21,101,192,0.25)':'var(--border)')+';">'+
@@ -5899,9 +5951,9 @@ function showResult(attempt, quiz){
             '<div style="font-weight:900;color:'+bc+';font-size:0.95rem;">'+p+'%</div>'+
           '</div>'+
           '<div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;">'+
-            '<div style="height:100%;width:'+p+'%;background:'+bc+';border-radius:4px;"></div>'+
+            '<div style="height:100%;width:'+pWidth+'%;background:'+bc+';border-radius:4px;"></div>'+
           '</div>'+
-          '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;">'+a.score+'/'+a.total+' correct | '+(a.timeStr||'--')+'</div>'+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:4px;">'+(a.attemptMode==='exam'?attemptScoreText(a):attemptScoreText(a)+' correct')+' | '+(a.timeStr||'--')+'</div>'+
         '</div>';
       }).join('')+
     '</div>';
@@ -6180,7 +6232,8 @@ function exportAnalysisDoc(){
   var doc='{\\rtf1\\ansi\\deff0\\uc1\\viewkind4\n'+
     '{\\fonttbl{\\f0 Arial;}{\\f1 Nirmala UI;}}\n'+
     '\\f0\\fs30\\b '+_rtfEscape((_lastQuiz.name||'Quiz')+' — Question Analysis')+'\\b0\\par\n'+
-    '\\fs20 Score: '+_rtfEscape(String(_lastAttempt.score||0)+'/'+String(_lastAttempt.total||qs.length))+
+    '\\fs20 Score: '+_rtfEscape(attemptScoreText(_lastAttempt))+
+    (_lastAttempt.attemptMode==='exam'?'    Correct: '+_rtfEscape(String(_lastAttempt.correctCount||0))+'    Wrong: '+_rtfEscape(String(_lastAttempt.wrongCount||0))+'    Unanswered: '+_rtfEscape(String(_lastAttempt.unansweredCount||0)):'')+
     '    Completed: '+_rtfEscape(_lastAttempt.completedAt||'')+'\\par\\par\n';
   qs.forEach(function(q,i){
     var ua=answers[i];
