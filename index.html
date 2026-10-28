@@ -976,7 +976,9 @@ textarea.inp{resize:vertical; min-height:64px;}
   flex:0 0 auto;
   height:min(46vh,380px);
 }
+.fc-card-outer.fc-mcq-card{height:min(52vh,460px);}
 .fc-focus-on .fc-card-outer{max-width:640px;height:min(50vh,440px);}
+.fc-focus-on .fc-card-outer.fc-mcq-card{height:min(56vh,500px);}
 .fc-card-inner{
   position:relative;width:100%;height:100%;
   transition:transform 0.6s cubic-bezier(0.34,1.28,0.64,1);
@@ -1010,6 +1012,21 @@ body.dark .fc-card-back .fc-face-label{color:#d9a35f;}
 .fc-face-text{font-family:'Georgia','Noto Sans Devanagari',serif;font-size:1.15rem;font-weight:600;line-height:1.75;word-break:break-word;letter-spacing:0.1px;}
 .fc-focus-on .fc-face-text{font-size:1.4rem;line-height:1.8;}
 .fc-tap-hint{display:none;}
+.fc-mcq-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:480px;margin-top:14px;}
+.fc-mcq-option{
+  min-width:0;padding:9px 10px;border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;
+  background:rgba(21,101,192,0.06);color:inherit;font-family:inherit;font-weight:700;font-size:0.78rem;line-height:1.35;
+  text-align:left;cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
+}
+.fc-mcq-option:active{transform:scale(.98);}
+.fc-mcq-option:disabled{cursor:default;opacity:1;}
+.fc-mcq-option.is-correct{background:rgba(46,125,50,.16);border-color:#2e7d32;color:#1b5e20;}
+.fc-mcq-option.is-wrong{background:rgba(198,40,40,.14);border-color:#c62828;color:#8e1616;}
+.fc-mcq-option-label{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;margin-right:5px;border-radius:50%;background:rgba(21,101,192,.12);font-size:.66rem;}
+body.dark .fc-mcq-option{background:rgba(127,168,214,.1);border-color:rgba(127,168,214,.28);color:#e7eef5;}
+body.dark .fc-mcq-option.is-correct{background:rgba(46,125,50,.28);border-color:#66bb6a;color:#c8e6c9;}
+body.dark .fc-mcq-option.is-wrong{background:rgba(198,40,40,.26);border-color:#ef5350;color:#ffcdd2;}
+@media(max-width:380px){.fc-mcq-options{gap:6px;margin-top:9px;}.fc-mcq-option{padding:7px;font-size:.7rem;}}
 
 .fc-rating-row{
   display:flex;align-items:center;justify-content:center;gap:18px;
@@ -2006,12 +2023,32 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <div class="card-title" id="fcAddCardTitle">&#10133; Card Add Karo</div>
       <input type="hidden" id="fcEditCardId" value="">
       <div class="field-group">
+        <label class="field-label" for="fcCardType">Card Type</label>
+        <select class="inp" id="fcCardType" onchange="fcToggleCardTypeFields()">
+          <option value="basic">Normal Flashcard</option>
+          <option value="mcq">MCQ — 4 options, automatic checking</option>
+        </select>
+      </div>
+      <div class="field-group">
         <label class="field-label">Front &#8212; Sawaal / Term *</label>
         <textarea class="inp" id="fcCardFront" rows="2" placeholder="Sawaal ya term..."></textarea>
       </div>
-      <div class="field-group">
+      <div class="field-group" id="fcCardBackGroup">
         <label class="field-label">Back &#8212; Jawab / Definition *</label>
         <textarea class="inp" id="fcCardBack" rows="2" placeholder="Jawab ya definition..."></textarea>
+      </div>
+      <div id="fcMcqOptionsGroup" style="display:none;">
+        <div style="font-size:0.75rem;color:var(--text2);margin:0 0 7px;">Chaaro options bharo, phir sahi option chuno. Back par wahi sahi jawab dikhega.</div>
+        <div class="field-group"><label class="field-label">Option A *</label><input class="inp" id="fcCardOption0" placeholder="Option A"></div>
+        <div class="field-group"><label class="field-label">Option B *</label><input class="inp" id="fcCardOption1" placeholder="Option B"></div>
+        <div class="field-group"><label class="field-label">Option C *</label><input class="inp" id="fcCardOption2" placeholder="Option C"></div>
+        <div class="field-group"><label class="field-label">Option D *</label><input class="inp" id="fcCardOption3" placeholder="Option D"></div>
+        <div class="field-group">
+          <label class="field-label" for="fcCardCorrect">Sahi jawab</label>
+          <select class="inp" id="fcCardCorrect">
+            <option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option>
+          </select>
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-orange" id="fcAddCardBtn" onclick="fcAddOrUpdateCard()">&#10133; Card Add Karo</button>
@@ -2023,6 +2060,9 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
       <div style="font-size:0.72rem;color:var(--text2);margin-bottom:8px;line-height:1.6;">
         .txt/.json/.csv/.html file select karo &#8212; format auto-detect ho jayega:<br>
         &#8226; <b>JSON:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"front":"Q","back":"A"}, ...]</code><br>
+        &#8226; <b>MCQ JSON (quiz jaisa):</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"q":"Question?","options":["A","B","C","D"],"correct":0}, ...]</code> (correct 0-based)<br>
+        &#8226; <b>MCQ CSV:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">question,optionA,optionB,optionC,optionD,correct</code> (correct 0-based)<br>
+        &#8226; <b>Text MCQ:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Question :: A | B | C | D :: 0</code><br>
         &#8226; <b>Text:</b> har line <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Sawaal :: Jawab</code>
       </div>
       <input type="file" class="inp" id="fcImportFileInp" accept=".txt,.json,.csv,.html,.htm" style="padding:7px;" onchange="fcHandleFileSelect(event)" />
@@ -7447,6 +7487,7 @@ var _fcSession = {
   deckId: null, queue: [], pos: 0, flipped: false,
   totalOriginal: 0, stats: { hard:0, moderate:0, easy:0, knew:0 }, done: false
 };
+var _fcMcqAnswerPending = false;
 
 // ---- Firebase ----
 function fcAttachListener(){
@@ -7944,12 +7985,15 @@ function renderFcCardsList(){
   }
   // Use data attributes for card IDs to avoid quote-escaping in onclick strings
   container.innerHTML = cards.map(function(c, idx){
+    var mcqInfo=Array.isArray(c.options)&&c.options.length===4?
+      '<div style="font-size:0.69rem;color:var(--text2);margin-top:4px;">MCQ · '+c.options.map(function(option,i){ return String.fromCharCode(65+i)+'. '+escHtml(option); }).join(' &nbsp; ')+'</div>':'';
     return '<div class="card" style="margin-bottom:8px;">'+
       '<div style="display:flex;align-items:flex-start;gap:10px;">'+
         '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:rgba(230,81,0,0.12);color:#e65100;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900;">'+(idx+1)+'</div>'+
         '<div style="flex:1;min-width:0;">'+
           '<div style="font-size:0.78rem;font-weight:700;color:var(--accent);margin-bottom:2px;">Q: '+escHtml(c.front)+'</div>'+
           '<div style="font-size:0.76rem;color:#2e7d32;font-weight:600;">A: '+escHtml(c.back)+'</div>'+
+          mcqInfo+
         '</div>'+
         '<div style="display:flex;gap:4px;flex-shrink:0;">'+
           '<button class="btn btn-xs fc-edit-btn" data-cid="'+escHtml(c.id)+'" style="background:rgba(21,101,192,0.08);color:var(--accent);border:1.5px solid rgba(21,101,192,0.2);">&#9998;</button>'+
@@ -7970,21 +8014,45 @@ function fcAddOrUpdateCard(){
   var deck=_fcDecks.find(function(d){ return String(d.id)===String(_fcCurrentDeckId); });
   if(!deck){ showToast('Deck nahi mili!','error'); return; }
   var front=((document.getElementById('fcCardFront')||{}).value||''). trim();
-  var back =((document.getElementById('fcCardBack' )||{}).value||''). trim();
-  if(!front||!back){ showToast('Front aur Back dono required hain!','error'); return; }
+  var cardType=((document.getElementById('fcCardType')||{}).value||'basic');
+  var options=[], correct=0, back='';
+  if(cardType==='mcq'){
+    options=[0,1,2,3].map(function(i){ return ((document.getElementById('fcCardOption'+i)||{}).value||'').trim(); });
+    correct=Number((document.getElementById('fcCardCorrect')||{}).value||0);
+    if(!front||options.some(function(option){ return !option; })){
+      showToast('Sawaal aur chaaro options bharna zaroori hai!','error'); return;
+    }
+    back=options[correct];
+  } else {
+    back=((document.getElementById('fcCardBack')||{}).value||'').trim();
+    if(!front||!back){ showToast('Front aur Back dono required hain!','error'); return; }
+  }
   var editId=((document.getElementById('fcEditCardId')||{}).value||'');
   var cards=(deck.cards||[]).slice();
   if(editId){
     var idx=cards.findIndex(function(c){ return String(c.id)===editId; });
-    if(idx!==-1){ cards[idx].front=front; cards[idx].back=back; }
+    if(idx!==-1){
+      cards[idx].front=front; cards[idx].back=back;
+      if(cardType==='mcq'){ cards[idx].options=options; cards[idx].correct=correct; }
+      else { delete cards[idx].options; delete cards[idx].correct; }
+    }
   } else {
-    cards.push({ id: Date.now()+'_'+Math.random().toString(36).slice(2,6), front:front, back:back });
+    var newCard={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6), front:front, back:back };
+    if(cardType==='mcq'){ newCard.options=options; newCard.correct=correct; }
+    cards.push(newCard);
   }
   deck.cards=cards;
   fcSaveDeck(deck).then(function(){
     showToast(editId?'Card update ho gaya!':'Card add ho gaya!','success');
     fcCancelEditCard();
   }).catch(function(e){ showToast('Save error: '+e.message,'error'); });
+}
+function fcToggleCardTypeFields(){
+  var isMcq=((document.getElementById('fcCardType')||{}).value==='mcq');
+  var backGroup=document.getElementById('fcCardBackGroup');
+  var optionsGroup=document.getElementById('fcMcqOptionsGroup');
+  if(backGroup) backGroup.style.display=isMcq?'none':'';
+  if(optionsGroup) optionsGroup.style.display=isMcq?'':'none';
 }
 function fcEditCard(cardId){
   var deck=_fcDecks.find(function(d){ return String(d.id)===String(_fcCurrentDeckId); });
@@ -7993,6 +8061,14 @@ function fcEditCard(cardId){
   if(!card) return;
   var ff=document.getElementById('fcCardFront'); if(ff) ff.value=card.front;
   var bb=document.getElementById('fcCardBack');  if(bb) bb.value=card.back;
+  var type=document.getElementById('fcCardType'); if(type) type.value=(Array.isArray(card.options)&&card.options.length===4)?'mcq':'basic';
+  [0,1,2,3].forEach(function(i){
+    var input=document.getElementById('fcCardOption'+i);
+    if(input) input.value=(card.options&&card.options[i])||'';
+  });
+  var correctSel=document.getElementById('fcCardCorrect');
+  if(correctSel) correctSel.value=String(Number(card.correct)||0);
+  fcToggleCardTypeFields();
   var ei=document.getElementById('fcEditCardId'); if(ei) ei.value=card.id;
   var tt=document.getElementById('fcAddCardTitle'); if(tt) tt.textContent='Edit Card';
   var ab=document.getElementById('fcAddCardBtn');   if(ab) ab.textContent='Update Card';
@@ -8002,6 +8078,10 @@ function fcEditCard(cardId){
 function fcCancelEditCard(){
   var fi=document.getElementById('fcCardFront'); if(fi) fi.value='';
   var bi=document.getElementById('fcCardBack');  if(bi) bi.value='';
+  var type=document.getElementById('fcCardType'); if(type) type.value='basic';
+  [0,1,2,3].forEach(function(i){ var input=document.getElementById('fcCardOption'+i); if(input) input.value=''; });
+  var correctSel=document.getElementById('fcCardCorrect'); if(correctSel) correctSel.value='0';
+  fcToggleCardTypeFields();
   var ei=document.getElementById('fcEditCardId');if(ei) ei.value='';
   var tt=document.getElementById('fcAddCardTitle'); if(tt) tt.textContent='Add Card';
   var ab=document.getElementById('fcAddCardBtn');   if(ab) ab.textContent='Add Card';
@@ -8042,7 +8122,7 @@ function fcParseImportText(raw){
   var text = raw.trim();
   var cards = [];
 
-  // 1) Try JSON array first: [{front, back}, ...] (also accepts {q,a} or {question,answer})
+  // 1) JSON: accepts normal cards and quiz-shaped MCQs ({q, options, correct}).
   try{
     var maybeJson = text;
     // If it's an HTML file with a JSON array embedded, try to extract it
@@ -8051,19 +8131,50 @@ function fcParseImportText(raw){
       if(m) maybeJson = m[0];
     }
     var data = JSON.parse(maybeJson);
-    if(Array.isArray(data)){
-      data.forEach(function(item){
-        var front = item.front || item.q || item.question || item.term || '';
-        var back  = item.back  || item.a || item.answer   || item.definition || '';
-        front = String(front).trim(); back = String(back).trim();
-        if(front && back) cards.push({front:front, back:back});
+    var dataCards=Array.isArray(data)?data:(data&&Array.isArray(data.cards)?data.cards:
+      (data&&Array.isArray(data.questions)?data.questions:null));
+    if(dataCards){
+      dataCards.forEach(function(item){
+        var normalized=fcNormalizeImportCard(item);
+        if(normalized) cards.push(normalized);
       });
       if(cards.length) return cards;
     }
   }catch(e){ /* not JSON, fall through to text parsing */ }
 
-  // 2) Fallback: plain text, one card per line, "Front :: Back"
-  //    Also supports "Front | Back" and "Front - Back" as separators.
+  // 2) CSV with a header row. Supports basic front/back and quiz-style MCQ columns.
+  var csvRows=fcParseCsvRows(text);
+  if(csvRows.length>1){
+    var headers=csvRows[0].map(function(h){ return String(h||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''); });
+    var hasQuestionHeader=headers.some(function(h){ return h==='front'||h==='q'||h==='question'||h==='term'; });
+    if(hasQuestionHeader){
+      function col(row, aliases){
+        for(var ai=0;ai<aliases.length;ai++){
+          var ci=headers.indexOf(aliases[ai]);
+          if(ci!==-1&&row[ci]!=null) return String(row[ci]).trim();
+        }
+        return '';
+      }
+      csvRows.slice(1).forEach(function(row){
+        var item={
+          front:col(row,['front','q','question','term']),
+          back:col(row,['back','a','answer','definition']),
+          correct:col(row,['correct','correctanswer','answerindex'])
+        };
+        item.options=[
+          col(row,['optiona','option1','choicea']),
+          col(row,['optionb','option2','choiceb']),
+          col(row,['optionc','option3','choicec']),
+          col(row,['optiond','option4','choiced'])
+        ];
+        var normalized=fcNormalizeImportCard(item);
+        if(normalized) cards.push(normalized);
+      });
+      if(cards.length) return cards;
+    }
+  }
+
+  // 3) Text: "Front :: Back" or "Question :: A | B | C | D :: correctIndex".
   var lines = text.split(/\r?\n/);
   lines.forEach(function(line){
     line = line.trim();
@@ -8073,11 +8184,68 @@ function fcParseImportText(raw){
     else if(line.indexOf('|') !== -1) parts = line.split('|');
     else if(line.indexOf('\t') !== -1) parts = line.split('\t');
     if(!parts || parts.length < 2) return;
-    var front = parts[0].trim();
-    var back = parts.slice(1).join('::').trim();
-    if(front && back) cards.push({front:front, back:back});
+    var front=parts[0].trim();
+    if(parts.length>=3){
+      var opts=parts[1].split('|').map(function(v){ return v.trim(); });
+      var answerText=parts.slice(2).join('::').trim();
+      var index=fcParseCorrectIndex(answerText,opts);
+      if(front&&opts.length>=4&&opts.slice(0,4).every(Boolean)&&index>=0){
+        cards.push({front:front,options:opts.slice(0,4),correct:index,back:opts[index]});
+      }
+    } else {
+      var back=parts[1].trim();
+      if(front&&back) cards.push({front:front,back:back});
+    }
   });
   return cards;
+}
+
+function fcParseCsvRows(text){
+  var rows=[], row=[], cell='', quoted=false;
+  for(var i=0;i<text.length;i++){
+    var ch=text[i];
+    if(quoted){
+      if(ch==='"'&&text[i+1]==='"'){ cell+='"'; i++; }
+      else if(ch==='"') quoted=false;
+      else cell+=ch;
+    } else if(ch==='"'&&cell==='') quoted=true;
+    else if(ch===','){ row.push(cell); cell=''; }
+    else if(ch==='\n'||ch==='\r'){
+      if(ch==='\r'&&text[i+1]==='\n') i++;
+      row.push(cell); cell='';
+      if(row.some(function(v){ return String(v).trim()!==''; })) rows.push(row);
+      row=[];
+    } else cell+=ch;
+  }
+  row.push(cell);
+  if(row.some(function(v){ return String(v).trim()!==''; })) rows.push(row);
+  return rows;
+}
+
+function fcParseCorrectIndex(value, options){
+  if(typeof value==='number'&&value%1===0) return value>=0&&value<4?value:-1;
+  var text=String(value==null?'':value).trim();
+  if(/^[0-3]$/.test(text)) return Number(text);
+  if(/^[a-d]$/i.test(text)) return text.toUpperCase().charCodeAt(0)-65;
+  var found=(options||[]).slice(0,4).findIndex(function(option){
+    return String(option).trim().toLowerCase()===text.toLowerCase();
+  });
+  return found;
+}
+function fcNormalizeImportCard(item){
+  if(!item||typeof item!=='object') return null;
+  var front=String(item.front||item.q||item.question||item.term||'').trim();
+  if(!front) return null;
+  var options=Array.isArray(item.options)?item.options.slice(0,4).map(function(v){ return String(v==null?'':v).trim(); }):[];
+  var correctValue=(item.correct!=null)?item.correct:
+    ((item.correctAnswer!=null)?item.correctAnswer:((item.answerIndex!=null)?item.answerIndex:item.answer));
+  if(options.length===4&&options.every(Boolean)&&correctValue!=null){
+    var correct=fcParseCorrectIndex(correctValue,options);
+    if(correct>=0) return {front:front,options:options,correct:correct,back:options[correct]};
+  }
+  var back=String(item.back||item.a||item.answer||item.definition||'').trim();
+  if(back) return {front:front,back:back};
+  return null;
 }
 
 function fcShowImportPreview(cards){
@@ -8088,8 +8256,9 @@ function fcShowImportPreview(cards){
   summary.textContent = cards.length + ' cards mile — preview neeche dekh lo:';
   var html = '';
   cards.slice(0, 50).forEach(function(c, i){
+    var answer=Array.isArray(c.options)?(' <span style="color:#2e7d32;font-weight:700;">[MCQ: '+escHtml(c.options[Number(c.correct)]||c.back)+']</span>'):'';
     html += '<div style="padding:5px 0;' + (i>0?'border-top:1px solid var(--border);':'') + '">' +
-      '<b>' + (i+1) + '.</b> ' + escHtml(c.front) + ' <span style="color:var(--text2);">&#8594;</span> ' + escHtml(c.back) +
+      '<b>' + (i+1) + '.</b> ' + escHtml(c.front) + ' <span style="color:var(--text2);">&#8594;</span> ' + escHtml(c.back||'') + answer +
       '</div>';
   });
   if(cards.length > 50){
@@ -8115,7 +8284,9 @@ function fcConfirmFileImport(){
   if(btn){ btn.disabled = true; btn.textContent = 'Import ho raha hai...'; }
   var existing=(deck.cards||[]).slice(); var added=0;
   _fcPendingImportCards.forEach(function(c){
-    existing.push({ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+added, front:c.front, back:c.back });
+    var newCard={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+added, front:c.front, back:c.back };
+    if(Array.isArray(c.options)){ newCard.options=c.options.slice(0,4); newCard.correct=Number(c.correct)||0; }
+    existing.push(newCard);
     added++;
   });
   deck.cards=existing;
@@ -8145,7 +8316,11 @@ function shareFcDeck(deckId){
     id: deck.id,
     name: deck.name,
     topic: deck.topic||'',
-    cards: (deck.cards||[]).map(function(c){ return { id:c.id, front:c.front, back:c.back }; }),
+    cards: (deck.cards||[]).map(function(c){
+      var sharedCard={ id:c.id, front:c.front, back:c.back };
+      if(Array.isArray(c.options)){ sharedCard.options=c.options.slice(0,4); sharedCard.correct=Number(c.correct)||0; }
+      return sharedCard;
+    }),
     sharedBy: _uid,
     sharedByName: (_user&&_user.displayName)||'Unknown',
     sharedByEmail: (_user&&_user.email)||'',
@@ -8261,7 +8436,9 @@ function fcPlaySharedDeckDirectly(deck){
     name: deck.name,
     topic: deck.topic || '',
     cards: (deck.cards||[]).map(function(c, i){
-      return { id: c.id || ('shared_'+i), front:c.front, back:c.back };
+      var sharedCard={ id: c.id || ('shared_'+i), front:c.front, back:c.back };
+      if(Array.isArray(c.options)){ sharedCard.options=c.options.slice(0,4); sharedCard.correct=Number(c.correct)||0; }
+      return sharedCard;
     })
   };
   if(!tempDeck.cards.length){
@@ -8282,7 +8459,9 @@ function importSharedFcDeck(){
     name: src.name + ' (Shared)',
     topic: src.topic || '',
     cards: (src.cards||[]).map(function(c, i){
-      return { id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+      var imported={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+      if(Array.isArray(c.options)){ imported.options=c.options.slice(0,4); imported.correct=Number(c.correct)||0; }
+      return imported;
     }),
     createdAt: Date.now()
   };
@@ -8301,8 +8480,10 @@ window.fcImportCards = function(deckId, cardsArr){
   if(!deck){ console.error('FC: Deck nahi mili. Sahi deckId dalo.'); return; }
   var existing=(deck.cards||[]).slice(); var added=0;
   (cardsArr||[]).forEach(function(c){
-    if(!c.front||!c.back) return;
-    existing.push({ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+added, front:String(c.front), back:String(c.back) });
+    var normalized=fcNormalizeImportCard(c);
+    if(!normalized) return;
+    normalized.id=Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+added;
+    existing.push(normalized);
     added++;
   });
   deck.cards=existing;
@@ -8317,7 +8498,9 @@ window.fcImportCards = function(deckId, cardsArr){
 // st.pos stays the same — the next card slides into current slot.
 function fcBuildInitialQueue(cards){
   return cards.map(function(c){
-    return { cardId:c.id, front:c.front, back:c.back };
+    var item={ cardId:c.id, front:c.front, back:c.back };
+    if(Array.isArray(c.options)){ item.options=c.options.slice(0,4); item.correct=Number(c.correct)||0; }
+    return item;
   });
 }
 function fcShuffleArray(arr){
@@ -8509,6 +8692,8 @@ function fcRenderCurrentCard(){
   }
 
   var card = st.queue[st.pos];
+  _fcMcqAnswerPending = false;
+  var isMcq=Array.isArray(card.options)&&card.options.length===4;
   var knewSoFar = st.stats.knew;
   var total = st.totalOriginal;
   var remaining = st.queue.length - st.pos;
@@ -8520,15 +8705,23 @@ function fcRenderCurrentCard(){
     '<span class="fc-progress-chip">🔄 Remaining: '+remaining+'</span>';
   if(meta) meta.textContent = 'Card ' + (st.pos+1) + ' of ' + st.queue.length + ' in queue';
 
+  var mcqOptionsHtml=isMcq?
+    '<div class="fc-mcq-options" id="fcMcqOptions">'+card.options.map(function(option,i){
+      return '<button type="button" class="fc-mcq-option" onclick="fcChooseMcqOption('+i+');event.stopPropagation();">'+
+        '<span class="fc-mcq-option-label">'+String.fromCharCode(65+i)+'</span>'+escHtml(option)+'</button>';
+    }).join('')+'</div>':'';
   area.innerHTML =
     '<div class="fc-card-stage">'+
     '<div class="fc-card-badge">🃏 Card ' + (st.pos+1) + ' / ' + st.queue.length + '</div>'+
-    '<div class="fc-card-outer' + (st.flipped ? ' flipped' : '') + '" id="fcCardOuter" onclick="fcFlipCard()">'+
+    '<div class="fc-card-outer' + (isMcq?' fc-mcq-card':'') + (st.flipped ? ' flipped' : '') + '" id="fcCardOuter" onclick="fcFlipCard()">'+
       '<div class="fc-card-inner">'+
         '<div class="fc-card-face fc-card-front">'+
+          (isMcq?'<div class="fc-face-label">Question · choose one answer</div>':'')+
           '<div class="fc-face-text">' + escHtml(card.front) + '</div>'+
+          mcqOptionsHtml+
         '</div>'+
         '<div class="fc-card-face fc-card-back">'+
+          (isMcq?'<div class="fc-face-label">Correct Answer</div>':'')+
           '<div class="fc-face-text">' + escHtml(card.back) + '</div>'+
         '</div>'+
       '</div>'+
@@ -8600,9 +8793,36 @@ function fcDeleteCurrentCard(){
 }
 
 function fcFlipCard(){
+  if(_fcMcqAnswerPending) return;
   _fcSession.flipped = !_fcSession.flipped;
   var outer = document.getElementById('fcCardOuter');
   if(outer) outer.classList.toggle('flipped', _fcSession.flipped);
+}
+
+function fcChooseMcqOption(index){
+  var st=_fcSession;
+  if(!st||_fcMcqAnswerPending||!st.queue||st.pos>=st.queue.length) return;
+  var card=st.queue[st.pos];
+  if(!Array.isArray(card.options)||card.options.length!==4) return;
+  _fcMcqAnswerPending=true;
+  var correct=(Number(index)===Number(card.correct));
+  var buttons=document.querySelectorAll('#fcMcqOptions .fc-mcq-option');
+  buttons.forEach(function(button,i){
+    button.disabled=true;
+    if(i===Number(card.correct)) button.classList.add('is-correct');
+    if(i===Number(index)&&!correct) button.classList.add('is-wrong');
+  });
+  document.querySelectorAll('#fcRatingRow button').forEach(function(button){ button.disabled=true; });
+  st.flipped=true;
+  var outer=document.getElementById('fcCardOuter');
+  if(outer) outer.classList.add('flipped');
+  showToast(correct?'✅ Sahi jawab — Easy mark hua':'❌ Galat jawab — Hard interval par repeat hoga',correct?'success':'error');
+  var cardId=card.cardId;
+  setTimeout(function(){
+    if(_fcSession!==st||!st.queue[st.pos]||String(st.queue[st.pos].cardId)!==String(cardId)) return;
+    _fcMcqAnswerPending=false;
+    fcRateCard(correct?'easy':'hard');
+  },correct?850:1100);
 }
 
 function fcRateCard(rating){
@@ -8628,6 +8848,7 @@ function fcRateCard(rating){
   rl.secondLastRating = rl.lastRating;
   rl.lastRating = rating;
   rl.front = card.front; rl.back = card.back;
+  if(Array.isArray(card.options)){ rl.options=card.options.slice(0,4); rl.correct=Number(card.correct)||0; }
   // Auto-save to the bookmark folder the moment a card crosses the tough
   // threshold on Hard or Moderate — regardless of what it gets rated after.
   if((rating==='hard'||rating==='moderate') && rl.counts[rating]===FC_TOUGH_THRESHOLD){
@@ -8638,7 +8859,9 @@ function fcRateCard(rating){
   st.queue.splice(st.pos, 1); // remove current
   if(rating !== 'knew'){
     var gap = fcComputeGap(rl, rating);
-    fcInsertWithGap(st.queue, st.pos, { cardId:card.cardId, front:card.front, back:card.back }, gap);
+    var repeatCard={ cardId:card.cardId, front:card.front, back:card.back };
+    if(Array.isArray(card.options)){ repeatCard.options=card.options.slice(0,4); repeatCard.correct=Number(card.correct)||0; }
+    fcInsertWithGap(st.queue, st.pos, repeatCard, gap);
   }
   st.flipped = false;
   if(!st.temp){ try{ fcSaveSession(JSON.parse(JSON.stringify(st))); }catch(e){} }
@@ -8738,13 +8961,20 @@ function fcJumpToCard(cardId){
   if(idx === -1){
     var rl = (st.ratingLog||{})[cardId];
     var front = rl ? rl.front : '', back = rl ? rl.back : '';
+    var options = rl&&Array.isArray(rl.options)?rl.options.slice(0,4):null;
+    var correct = rl?Number(rl.correct)||0:0;
     if(!front && !back){
       // Last resort: look it up in the deck itself.
       var deck = st.temp ? _fcTempPlayDeck : _fcDecks.find(function(d){ return String(d.id)===String(st.deckId); });
       var found = deck && (deck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
-      if(found){ front = found.front; back = found.back; }
+      if(found){
+        front = found.front; back = found.back;
+        if(Array.isArray(found.options)){ options=found.options.slice(0,4); correct=Number(found.correct)||0; }
+      }
     }
-    st.queue.splice(st.pos, 0, { cardId:cardId, front:front, back:back });
+    var restoredCard={ cardId:cardId, front:front, back:back };
+    if(options){ restoredCard.options=options; restoredCard.correct=correct; }
+    st.queue.splice(st.pos, 0, restoredCard);
     idx = st.pos;
   }
   st.pos = idx;
@@ -8956,7 +9186,9 @@ function fcSaveTempDeckToMyDecks(){
     name: src.name,
     topic: src.topic || '',
     cards: (src.cards||[]).map(function(c, i){
-      return { id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+      var savedCard={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+      if(Array.isArray(c.options)){ savedCard.options=c.options.slice(0,4); savedCard.correct=Number(c.correct)||0; }
+      return savedCard;
     }),
     createdAt: Date.now()
   };
