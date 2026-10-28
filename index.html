@@ -976,9 +976,7 @@ textarea.inp{resize:vertical; min-height:64px;}
   flex:0 0 auto;
   height:min(46vh,380px);
 }
-.fc-card-outer.fc-mcq-card{height:min(52vh,460px);}
 .fc-focus-on .fc-card-outer{max-width:640px;height:min(50vh,440px);}
-.fc-focus-on .fc-card-outer.fc-mcq-card{height:min(56vh,500px);}
 .fc-card-inner{
   position:relative;width:100%;height:100%;
   transition:transform 0.6s cubic-bezier(0.34,1.28,0.64,1);
@@ -1012,10 +1010,10 @@ body.dark .fc-card-back .fc-face-label{color:#d9a35f;}
 .fc-face-text{font-family:'Georgia','Noto Sans Devanagari',serif;font-size:1.15rem;font-weight:600;line-height:1.75;word-break:break-word;letter-spacing:0.1px;}
 .fc-focus-on .fc-face-text{font-size:1.4rem;line-height:1.8;}
 .fc-tap-hint{display:none;}
-.fc-mcq-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:480px;margin-top:14px;}
+.fc-mcq-options{display:grid;grid-template-columns:1fr;gap:8px;width:100%;max-width:560px;margin:12px auto 0;}
 .fc-mcq-option{
-  min-width:0;padding:9px 10px;border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;
-  background:rgba(21,101,192,0.06);color:inherit;font-family:inherit;font-weight:700;font-size:0.78rem;line-height:1.35;
+  min-width:0;min-height:46px;padding:11px 13px;border:1.5px solid rgba(21,101,192,0.2);border-radius:10px;
+  background:rgba(21,101,192,0.06);color:inherit;font-family:inherit;font-weight:700;font-size:0.9rem;line-height:1.4;
   text-align:left;cursor:pointer;transition:background .15s,border-color .15s,transform .15s;
 }
 .fc-mcq-option:active{transform:scale(.98);}
@@ -1023,10 +1021,15 @@ body.dark .fc-card-back .fc-face-label{color:#d9a35f;}
 .fc-mcq-option.is-correct{background:rgba(46,125,50,.16);border-color:#2e7d32;color:#1b5e20;}
 .fc-mcq-option.is-wrong{background:rgba(198,40,40,.14);border-color:#c62828;color:#8e1616;}
 .fc-mcq-option-label{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;margin-right:5px;border-radius:50%;background:rgba(21,101,192,.12);font-size:.66rem;}
+.fc-mcq-feedback{min-height:1.45em;width:100%;max-width:560px;margin:8px auto 0;text-align:center;font-size:.84rem;font-weight:800;line-height:1.45;}
+.fc-mcq-feedback.is-correct{color:#2e7d32;}
+.fc-mcq-feedback.is-wrong{color:#c62828;}
 body.dark .fc-mcq-option{background:rgba(127,168,214,.1);border-color:rgba(127,168,214,.28);color:#e7eef5;}
 body.dark .fc-mcq-option.is-correct{background:rgba(46,125,50,.28);border-color:#66bb6a;color:#c8e6c9;}
 body.dark .fc-mcq-option.is-wrong{background:rgba(198,40,40,.26);border-color:#ef5350;color:#ffcdd2;}
-@media(max-width:380px){.fc-mcq-options{gap:6px;margin-top:9px;}.fc-mcq-option{padding:7px;font-size:.7rem;}}
+body.dark .fc-mcq-feedback.is-correct{color:#81c784;}
+body.dark .fc-mcq-feedback.is-wrong{color:#ef9a9a;}
+@media(max-width:380px){.fc-mcq-options{gap:7px;margin-top:9px;}.fc-mcq-option{min-height:44px;padding:10px;font-size:.84rem;}}
 
 .fc-rating-row{
   display:flex;align-items:center;justify-content:center;gap:18px;
@@ -7487,7 +7490,7 @@ var _fcSession = {
   deckId: null, queue: [], pos: 0, flipped: false,
   totalOriginal: 0, stats: { hard:0, moderate:0, easy:0, knew:0 }, done: false
 };
-var _fcMcqAnswerPending = false;
+var _fcMcqAnswered = false;
 
 // ---- Firebase ----
 function fcAttachListener(){
@@ -8692,7 +8695,7 @@ function fcRenderCurrentCard(){
   }
 
   var card = st.queue[st.pos];
-  _fcMcqAnswerPending = false;
+  _fcMcqAnswered = false;
   var isMcq=Array.isArray(card.options)&&card.options.length===4;
   var knewSoFar = st.stats.knew;
   var total = st.totalOriginal;
@@ -8710,15 +8713,15 @@ function fcRenderCurrentCard(){
       return '<button type="button" class="fc-mcq-option" onclick="fcChooseMcqOption('+i+');event.stopPropagation();">'+
         '<span class="fc-mcq-option-label">'+String.fromCharCode(65+i)+'</span>'+escHtml(option)+'</button>';
     }).join('')+'</div>':'';
+  var mcqFeedbackHtml=isMcq?'<div class="fc-mcq-feedback" id="fcMcqFeedback" aria-live="polite"></div>':'';
   area.innerHTML =
     '<div class="fc-card-stage">'+
     '<div class="fc-card-badge">🃏 Card ' + (st.pos+1) + ' / ' + st.queue.length + '</div>'+
-    '<div class="fc-card-outer' + (isMcq?' fc-mcq-card':'') + (st.flipped ? ' flipped' : '') + '" id="fcCardOuter" onclick="fcFlipCard()">'+
+    '<div class="fc-card-outer' + (st.flipped ? ' flipped' : '') + '" id="fcCardOuter" onclick="fcFlipCard()">'+
       '<div class="fc-card-inner">'+
         '<div class="fc-card-face fc-card-front">'+
           (isMcq?'<div class="fc-face-label">Question · choose one answer</div>':'')+
           '<div class="fc-face-text">' + escHtml(card.front) + '</div>'+
-          mcqOptionsHtml+
         '</div>'+
         '<div class="fc-card-face fc-card-back">'+
           (isMcq?'<div class="fc-face-label">Correct Answer</div>':'')+
@@ -8726,6 +8729,8 @@ function fcRenderCurrentCard(){
         '</div>'+
       '</div>'+
     '</div>'+
+    mcqOptionsHtml+
+    mcqFeedbackHtml+
     '<div id="fcRatingRow" class="fc-rating-row" style="display:flex;">'+
       '<button class="fc-rate-btn fc-rate-hard" onclick="fcRateCard(\'hard\')" title="Hard"><span class="fc-rate-count">1</span></button>'+
       '<button class="fc-rate-btn fc-rate-mod"  onclick="fcRateCard(\'moderate\')" title="Moderate"><span class="fc-rate-count">3</span></button>'+
@@ -8793,7 +8798,6 @@ function fcDeleteCurrentCard(){
 }
 
 function fcFlipCard(){
-  if(_fcMcqAnswerPending) return;
   _fcSession.flipped = !_fcSession.flipped;
   var outer = document.getElementById('fcCardOuter');
   if(outer) outer.classList.toggle('flipped', _fcSession.flipped);
@@ -8801,10 +8805,10 @@ function fcFlipCard(){
 
 function fcChooseMcqOption(index){
   var st=_fcSession;
-  if(!st||_fcMcqAnswerPending||!st.queue||st.pos>=st.queue.length) return;
+  if(!st||_fcMcqAnswered||!st.queue||st.pos>=st.queue.length) return;
   var card=st.queue[st.pos];
   if(!Array.isArray(card.options)||card.options.length!==4) return;
-  _fcMcqAnswerPending=true;
+  _fcMcqAnswered=true;
   var correct=(Number(index)===Number(card.correct));
   var buttons=document.querySelectorAll('#fcMcqOptions .fc-mcq-option');
   buttons.forEach(function(button,i){
@@ -8812,17 +8816,12 @@ function fcChooseMcqOption(index){
     if(i===Number(card.correct)) button.classList.add('is-correct');
     if(i===Number(index)&&!correct) button.classList.add('is-wrong');
   });
-  document.querySelectorAll('#fcRatingRow button').forEach(function(button){ button.disabled=true; });
-  st.flipped=true;
-  var outer=document.getElementById('fcCardOuter');
-  if(outer) outer.classList.add('flipped');
-  showToast(correct?'✅ Sahi jawab — Easy mark hua':'❌ Galat jawab — Hard interval par repeat hoga',correct?'success':'error');
-  var cardId=card.cardId;
-  setTimeout(function(){
-    if(_fcSession!==st||!st.queue[st.pos]||String(st.queue[st.pos].cardId)!==String(cardId)) return;
-    _fcMcqAnswerPending=false;
-    fcRateCard(correct?'easy':'hard');
-  },correct?850:1100);
+  var feedback=document.getElementById('fcMcqFeedback');
+  if(feedback){
+    feedback.classList.add(correct?'is-correct':'is-wrong');
+    if(correct) feedback.textContent='✅ Sahi jawab!';
+    else feedback.textContent='❌ Galat jawab. Sahi jawab: '+String.fromCharCode(65+Number(card.correct))+' — '+String(card.options[Number(card.correct)]);
+  }
 }
 
 function fcRateCard(rating){
