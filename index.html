@@ -1241,6 +1241,23 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
   border-bottom:2px solid var(--border);display:flex;align-items:center;gap:6px;
 }
 .fc-saved-group-title:first-child{margin-top:0;}
+.fc-explain-box{width:100%;max-width:560px;margin:10px auto 0;padding:10px 13px;border-radius:12px;
+  background:rgba(21,101,192,0.07);border:1.5px solid rgba(21,101,192,0.18);border-left:4px solid var(--accent);
+  font-size:.82rem;line-height:1.6;color:var(--text);text-align:left;white-space:pre-wrap;word-break:break-word;
+  animation:fcExplIn .25s ease;}
+.fc-explain-box .fc-explain-title{display:block;font-size:.62rem;font-weight:900;letter-spacing:.8px;text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+@keyframes fcExplIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(100,170,255,0.25);}
+.fc-saved-card .fc-saved-e{
+  font-size:0.83rem;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;
+  background:rgba(21,101,192,0.07);border-radius:9px;padding:7px 9px;
+}
+.fc-saved-card .fc-saved-e::before{
+  content:'E';display:inline-block;font-family:'Inter',sans-serif;
+  font-size:0.58rem;font-weight:900;color:#fff;background:var(--accent);
+  width:16px;height:16px;line-height:16px;text-align:center;border-radius:5px;
+  margin-right:7px;vertical-align:2px;
+}
 </style>
 
 <!-- Firebase SDK loaded at body end -->
@@ -2053,6 +2070,10 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
           </select>
         </div>
       </div>
+      <div class="field-group">
+        <label class="field-label" for="fcCardExplanation">&#128161; Explanation (optional)</label>
+        <textarea class="inp" id="fcCardExplanation" rows="3" placeholder="Is sawaal ka jawab kyu sahi hai — answer dene ke baad yahi dikhega..."></textarea>
+      </div>
       <div class="btn-row">
         <button class="btn btn-orange" id="fcAddCardBtn" onclick="fcAddOrUpdateCard()">&#10133; Card Add Karo</button>
         <button class="btn btn-outline btn-sm" id="fcCancelEditBtn" onclick="fcCancelEditCard()" style="display:none;">Cancel Edit</button>
@@ -2061,12 +2082,12 @@ body.dark .fc-saved-card .fc-saved-a{color:#8fd99a;background:rgba(46,125,50,0.1
     <div class="card" style="background:rgba(230,81,0,0.04);border:1.5px solid rgba(230,81,0,0.15);margin-bottom:10px;">
       <div class="card-title" style="color:#e65100;margin-bottom:6px;">&#128161; File Se Bulk Import</div>
       <div style="font-size:0.72rem;color:var(--text2);margin-bottom:8px;line-height:1.6;">
-        .txt/.json/.csv/.html file select karo &#8212; format auto-detect ho jayega:<br>
-        &#8226; <b>JSON:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"front":"Q","back":"A"}, ...]</code><br>
-        &#8226; <b>MCQ JSON (quiz jaisa):</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"q":"Question?","options":["A","B","C","D"],"correct":0}, ...]</code> (correct 0-based)<br>
-        &#8226; <b>MCQ CSV:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">question,optionA,optionB,optionC,optionD,correct</code> (correct 0-based)<br>
-        &#8226; <b>Text MCQ:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Question :: A | B | C | D :: 0</code><br>
-        &#8226; <b>Text:</b> har line <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Sawaal :: Jawab</code>
+        .txt/.json/.csv/.html file select karo &#8212; format auto-detect ho jayega. <b>explanation</b> sab formats me optional hai:<br>
+        &#8226; <b>JSON (Normal):</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"front":"Q","back":"A","explanation":"Kyu"}, ...]</code><br>
+        &#8226; <b>JSON (MCQ):</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">[{"q":"Question?","options":["A","B","C","D"],"correct":0,"explanation":"Kyu"}, ...]</code> (correct 0-based ya "A/B/C/D")<br>
+        &#8226; <b>CSV:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">question,optionA,optionB,optionC,optionD,correct,explanation</code><br>
+        &#8226; <b>Text MCQ:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Question :: A | B | C | D :: 0 :: Explanation</code><br>
+        &#8226; <b>Text Normal:</b> <code style="background:var(--surface2);padding:1px 4px;border-radius:4px;">Sawaal :: Jawab :: Explanation</code>
       </div>
       <input type="file" class="inp" id="fcImportFileInp" accept=".txt,.json,.csv,.html,.htm" style="padding:7px;" onchange="fcHandleFileSelect(event)" />
       <div id="fcImportPreviewBox" style="display:none;margin-top:10px;">
@@ -7491,6 +7512,32 @@ var _fcSession = {
   totalOriginal: 0, stats: { hard:0, moderate:0, easy:0, knew:0 }, done: false
 };
 var _fcMcqAnswered = false;
+// Explanation helper — newer cards carry .explanation; for older queue items /
+// saved cards that were created before this feature, fall back to the deck.
+function fcGetExplanation(item, deckId, cardId){
+  if(item && item.explanation) return String(item.explanation);
+  var did = deckId!=null ? deckId : (_fcSession && _fcSession.deckId);
+  var cid = cardId!=null ? cardId : (item && (item.cardId!=null?item.cardId:item.id));
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(did); }) ||
+             (typeof _fcTempPlayDeck!=='undefined' && _fcTempPlayDeck && String(_fcTempPlayDeck.id)===String(did) ? _fcTempPlayDeck : null);
+  if(!deck) return '';
+  var dc = (deck.cards||[]).find(function(c){ return String(c.id)===String(cid); });
+  return (dc && dc.explanation) ? String(dc.explanation) : '';
+}
+// Show/hide the explanation under the card. Normal cards: after flip.
+// MCQ cards: after an option is chosen (or after flip).
+function fcUpdateExplainBox(){
+  var st=_fcSession; var box=document.getElementById('fcExplainBox');
+  if(!box||!st||!st.queue||st.pos>=st.queue.length) return;
+  var card=st.queue[st.pos];
+  var isMcq=Array.isArray(card.options)&&card.options.length===4;
+  var expl=fcGetExplanation(card, st.deckId, card.cardId);
+  var visible=!!expl && (st.flipped || (isMcq && _fcMcqAnswered));
+  if(visible){
+    box.innerHTML='<span class="fc-explain-title">&#128161; Explanation</span>'+escHtml(expl);
+    box.style.display='';
+  } else { box.style.display='none'; box.innerHTML=''; }
+}
 
 // ---- Firebase ----
 function fcAttachListener(){
@@ -7559,7 +7606,7 @@ function fcDetachSavedListener(){
   if(_fcSavedListener){ try{_fcSavedListener();}catch(e){} _fcSavedListener=null; }
 }
 function fcSavedDocId(deckId, cardId){ return String(deckId)+'__'+String(cardId); }
-function fcSaveCardToFolder(deckId, cardId, front, back, reason, toughType){
+function fcSaveCardToFolder(deckId, cardId, front, back, reason, toughType, explanation){
   if(!_db||!_uid) return Promise.reject('not logged in');
   var deck = _fcDecks.find(function(d){ return String(d.id)===String(deckId); }) ||
              (_fcTempPlayDeck && String(_fcTempPlayDeck.id)===String(deckId) ? _fcTempPlayDeck : null);
@@ -7568,6 +7615,7 @@ function fcSaveCardToFolder(deckId, cardId, front, back, reason, toughType){
   var entry = {
     id: docId, deckId: String(deckId), cardId: String(cardId),
     front: front, back: back,
+    explanation: explanation || (existing && existing.explanation) || '',
     deckName: deck ? deck.name : '(Unknown Deck)',
     topic: deck ? (deck.topic||'') : '',
     savedAt: existing ? existing.savedAt : Date.now(),
@@ -7628,13 +7676,14 @@ function fcToggleSaveCurrentCard(){
     _fcSavedCards.push({
       id: docId, deckId: String(st.deckId), cardId: String(card.cardId),
       front: card.front, back: card.back,
+      explanation: fcGetExplanation(card, st.deckId, card.cardId),
       deckName: (function(){ var d=_fcDecks.find(function(x){return String(x.id)===String(st.deckId);})||_fcTempPlayDeck; return d?d.name:'(Unknown Deck)'; })(),
       topic: (function(){ var d=_fcDecks.find(function(x){return String(x.id)===String(st.deckId);})||_fcTempPlayDeck; return d?(d.topic||''):''; })(),
       savedAt: Date.now(), manual: true, autoTough: false, toughType: null
     });
     fcUpdateSaveBtnUI();
     showToast('✅ Card save ho gaya!','success');
-    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'manual').catch(function(e){
+    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'manual', null, fcGetExplanation(card, st.deckId, card.cardId)).catch(function(e){
       // Roll back the optimistic add if the write actually failed.
       _fcSavedCards = _fcSavedCards.filter(function(s){ return s.id!==docId; });
       fcUpdateSaveBtnUI();
@@ -7662,6 +7711,7 @@ var _fcSavedView = 'topic'; // 'topic' | 'response'
 // Not persisted — resets each time the page is opened, review session ki tarah.
 var _fcSavedHiddenQ = {};
 var _fcSavedHiddenA = {};
+var _fcSavedHiddenE = {}; // explanation hidden state (per saved card)
 function fcSetSavedView(mode){
   _fcSavedView = mode;
   var tTopic = document.getElementById('fcSavedTabTopic');
@@ -7701,20 +7751,21 @@ function fcSavedCardGroupKey(c){
 // ---- Per-card show/hide toggles ----
 function fcToggleSavedPart(docId, part){
   if(part==='q') _fcSavedHiddenQ[docId] = !_fcSavedHiddenQ[docId];
+  else if(part==='e') _fcSavedHiddenE[docId] = !_fcSavedHiddenE[docId];
   else _fcSavedHiddenA[docId] = !_fcSavedHiddenA[docId];
   renderFcSavedPage();
 }
 // ---- Global show/hide all (for whichever cards are currently listed) ----
 function fcHideAllAnswers(){
-  _fcSavedCards.forEach(function(c){ _fcSavedHiddenA[c.id] = true; _fcSavedHiddenQ[c.id] = false; });
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenA[c.id] = true; _fcSavedHiddenE[c.id] = true; _fcSavedHiddenQ[c.id] = false; });
   renderFcSavedPage();
 }
 function fcShowAllAnswers(){
-  _fcSavedCards.forEach(function(c){ _fcSavedHiddenA[c.id] = false; });
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenA[c.id] = false; _fcSavedHiddenE[c.id] = false; });
   renderFcSavedPage();
 }
 function fcHideAllQuestions(){
-  _fcSavedCards.forEach(function(c){ _fcSavedHiddenQ[c.id] = true; _fcSavedHiddenA[c.id] = false; });
+  _fcSavedCards.forEach(function(c){ _fcSavedHiddenQ[c.id] = true; _fcSavedHiddenA[c.id] = false; _fcSavedHiddenE[c.id] = false; });
   renderFcSavedPage();
 }
 function fcShowAllQuestions(){
@@ -7815,6 +7866,13 @@ function fcRenderSavedCardHtml(c){
   if((c.notRememberedCount||0) > 0) tags += '<span class="fc-saved-tag tag-hard">&#9888; Still not remembered: '+c.notRememberedCount+'x</span>';
   var qHidden = _fcSavedHiddenQ[c.id];
   var aHidden = _fcSavedHiddenA[c.id];
+  var eHidden = _fcSavedHiddenE[c.id];
+  var expl = fcGetExplanation(c, c.deckId, c.cardId);
+  var explRow = expl ?
+    '<div class="fc-saved-row">'+
+      '<div class="fc-saved-e">'+(eHidden ? '<span class="fc-saved-blur">Explanation hidden</span>' : escHtml(expl))+'</div>'+
+      '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="e" title="'+(eHidden?'Show explanation':'Hide explanation')+'">'+(eHidden?'&#128065;':'&#128064;')+'</button>'+
+    '</div>' : '';
   return '<div class="fc-saved-card">'+
     '<div class="fc-saved-row">'+
       '<div class="fc-saved-q">'+(qHidden ? '<span class="fc-saved-blur">Question hidden</span>' : escHtml(c.front))+'</div>'+
@@ -7824,6 +7882,7 @@ function fcRenderSavedCardHtml(c){
       '<div class="fc-saved-a">'+(aHidden ? '<span class="fc-saved-blur">Answer hidden</span>' : escHtml(c.back))+'</div>'+
       '<button class="btn btn-xs fc-saved-eye-btn" data-sid="'+escHtml(c.id)+'" data-part="a" title="'+(aHidden?'Show answer':'Hide answer')+'">'+(aHidden?'&#128065;':'&#128064;')+'</button>'+
     '</div>'+
+    explRow+
     '<div class="fc-saved-meta">'+tags+'</div>'+
     '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">'+
       '<button class="btn btn-xs btn-danger fc-saved-remove-btn" data-sid="'+escHtml(c.id)+'">&#128465; Remove</button>'+
@@ -7997,6 +8056,7 @@ function renderFcCardsList(){
           '<div style="font-size:0.78rem;font-weight:700;color:var(--accent);margin-bottom:2px;">Q: '+escHtml(c.front)+'</div>'+
           '<div style="font-size:0.76rem;color:#2e7d32;font-weight:600;">A: '+escHtml(c.back)+'</div>'+
           mcqInfo+
+          (c.explanation?'<div style="font-size:0.7rem;color:var(--text2);margin-top:5px;padding:5px 8px;background:rgba(21,101,192,0.06);border-radius:7px;white-space:pre-wrap;">&#128161; '+escHtml(c.explanation)+'</div>':'')+
         '</div>'+
         '<div style="display:flex;gap:4px;flex-shrink:0;">'+
           '<button class="btn btn-xs fc-edit-btn" data-cid="'+escHtml(c.id)+'" style="background:rgba(21,101,192,0.08);color:var(--accent);border:1.5px solid rgba(21,101,192,0.2);">&#9998;</button>'+
@@ -8030,17 +8090,20 @@ function fcAddOrUpdateCard(){
     back=((document.getElementById('fcCardBack')||{}).value||'').trim();
     if(!front||!back){ showToast('Front aur Back dono required hain!','error'); return; }
   }
+  var explanation=((document.getElementById('fcCardExplanation')||{}).value||'').trim();
   var editId=((document.getElementById('fcEditCardId')||{}).value||'');
   var cards=(deck.cards||[]).slice();
   if(editId){
     var idx=cards.findIndex(function(c){ return String(c.id)===editId; });
     if(idx!==-1){
       cards[idx].front=front; cards[idx].back=back;
+      if(explanation) cards[idx].explanation=explanation; else delete cards[idx].explanation;
       if(cardType==='mcq'){ cards[idx].options=options; cards[idx].correct=correct; }
       else { delete cards[idx].options; delete cards[idx].correct; }
     }
   } else {
     var newCard={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6), front:front, back:back };
+    if(explanation) newCard.explanation=explanation;
     if(cardType==='mcq'){ newCard.options=options; newCard.correct=correct; }
     cards.push(newCard);
   }
@@ -8064,6 +8127,7 @@ function fcEditCard(cardId){
   if(!card) return;
   var ff=document.getElementById('fcCardFront'); if(ff) ff.value=card.front;
   var bb=document.getElementById('fcCardBack');  if(bb) bb.value=card.back;
+  var ex=document.getElementById('fcCardExplanation'); if(ex) ex.value=card.explanation||'';
   var type=document.getElementById('fcCardType'); if(type) type.value=(Array.isArray(card.options)&&card.options.length===4)?'mcq':'basic';
   [0,1,2,3].forEach(function(i){
     var input=document.getElementById('fcCardOption'+i);
@@ -8081,6 +8145,7 @@ function fcEditCard(cardId){
 function fcCancelEditCard(){
   var fi=document.getElementById('fcCardFront'); if(fi) fi.value='';
   var bi=document.getElementById('fcCardBack');  if(bi) bi.value='';
+  var exi=document.getElementById('fcCardExplanation'); if(exi) exi.value='';
   var type=document.getElementById('fcCardType'); if(type) type.value='basic';
   [0,1,2,3].forEach(function(i){ var input=document.getElementById('fcCardOption'+i); if(input) input.value=''; });
   var correctSel=document.getElementById('fcCardCorrect'); if(correctSel) correctSel.value='0';
@@ -8162,7 +8227,8 @@ function fcParseImportText(raw){
         var item={
           front:col(row,['front','q','question','term']),
           back:col(row,['back','a','answer','definition']),
-          correct:col(row,['correct','correctanswer','answerindex'])
+          correct:col(row,['correct','correctanswer','answerindex']),
+          explanation:col(row,['explanation','exp','explain','solution','reason'])
         };
         item.options=[
           col(row,['optiona','option1','choicea']),
@@ -8188,16 +8254,25 @@ function fcParseImportText(raw){
     else if(line.indexOf('\t') !== -1) parts = line.split('\t');
     if(!parts || parts.length < 2) return;
     var front=parts[0].trim();
-    if(parts.length>=3){
+    var isMcqLine = parts.length>=3 && parts[1].indexOf('|')!==-1;
+    if(isMcqLine){
       var opts=parts[1].split('|').map(function(v){ return v.trim(); });
-      var answerText=parts.slice(2).join('::').trim();
+      var answerText=parts[2].trim();
+      var expl=parts.slice(3).join(' :: ').trim();
       var index=fcParseCorrectIndex(answerText,opts);
       if(front&&opts.length>=4&&opts.slice(0,4).every(Boolean)&&index>=0){
-        cards.push({front:front,options:opts.slice(0,4),correct:index,back:opts[index]});
+        var mc={front:front,options:opts.slice(0,4),correct:index,back:opts[index]};
+        if(expl) mc.explanation=expl;
+        cards.push(mc);
       }
     } else {
       var back=parts[1].trim();
-      if(front&&back) cards.push({front:front,back:back});
+      var bexpl=parts.slice(2).join(' :: ').trim();
+      if(front&&back){
+        var bc={front:front,back:back};
+        if(bexpl) bc.explanation=bexpl;
+        cards.push(bc);
+      }
     }
   });
   return cards;
@@ -8242,12 +8317,21 @@ function fcNormalizeImportCard(item){
   var options=Array.isArray(item.options)?item.options.slice(0,4).map(function(v){ return String(v==null?'':v).trim(); }):[];
   var correctValue=(item.correct!=null)?item.correct:
     ((item.correctAnswer!=null)?item.correctAnswer:((item.answerIndex!=null)?item.answerIndex:item.answer));
+  var explanation=String(item.explanation||item.exp||item.explain||item.solution||item.reason||'').trim();
   if(options.length===4&&options.every(Boolean)&&correctValue!=null){
     var correct=fcParseCorrectIndex(correctValue,options);
-    if(correct>=0) return {front:front,options:options,correct:correct,back:options[correct]};
+    if(correct>=0){
+      var mcq={front:front,options:options,correct:correct,back:options[correct]};
+      if(explanation) mcq.explanation=explanation;
+      return mcq;
+    }
   }
   var back=String(item.back||item.a||item.answer||item.definition||'').trim();
-  if(back) return {front:front,back:back};
+  if(back){
+    var basic={front:front,back:back};
+    if(explanation) basic.explanation=explanation;
+    return basic;
+  }
   return null;
 }
 
@@ -8261,7 +8345,7 @@ function fcShowImportPreview(cards){
   cards.slice(0, 50).forEach(function(c, i){
     var answer=Array.isArray(c.options)?(' <span style="color:#2e7d32;font-weight:700;">[MCQ: '+escHtml(c.options[Number(c.correct)]||c.back)+']</span>'):'';
     html += '<div style="padding:5px 0;' + (i>0?'border-top:1px solid var(--border);':'') + '">' +
-      '<b>' + (i+1) + '.</b> ' + escHtml(c.front) + ' <span style="color:var(--text2);">&#8594;</span> ' + escHtml(c.back||'') + answer +
+      '<b>' + (i+1) + '.</b> ' + escHtml(c.front) + ' <span style="color:var(--text2);">&#8594;</span> ' + escHtml(c.back||'') + answer + (c.explanation?' <span style="color:var(--accent);font-weight:700;">[&#128161; explanation]</span>':'') +
       '</div>';
   });
   if(cards.length > 50){
@@ -8288,6 +8372,7 @@ function fcConfirmFileImport(){
   var existing=(deck.cards||[]).slice(); var added=0;
   _fcPendingImportCards.forEach(function(c){
     var newCard={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+added, front:c.front, back:c.back };
+    if(c.explanation) newCard.explanation=c.explanation;
     if(Array.isArray(c.options)){ newCard.options=c.options.slice(0,4); newCard.correct=Number(c.correct)||0; }
     existing.push(newCard);
     added++;
@@ -8321,6 +8406,7 @@ function shareFcDeck(deckId){
     topic: deck.topic||'',
     cards: (deck.cards||[]).map(function(c){
       var sharedCard={ id:c.id, front:c.front, back:c.back };
+      if(c.explanation) sharedCard.explanation=c.explanation;
       if(Array.isArray(c.options)){ sharedCard.options=c.options.slice(0,4); sharedCard.correct=Number(c.correct)||0; }
       return sharedCard;
     }),
@@ -8440,6 +8526,7 @@ function fcPlaySharedDeckDirectly(deck){
     topic: deck.topic || '',
     cards: (deck.cards||[]).map(function(c, i){
       var sharedCard={ id: c.id || ('shared_'+i), front:c.front, back:c.back };
+      if(c.explanation) sharedCard.explanation=c.explanation;
       if(Array.isArray(c.options)){ sharedCard.options=c.options.slice(0,4); sharedCard.correct=Number(c.correct)||0; }
       return sharedCard;
     })
@@ -8463,6 +8550,7 @@ function importSharedFcDeck(){
     topic: src.topic || '',
     cards: (src.cards||[]).map(function(c, i){
       var imported={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+      if(c.explanation) imported.explanation=c.explanation;
       if(Array.isArray(c.options)){ imported.options=c.options.slice(0,4); imported.correct=Number(c.correct)||0; }
       return imported;
     }),
@@ -8502,6 +8590,7 @@ window.fcImportCards = function(deckId, cardsArr){
 function fcBuildInitialQueue(cards){
   return cards.map(function(c){
     var item={ cardId:c.id, front:c.front, back:c.back };
+    if(c.explanation) item.explanation=c.explanation;
     if(Array.isArray(c.options)){ item.options=c.options.slice(0,4); item.correct=Number(c.correct)||0; }
     return item;
   });
@@ -8713,7 +8802,8 @@ function fcRenderCurrentCard(){
       return '<button type="button" class="fc-mcq-option" onclick="fcChooseMcqOption('+i+');event.stopPropagation();">'+
         '<span class="fc-mcq-option-label">'+String.fromCharCode(65+i)+'</span>'+escHtml(option)+'</button>';
     }).join('')+'</div>':'';
-  var mcqFeedbackHtml=isMcq?'<div class="fc-mcq-feedback" id="fcMcqFeedback" aria-live="polite"></div>':'';
+  var mcqFeedbackHtml=(isMcq?'<div class="fc-mcq-feedback" id="fcMcqFeedback" aria-live="polite"></div>':'')+
+    '<div class="fc-explain-box" id="fcExplainBox" style="display:none;"></div>';
   area.innerHTML =
     '<div class="fc-card-stage">'+
     '<div class="fc-card-badge">🃏 Card ' + (st.pos+1) + ' / ' + st.queue.length + '</div>'+
@@ -8746,6 +8836,7 @@ function fcRenderCurrentCard(){
     '</div>'+
     '</div>';
   fcUpdateSaveBtnUI();
+  fcUpdateExplainBox();
 }
 
 // ---- Manual Prev / Next navigation (does not affect ratings/stats) ----
@@ -8801,6 +8892,7 @@ function fcFlipCard(){
   _fcSession.flipped = !_fcSession.flipped;
   var outer = document.getElementById('fcCardOuter');
   if(outer) outer.classList.toggle('flipped', _fcSession.flipped);
+  fcUpdateExplainBox();
 }
 
 function fcChooseMcqOption(index){
@@ -8822,6 +8914,7 @@ function fcChooseMcqOption(index){
     if(correct) feedback.textContent='✅ Sahi jawab!';
     else feedback.textContent='❌ Galat jawab. Sahi jawab: '+String.fromCharCode(65+Number(card.correct))+' — '+String(card.options[Number(card.correct)]);
   }
+  fcUpdateExplainBox();
 }
 
 function fcRateCard(rating){
@@ -8847,11 +8940,12 @@ function fcRateCard(rating){
   rl.secondLastRating = rl.lastRating;
   rl.lastRating = rating;
   rl.front = card.front; rl.back = card.back;
+  if(card.explanation) rl.explanation = card.explanation;
   if(Array.isArray(card.options)){ rl.options=card.options.slice(0,4); rl.correct=Number(card.correct)||0; }
   // Auto-save to the bookmark folder the moment a card crosses the tough
   // threshold on Hard or Moderate — regardless of what it gets rated after.
   if((rating==='hard'||rating==='moderate') && rl.counts[rating]===FC_TOUGH_THRESHOLD){
-    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'auto', rating).then(function(){
+    fcSaveCardToFolder(st.deckId, card.cardId, card.front, card.back, 'auto', rating, fcGetExplanation(card, st.deckId, card.cardId)).then(function(){
       showToast('📌 Tough card auto-save ho gaya!','info');
     }).catch(function(){});
   }
@@ -8859,6 +8953,7 @@ function fcRateCard(rating){
   if(rating !== 'knew'){
     var gap = fcComputeGap(rl, rating);
     var repeatCard={ cardId:card.cardId, front:card.front, back:card.back };
+    if(card.explanation) repeatCard.explanation=card.explanation;
     if(Array.isArray(card.options)){ repeatCard.options=card.options.slice(0,4); repeatCard.correct=Number(card.correct)||0; }
     fcInsertWithGap(st.queue, st.pos, repeatCard, gap);
   }
@@ -9016,11 +9111,12 @@ function appConfirm(message, onYes){
 function fcOpenCardEditor(mode, cardId){
   var st = _fcSession;
   var isEdit = mode === 'edit';
-  var existingFront = '', existingBack = '';
+  var existingFront = '', existingBack = '', existingExpl = '';
   if(isEdit){
     var card = (st && st.queue) ? st.queue.find(function(c){ return c.cardId===cardId; }) : null;
     if(!card){ showToast('Card nahi mili','error'); return; }
     existingFront = card.front; existingBack = card.back;
+    existingExpl = fcGetExplanation(card, st.deckId, card.cardId);
   }
   var old = document.getElementById('fcCardEditorOverlay');
   if(old) old.remove();
@@ -9038,6 +9134,10 @@ function fcOpenCardEditor(mode, cardId){
         '<label class="field-label">Back &#8212; Jawab / Definition *</label>'+
         '<textarea class="inp" id="fcEditorBack" rows="2" placeholder="Jawab ya definition...">'+escHtml(existingBack)+'</textarea>'+
       '</div>'+
+      '<div class="field-group">'+
+        '<label class="field-label">&#128161; Explanation (optional)</label>'+
+        '<textarea class="inp" id="fcEditorExpl" rows="3" placeholder="Answer ke baad dikhne wali explanation...">'+escHtml(existingExpl)+'</textarea>'+
+      '</div>'+
       '<div style="display:flex;gap:8px;margin-top:6px;">'+
         '<button id="fcEditorCancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border,#bdd5ea);background:transparent;color:var(--text2,#37526d);font-weight:700;cursor:pointer;">Cancel</button>'+
         '<button id="fcEditorSave" class="btn btn-orange" style="flex:1;">'+(isEdit?'&#10003; Update Karo':'&#10003; Add Karo')+'</button>'+
@@ -9051,11 +9151,12 @@ function fcOpenCardEditor(mode, cardId){
     var front = (document.getElementById('fcEditorFront').value||'').trim();
     var back  = (document.getElementById('fcEditorBack').value||'').trim();
     if(!front || !back){ showToast('Front aur Back dono required hain!','error'); return; }
+    var expl = (document.getElementById('fcEditorExpl').value||'').trim();
     if(isEdit){
-      fcApplyCardEdit(cardId, front, back);
+      fcApplyCardEdit(cardId, front, back, expl);
       showToast('&#9998; Card update ho gaya!'.replace('&#9998;','✏️'),'success');
     } else {
-      fcApplyNewCard(front, back);
+      fcApplyNewCard(front, back, expl);
       showToast('➕ Naya card add ho gaya!','success');
     }
     cleanup();
@@ -9065,42 +9166,47 @@ function fcOpenCardEditor(mode, cardId){
 // Persist an edit to the current card's front/back — updates every copy of
 // this card sitting in the live queue (it may repeat later via spaced
 // repetition), the ratingLog entry, and the underlying deck/temp deck.
-function fcApplyCardEdit(cardId, front, back){
+function fcApplyCardEdit(cardId, front, back, expl){
   var st = _fcSession;
   if(!st) return;
-  st.queue.forEach(function(c){ if(c.cardId===cardId){ c.front=front; c.back=back; } });
-  if(st.ratingLog && st.ratingLog[cardId]){ st.ratingLog[cardId].front=front; st.ratingLog[cardId].back=back; }
+  expl = expl || '';
+  st.queue.forEach(function(c){ if(c.cardId===cardId){ c.front=front; c.back=back; if(expl) c.explanation=expl; else delete c.explanation; } });
+  if(st.ratingLog && st.ratingLog[cardId]){ st.ratingLog[cardId].front=front; st.ratingLog[cardId].back=back; if(expl) st.ratingLog[cardId].explanation=expl; else delete st.ratingLog[cardId].explanation; }
   if(!st.temp){
     var deck = _fcDecks.find(function(d){ return String(d.id)===String(st.deckId); });
     if(deck){
       var dc = (deck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
-      if(dc){ dc.front=front; dc.back=back; }
+      if(dc){ dc.front=front; dc.back=back; if(expl) dc.explanation=expl; else delete dc.explanation; }
       fcSaveDeck(deck).catch(function(e){ dbg('fcApplyCardEdit save err: '+e.message,'error'); });
     }
     try{ fcSaveSession(JSON.parse(JSON.stringify(st))); }catch(e){}
   } else if(_fcTempPlayDeck){
     var tc = (_fcTempPlayDeck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
-    if(tc){ tc.front=front; tc.back=back; }
+    if(tc){ tc.front=front; tc.back=back; if(expl) tc.explanation=expl; else delete tc.explanation; }
   }
   fcRenderCurrentCard();
 }
 // Add a brand new card to the deck and drop it into the live queue a few
 // cards ahead so it shows up soon without disrupting the current card.
-function fcApplyNewCard(front, back){
+function fcApplyNewCard(front, back, expl){
   var st = _fcSession;
   if(!st) return;
   var newId = Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  var newCardObj = { id:newId, front:front, back:back };
+  if(expl) newCardObj.explanation = expl;
   if(!st.temp){
     var deck = _fcDecks.find(function(d){ return String(d.id)===String(st.deckId); });
     if(deck){
-      deck.cards = (deck.cards||[]).concat([{ id:newId, front:front, back:back }]);
+      deck.cards = (deck.cards||[]).concat([newCardObj]);
       fcSaveDeck(deck).catch(function(e){ dbg('fcApplyNewCard save err: '+e.message,'error'); });
     }
   } else if(_fcTempPlayDeck){
-    _fcTempPlayDeck.cards = (_fcTempPlayDeck.cards||[]).concat([{ id:newId, front:front, back:back }]);
+    _fcTempPlayDeck.cards = (_fcTempPlayDeck.cards||[]).concat([newCardObj]);
   }
   var insertAt = Math.min(st.pos + 3, st.queue.length);
-  st.queue.splice(insertAt, 0, { cardId:newId, front:front, back:back });
+  var qItem = { cardId:newId, front:front, back:back };
+  if(expl) qItem.explanation = expl;
+  st.queue.splice(insertAt, 0, qItem);
   st.totalOriginal = (st.totalOriginal||0) + 1;
   if(!st.temp){ try{ fcSaveSession(JSON.parse(JSON.stringify(st))); }catch(e){} }
   fcRenderCurrentCard();
@@ -9186,6 +9292,7 @@ function fcSaveTempDeckToMyDecks(){
     topic: src.topic || '',
     cards: (src.cards||[]).map(function(c, i){
       var savedCard={ id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:c.front, back:c.back };
+      if(c.explanation) savedCard.explanation=c.explanation;
       if(Array.isArray(c.options)){ savedCard.options=c.options.slice(0,4); savedCard.correct=Number(c.correct)||0; }
       return savedCard;
     }),
@@ -9233,6 +9340,7 @@ function fcShowRatingCards(rating){
         '<div style="font-size:0.84rem;color:var(--text);margin-bottom:8px;">'+escHtml(c.front)+'</div>'+
         '<div style="font-size:0.68rem;font-weight:700;color:var(--text2);margin-bottom:3px;">JAWAB</div>'+
         '<div style="font-size:0.84rem;color:var(--text);">'+escHtml(c.back)+'</div>'+
+        (c.explanation?'<div style="font-size:0.68rem;font-weight:700;color:var(--accent);margin:8px 0 3px;">&#128161; EXPLANATION</div><div style="font-size:0.8rem;color:var(--text);white-space:pre-wrap;">'+escHtml(c.explanation)+'</div>':'')+
       '</div>';
   });
   html += '</div>';
