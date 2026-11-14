@@ -1271,7 +1271,6 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
   font-weight:800;font-size:0.78rem;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s;
 }
 .fc-tag-btn:active{transform:scale(0.95);}
-.fc-tag-btn.has{background:var(--purple);color:#fff;border-color:var(--purple);}
 .fc-tag-caret{font-size:0.7rem;transition:transform .15s;}
 .fc-tag-btn.open .fc-tag-caret{transform:rotate(180deg);}
 .fc-tag-cur{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
@@ -8498,8 +8497,7 @@ function fcTagCurrentBase(){
 function fcTagBarHtml(){
   return '<div class="fc-tag-wrap" id="fcTagWrap">'+
     '<div class="fc-tag-head">'+
-      '<button type="button" class="fc-tag-btn" id="fcTagBtn" onclick="fcTagToggleDrop()">&#127991; Tag <span id="fcTagBtnCnt"></span><span class="fc-tag-caret">&#9662;</span></button>'+
-      '<div class="fc-tag-cur" id="fcTagCur"></div>'+
+      '<button type="button" class="fc-tag-btn" id="fcTagBtn" onclick="fcTagToggleDrop()">&#127991; Tag <span class="fc-tag-caret">&#9662;</span></button>'+
     '</div>'+
     '<div class="fc-tag-drop" id="fcTagDrop" style="display:none;">'+
       '<div class="fc-tag-add">'+
@@ -8536,15 +8534,7 @@ function fcTagBarUpdate(){
   var base = fcTagCurrentBase(); if(!base) return;
   var cur = fcTagsOf(base.deckId, base.cardId);
   var curLow = cur.map(function(t){ return t.toLowerCase(); });
-  var cnt = document.getElementById('fcTagBtnCnt');
-  var btn = document.getElementById('fcTagBtn');
-  var curBox = document.getElementById('fcTagCur');
   var list = document.getElementById('fcTagList');
-  if(cnt) cnt.textContent = cur.length ? '('+cur.length+') ' : '';
-  if(btn) btn.classList.toggle('has', cur.length>0);
-  if(curBox) curBox.innerHTML = cur.length
-    ? cur.map(function(t){ return '<span class="fc-tag-chip mini">'+escHtml(t)+'</span>'; }).join('')
-    : '<span class="fc-tag-none">Koi tag nahi</span>';
   if(list){
     var all = fcTagAllNames();
     list.innerHTML = all.length
