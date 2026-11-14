@@ -1258,6 +1258,58 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
   width:16px;height:16px;line-height:16px;text-align:center;border-radius:5px;
   margin-right:7px;vertical-align:2px;
 }
+
+/* ================================================================
+   FLASHCARD TAGS — in-quiz tag dropdown + Tagged folder page
+   ================================================================ */
+.fc-tag-wrap{width:100%;max-width:560px;margin:12px auto 4px;flex-shrink:0;}
+.fc-focus-on .fc-tag-wrap{max-width:640px;}
+.fc-tag-head{display:flex;align-items:center;gap:8px;min-width:0;}
+.fc-tag-btn{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:11px;
+  border:1.5px solid rgba(106,27,154,0.35);background:rgba(106,27,154,0.08);color:var(--purple);
+  font-weight:800;font-size:0.78rem;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s;
+}
+.fc-tag-btn:active{transform:scale(0.95);}
+.fc-tag-btn.has{background:var(--purple);color:#fff;border-color:var(--purple);}
+.fc-tag-caret{font-size:0.7rem;transition:transform .15s;}
+.fc-tag-btn.open .fc-tag-caret{transform:rotate(180deg);}
+.fc-tag-cur{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
+.fc-tag-cur::-webkit-scrollbar{display:none;}
+.fc-tag-none{font-size:0.7rem;color:var(--text2);opacity:.8;}
+.fc-tag-drop{
+  margin-top:8px;padding:10px;border-radius:13px;background:var(--surface);border:1.5px solid var(--border);
+  box-shadow:0 6px 20px rgba(20,30,45,0.12);animation:fcExplIn .2s ease;
+}
+.fc-tag-add{display:flex;gap:7px;align-items:center;margin-bottom:9px;}
+.fc-tag-add .inp{flex:1;min-width:0;margin:0;padding:8px 10px;font-size:0.82rem;}
+.fc-tag-list{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow-y:auto;}
+.fc-tag-chip{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:0.74rem;font-weight:800;
+  border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:all .12s;max-width:100%;
+}
+.fc-tag-chip small{font-size:0.62rem;opacity:.7;font-weight:700;}
+.fc-tag-chip.on{background:var(--purple);color:#fff;border-color:var(--purple);}
+.fc-tag-chip.mini{padding:3px 9px;font-size:0.66rem;cursor:default;background:rgba(106,27,154,0.12);color:var(--purple);border-color:rgba(106,27,154,0.3);flex:0 0 auto;}
+.fc-tag-chip .fc-tg-rm{margin-left:2px;font-weight:900;cursor:pointer;padding:0 2px;}
+
+/* Tagged page */
+#fcTaggedChips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;}
+.fc-tg-bulk{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:10px;border-radius:13px;background:var(--surface);border:1.5px solid var(--border);}
+.fc-tg-bulk-title{width:100%;font-size:0.64rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--text2);}
+.fc-tg-bulk .btn{flex:1 1 44%;min-width:120px;}
+.fc-tg-bulk .btn.off{background:rgba(198,40,40,0.08);color:var(--red);border-color:rgba(198,40,40,0.3);}
+.fc-tg-bulk .btn.on{background:rgba(46,125,50,0.08);color:var(--green);border-color:rgba(46,125,50,0.3);}
+.fc-tg-tagactions{display:flex;gap:7px;margin-bottom:10px;}
+.fc-tg-opts{display:flex;flex-direction:column;gap:5px;}
+.fc-tg-opt{font-size:0.82rem;line-height:1.5;padding:6px 9px;border-radius:9px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);}
+.fc-tg-opt b{display:inline-block;min-width:18px;color:var(--accent);}
+.fc-tg-opt.correct{background:rgba(46,125,50,0.1);border-color:rgba(46,125,50,0.45);color:#1b5e20;font-weight:700;}
+body.dark .fc-tg-opt.correct{color:#8fd99a;}
+.fc-saved-card.fc-tg-card{border-left-color:var(--purple);}
+.fc-tg-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border);}
+.fc-tg-deck{font-size:0.62rem;color:var(--text2);margin-top:6px;}
 </style>
 
 <!-- Firebase SDK loaded at body end -->
@@ -2002,6 +2054,7 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
           <button class="fc-deck-menu-btn" id="fcListMenuBtn" onclick="fcToggleListMenu(event)" aria-label="Manage" title="Manage">&#8942;</button>
           <div class="fc-deck-menu" id="fcListMenu">
             <button onclick="fcCloseListMenu();navTo('fc-saved',{title:'🔖 Saved Cards'});renderFcSavedPage();">&#128278; Saved Cards</button>
+            <button onclick="fcCloseListMenu();fcOpenTagged();">&#127991; Tagged Questions</button>
             <button onclick="fcCloseListMenu();openFcNewDeckForm();">&#10133; New Deck</button>
             <button onclick="fcCloseListMenu();fcExportAllDecks();">&#11015; Export All Decks</button>
             <button onclick="fcCloseListMenu();renderFcDeckList();showToast('List refresh ho gayi','success');">&#8635; Refresh List</button>
@@ -2009,6 +2062,7 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
         </div>
       </div>
     </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:10px;color:var(--purple);border-color:rgba(106,27,154,0.35);padding:9px;" onclick="fcOpenTagged()">&#127991; Tagged Questions &mdash; tag-wise folder</button>
     <div class="card" id="fcNewDeckForm" style="display:none;margin-bottom:10px;">
       <div class="card-title">&#10133; Naya Flashcard Deck</div>
       <div class="field-group">
@@ -2122,6 +2176,17 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
         <div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Session load ho rahi hai...</div></div>
       </div>
     </div>
+  </div>
+
+  <!-- ===== FLASHCARD TAGGED QUESTIONS PAGE ===== -->
+  <div id="page-fc-tagged" class="page">
+    <div style="margin-bottom:10px;">
+      <div id="fcTaggedTitle" style="font-size:1.13rem;font-weight:800;color:var(--text);">&#127991; Tagged Questions</div>
+      <div id="fcTaggedSubtitle" style="font-size:0.7rem;color:var(--text2);margin-top:1px;"></div>
+    </div>
+    <div id="fcTaggedChips"></div>
+    <div id="fcTaggedCtrl"></div>
+    <div id="fcTaggedList"></div>
   </div>
 
   <!-- ===== FLASHCARD SAVED CARDS PAGE ===== -->
@@ -2515,6 +2580,9 @@ function _doNavigateTo(pageName, pushBrowser){
   } else if(pageName === 'fc-saved'){
     document.getElementById('topbarTitle').textContent = '🔖 Saved Cards';
     renderFcSavedPage();
+  } else if(pageName === 'fc-tagged'){
+    document.getElementById('topbarTitle').textContent = '🏷 Tagged Questions';
+    renderFcTaggedPage();
   } else if(pageName === 'settings'){
     document.getElementById('topbarTitle').textContent = '⚙️ Settings';
     renderSettingsPage();
@@ -2758,6 +2826,7 @@ function attachListeners(){
   attachSharedAttemptListener();
   fcAttachListener();
   fcAttachSavedListener();
+  fcAttachTaggedListener();
 
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
@@ -2795,6 +2864,7 @@ function detachListeners(){
   _hlDetachFirebaseListeners();
   fcDetachListener();
   fcDetachSavedListener();
+  fcDetachTaggedListener();
   STATE.quizzes=[]; STATE.attempts=[]; STATE.sharedAttempts=[];
   // savedQuestions ko preserve karo — reload on next auth
 }
@@ -3669,6 +3739,7 @@ function _backupDataSnapshot(){
     subjectEntries:_backupDeepCopy(_smGetEntries()),
     flashcardDecks:_backupDeepCopy(typeof _fcDecks!=='undefined'?_fcDecks:[]),
     flashcardSavedCards:_backupDeepCopy(typeof _fcSavedCards!=='undefined'?_fcSavedCards:[]),
+    flashcardTaggedCards:_backupDeepCopy(typeof _fcTagged!=='undefined'?_fcTagged:[]),
     localSettings:_backupReadLocalData(),
     quizSessions:quizSessions
   };
@@ -3814,6 +3885,13 @@ function restoreUserDataBackup(data){
     _fcSavedCards=_backupMergeById(_fcSavedCards,data.flashcardSavedCards);
     data.flashcardSavedCards.forEach(function(card){
       if(card&&card.id!=null) writes.push(_db.collection('users').doc(_uid).collection('fc_saved').doc(String(card.id)).set(card));
+    });
+  }
+  if(typeof _fcTagged!=='undefined'&&Array.isArray(data.flashcardTaggedCards)){
+    _fcTagged=_backupMergeById(_fcTagged,data.flashcardTaggedCards);
+    fcTagSaveCache();
+    data.flashcardTaggedCards.forEach(function(card){
+      if(card&&card.id!=null) writes.push(_db.collection('users').doc(_uid).collection('fc_tagged').doc(String(card.id)).set(card));
     });
   }
   if(data.quizSessions&&typeof data.quizSessions==='object'){
@@ -7898,6 +7976,476 @@ function fcRenderSavedCardHtml(c){
   '</div>';
 }
 
+// ================================================================
+// FLASHCARD TAGS
+// Quiz ke dauran kisi bhi card par ek ya kai tags lagao (dropdown se),
+// baad me "Tagged Questions" folder me tag-wise dekho.
+// Data: users/{uid}/fc_tagged/{deckId__cardId}  (+ localStorage cache)
+// ================================================================
+var _fcTagged = [];
+var _fcTaggedListener = null;
+var _fcTagDropOpen = false;
+var _fcTagFilter = '';
+var _fcTgHid = {};                                   // docId -> {q,o,a,e} per-card override (true = hidden)
+var _fcTgBulk = { q:false, o:false, a:false, e:false }; // bulk state (true = hidden)
+var _fcTagSheetRefresh = null;
+
+function fcTagCacheKey(){ return 'fcTaggedCache_' + (_uid||'anon'); }
+function fcTagLoadCache(){
+  try{ var r = localStorage.getItem(fcTagCacheKey()); if(r){ var a = JSON.parse(r); if(Array.isArray(a)) return a; } }catch(e){}
+  return [];
+}
+function fcTagSaveCache(){ try{ localStorage.setItem(fcTagCacheKey(), JSON.stringify(_fcTagged)); }catch(e){} }
+function fcAttachTaggedListener(){
+  fcDetachTaggedListener();
+  if(!_db||!_uid) return;
+  _fcTagged = fcTagLoadCache();
+  _fcTaggedListener = _db.collection('users').doc(_uid).collection('fc_tagged')
+    .onSnapshot(function(snap){
+      var arr = [];
+      snap.forEach(function(d){ if(d.exists) arr.push(d.data()); });
+      arr.sort(function(a,b){ return (b.taggedAt||0)-(a.taggedAt||0); });
+      _fcTagged = arr;
+      fcTagSaveCache();
+      fcTagAfterChange();
+    }, function(err){ dbg('FC tagged listener err: '+err.message,'error'); });
+}
+function fcDetachTaggedListener(){
+  if(_fcTaggedListener){ try{_fcTaggedListener();}catch(e){} _fcTaggedListener = null; }
+}
+function fcTagAfterChange(){
+  var ap = getActivePage();
+  if(ap==='fc-tagged') renderFcTaggedPage();
+  if(ap==='fc-play') fcTagBarUpdate();
+  if(typeof _fcTagSheetRefresh === 'function'){ try{ _fcTagSheetRefresh(); }catch(e){} }
+}
+function fcTagNormalize(raw){ return String(raw||'').replace(/\s+/g,' ').trim().slice(0,30); }
+function fcTagAllNames(){
+  var map = {};
+  _fcTagged.forEach(function(e){
+    (e.tags||[]).forEach(function(t){
+      var k = String(t).toLowerCase();
+      if(!map[k]) map[k] = { name:t, count:0 };
+      map[k].count++;
+    });
+  });
+  return Object.keys(map).map(function(k){ return map[k]; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+}
+function fcTagCanon(name){
+  var low = name.toLowerCase();
+  var all = fcTagAllNames();
+  for(var i=0;i<all.length;i++){ if(all[i].name.toLowerCase()===low) return all[i].name; }
+  return name;
+}
+function fcTagFindEntry(deckId, cardId){
+  var id = fcSavedDocId(deckId, cardId);
+  return _fcTagged.find(function(e){ return e.id===id; }) || null;
+}
+function fcTagsOf(deckId, cardId){
+  var e = fcTagFindEntry(deckId, cardId);
+  return e ? (e.tags||[]).slice() : [];
+}
+function fcTagPersist(entry, remove){
+  fcTagSaveCache();
+  if(!_db||!_uid) return;
+  var ref = _db.collection('users').doc(_uid).collection('fc_tagged').doc(entry.id);
+  var p = remove ? ref.delete() : ref.set(entry);
+  p.catch(function(e){ showToast('Tag save error: '+(e&&e.message?e.message:e),'error'); });
+}
+// base = { deckId, cardId, front, back, options?, correct?, explanation? }
+function fcTagSetFor(base, tags){
+  var id = fcSavedDocId(base.deckId, base.cardId);
+  var idx = -1;
+  for(var i=0;i<_fcTagged.length;i++){ if(_fcTagged[i].id===id){ idx = i; break; } }
+  var existing = idx>=0 ? _fcTagged[idx] : null;
+  if(!tags.length){
+    if(existing){ _fcTagged.splice(idx,1); fcTagPersist(existing, true); }
+    fcTagAfterChange();
+    return;
+  }
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(base.deckId); }) ||
+             (typeof _fcTempPlayDeck!=='undefined' && _fcTempPlayDeck && String(_fcTempPlayDeck.id)===String(base.deckId) ? _fcTempPlayDeck : null);
+  var entry = {
+    id: id, deckId: String(base.deckId), cardId: String(base.cardId),
+    front: base.front || '', back: base.back || '',
+    explanation: base.explanation || (existing && existing.explanation) || '',
+    deckName: deck ? deck.name : (existing ? existing.deckName : '(Unknown Deck)'),
+    topic: deck ? (deck.topic||'') : (existing ? (existing.topic||'') : ''),
+    tags: tags.slice(),
+    taggedAt: existing ? existing.taggedAt : Date.now(),
+    updatedAt: Date.now()
+  };
+  var opts = Array.isArray(base.options) ? base.options : (existing && Array.isArray(existing.options) ? existing.options : null);
+  if(opts){ entry.options = opts.slice(0,4); entry.correct = Number(base.correct!=null ? base.correct : (existing?existing.correct:0)) || 0; }
+  if(idx>=0) _fcTagged[idx] = entry; else _fcTagged.unshift(entry);
+  fcTagPersist(entry, false);
+  fcTagAfterChange();
+}
+function fcTagToggleForBase(base, tag){
+  if(!base) return;
+  var cur = fcTagsOf(base.deckId, base.cardId);
+  var low = tag.toLowerCase();
+  var i = -1;
+  cur.forEach(function(t,k){ if(t.toLowerCase()===low) i = k; });
+  if(i>=0) cur.splice(i,1); else cur.push(tag);
+  fcTagSetFor(base, cur);
+}
+function fcTagAddForBase(base, raw){
+  if(!base) return false;
+  var parts = String(raw||'').split(',').map(fcTagNormalize).filter(Boolean);
+  if(!parts.length) return false;
+  var cur = fcTagsOf(base.deckId, base.cardId);
+  var changed = false;
+  parts.forEach(function(p){
+    var name = fcTagCanon(p);
+    if(!cur.some(function(t){ return t.toLowerCase()===name.toLowerCase(); })){ cur.push(name); changed = true; }
+  });
+  if(changed) fcTagSetFor(base, cur);
+  return true;
+}
+
+// ---- In-quiz tag bar (inline dropdown — never re-renders the card) ----
+function fcTagCurrentBase(){
+  var st = _fcSession;
+  if(!st || !st.queue || st.pos>=st.queue.length) return null;
+  var c = st.queue[st.pos];
+  return { deckId: st.deckId, cardId: c.cardId, front: c.front, back: c.back,
+           options: c.options, correct: c.correct, explanation: fcGetExplanation(c, st.deckId, c.cardId) };
+}
+function fcTagBarHtml(){
+  return '<div class="fc-tag-wrap" id="fcTagWrap">'+
+    '<div class="fc-tag-head">'+
+      '<button type="button" class="fc-tag-btn" id="fcTagBtn" onclick="fcTagToggleDrop()">&#127991; Tag <span id="fcTagBtnCnt"></span><span class="fc-tag-caret">&#9662;</span></button>'+
+      '<div class="fc-tag-cur" id="fcTagCur"></div>'+
+    '</div>'+
+    '<div class="fc-tag-drop" id="fcTagDrop" style="display:none;">'+
+      '<div class="fc-tag-add">'+
+        '<input type="text" class="inp" id="fcTagInp" maxlength="60" placeholder="Naya tag likho (comma se kai tags)" autocomplete="off">'+
+        '<button type="button" class="btn btn-orange btn-sm" id="fcTagAddBtn">+ Add</button>'+
+      '</div>'+
+      '<div class="fc-tag-list" id="fcTagList"></div>'+
+    '</div>'+
+  '</div>';
+}
+function fcTagToggleDrop(){
+  _fcTagDropOpen = !_fcTagDropOpen;
+  fcTagApplyDrop(true);
+}
+function fcTagApplyDrop(scroll){
+  var d = document.getElementById('fcTagDrop');
+  var b = document.getElementById('fcTagBtn');
+  if(!d || !b) return;
+  d.style.display = _fcTagDropOpen ? '' : 'none';
+  b.classList.toggle('open', _fcTagDropOpen);
+  if(_fcTagDropOpen && scroll){
+    var w = document.getElementById('fcTagWrap');
+    if(w && w.scrollIntoView) setTimeout(function(){ try{ w.scrollIntoView({block:'nearest',behavior:'smooth'}); }catch(e){} }, 30);
+  }
+}
+function fcTagAddFromInput(){
+  var inp = document.getElementById('fcTagInp'); if(!inp) return;
+  var ok = fcTagAddForBase(fcTagCurrentBase(), inp.value);
+  if(ok){ inp.value = ''; showToast('🏷 Tag lag gaya','success'); }
+  else showToast('Tag ka naam likho','error');
+}
+function fcTagBarUpdate(){
+  var wrap = document.getElementById('fcTagWrap'); if(!wrap) return;
+  var base = fcTagCurrentBase(); if(!base) return;
+  var cur = fcTagsOf(base.deckId, base.cardId);
+  var curLow = cur.map(function(t){ return t.toLowerCase(); });
+  var cnt = document.getElementById('fcTagBtnCnt');
+  var btn = document.getElementById('fcTagBtn');
+  var curBox = document.getElementById('fcTagCur');
+  var list = document.getElementById('fcTagList');
+  if(cnt) cnt.textContent = cur.length ? '('+cur.length+') ' : '';
+  if(btn) btn.classList.toggle('has', cur.length>0);
+  if(curBox) curBox.innerHTML = cur.length
+    ? cur.map(function(t){ return '<span class="fc-tag-chip mini">'+escHtml(t)+'</span>'; }).join('')
+    : '<span class="fc-tag-none">Koi tag nahi</span>';
+  if(list){
+    var all = fcTagAllNames();
+    list.innerHTML = all.length
+      ? all.map(function(t){
+          var on = curLow.indexOf(t.name.toLowerCase())!==-1;
+          return '<button type="button" class="fc-tag-chip'+(on?' on':'')+'" data-tag="'+escHtml(t.name)+'">'+(on?'&#10003; ':'')+escHtml(t.name)+' <small>'+t.count+'</small></button>';
+        }).join('')
+      : '<div class="fc-tag-none">Abhi koi tag nahi — upar naya tag banao.</div>';
+    list.onclick = function(e){
+      var b = e.target.closest('.fc-tag-chip'); if(!b) return;
+      fcTagToggleForBase(fcTagCurrentBase(), b.getAttribute('data-tag'));
+    };
+  }
+}
+function fcTagBarInit(){
+  var inp = document.getElementById('fcTagInp');
+  var add = document.getElementById('fcTagAddBtn');
+  if(inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); fcTagAddFromInput(); } });
+  if(add) add.addEventListener('click', fcTagAddFromInput);
+  fcTagApplyDrop(false);
+  fcTagBarUpdate();
+}
+// Keep tagged snapshot in sync when a card is edited mid-quiz.
+function fcTagSyncEdit(deckId, cardId, front, back, expl){
+  var e = fcTagFindEntry(deckId, cardId);
+  if(!e) return;
+  e.front = front; e.back = back; e.explanation = expl || '';
+  e.updatedAt = Date.now();
+  fcTagPersist(e, false);
+}
+
+// ---- Tagged Questions page ----
+function fcOpenTagged(){
+  navTo('fc-tagged', { title:'🏷 Tagged Questions', render: renderFcTaggedPage });
+}
+function fcTgHidden(docId, part){
+  var o = _fcTgHid[docId];
+  if(o && typeof o[part]==='boolean') return o[part];
+  return !!_fcTgBulk[part];
+}
+function fcTgToggle(docId, part){
+  var cur = fcTgHidden(docId, part);
+  if(!_fcTgHid[docId]) _fcTgHid[docId] = {};
+  _fcTgHid[docId][part] = !cur;
+  renderFcTaggedPage();
+}
+function fcTgBulkSet(part, hide){
+  _fcTgBulk[part] = !!hide;
+  Object.keys(_fcTgHid).forEach(function(k){ if(_fcTgHid[k]) delete _fcTgHid[k][part]; });
+  renderFcTaggedPage();
+}
+function fcTgBulkAll(hide){
+  ['q','o','a','e'].forEach(function(p){ _fcTgBulk[p] = !!hide; });
+  _fcTgHid = {};
+  renderFcTaggedPage();
+}
+function fcTgSelectTag(tag){
+  _fcTagFilter = tag || '';
+  renderFcTaggedPage();
+}
+function fcTgListForFilter(){
+  if(!_fcTagFilter) return _fcTagged.slice();
+  var low = _fcTagFilter.toLowerCase();
+  return _fcTagged.filter(function(e){
+    return (e.tags||[]).some(function(t){ return String(t).toLowerCase()===low; });
+  });
+}
+function fcTgBase(e){
+  return { deckId:e.deckId, cardId:e.cardId, front:e.front, back:e.back, options:e.options, correct:e.correct, explanation:e.explanation };
+}
+function renderFcTaggedPage(){
+  var chipsBox = document.getElementById('fcTaggedChips');
+  var ctrl = document.getElementById('fcTaggedCtrl');
+  var container = document.getElementById('fcTaggedList');
+  var sub = document.getElementById('fcTaggedSubtitle');
+  if(!container || !chipsBox || !ctrl) return;
+  var names = fcTagAllNames();
+  if(_fcTagFilter && !names.some(function(n){ return n.name.toLowerCase()===_fcTagFilter.toLowerCase(); })) _fcTagFilter = '';
+  if(sub) sub.textContent = _fcTagged.length+' tagged questions · '+names.length+' tags';
+
+  if(!_fcTagged.length){
+    chipsBox.innerHTML = ''; ctrl.innerHTML = '';
+    container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
+      '<div style="font-size:2rem;margin-bottom:6px;">&#127991;</div>'+
+      '<div>Abhi koi tagged question nahi hai.</div>'+
+      '<div style="font-size:0.74rem;margin-top:4px;">Flashcard quiz ke dauran card ke neeche <b>Tag</b> button se tag lagao.</div></div>';
+    return;
+  }
+
+  chipsBox.innerHTML =
+    '<button type="button" class="fc-tag-chip'+(!_fcTagFilter?' on':'')+'" data-tag="">Sab <small>'+_fcTagged.length+'</small></button>'+
+    names.map(function(n){
+      var on = _fcTagFilter && n.name.toLowerCase()===_fcTagFilter.toLowerCase();
+      return '<button type="button" class="fc-tag-chip'+(on?' on':'')+'" data-tag="'+escHtml(n.name)+'">&#127991; '+escHtml(n.name)+' <small>'+n.count+'</small></button>';
+    }).join('');
+  chipsBox.onclick = function(e){
+    var b = e.target.closest('.fc-tag-chip'); if(!b) return;
+    fcTgSelectTag(b.getAttribute('data-tag'));
+  };
+
+  var list = fcTgListForFilter();
+  function bulkBtn(part, label){
+    var hid = !!_fcTgBulk[part];
+    return '<button type="button" class="btn btn-xs btn-outline fc-tg-bulkbtn '+(hid?'off':'on')+'" data-part="'+part+'">'+(hid?'&#128584; ':'&#128065; ')+label+': '+(hid?'Hidden':'Shown')+'</button>';
+  }
+  ctrl.innerHTML =
+    (_fcTagFilter ? '<div class="fc-tg-tagactions">'+
+        '<button type="button" class="btn btn-xs btn-outline" id="fcTgRenameBtn" style="flex:1;">&#9998; Tag Rename</button>'+
+        '<button type="button" class="btn btn-xs btn-danger" id="fcTgDeleteBtn" style="flex:1;">&#128465; Tag Delete</button>'+
+      '</div>' : '')+
+    '<div class="fc-tg-bulk">'+
+      '<div class="fc-tg-bulk-title">Sab cards ke liye hide / show ('+list.length+')</div>'+
+      bulkBtn('q','Question')+bulkBtn('o','Options')+bulkBtn('a','Answer')+bulkBtn('e','Explanation')+
+      '<button type="button" class="btn btn-xs btn-outline" id="fcTgShowAllBtn" style="flex:1 1 44%;min-width:120px;">&#128065; Sab Dikhao</button>'+
+      '<button type="button" class="btn btn-xs btn-outline" id="fcTgHideAllBtn" style="flex:1 1 44%;min-width:120px;">&#128584; Sab Chhupao</button>'+
+    '</div>';
+  ctrl.onclick = function(e){
+    var bb = e.target.closest('.fc-tg-bulkbtn');
+    if(bb){ var p = bb.getAttribute('data-part'); fcTgBulkSet(p, !_fcTgBulk[p]); return; }
+    if(e.target.closest('#fcTgShowAllBtn')){ fcTgBulkAll(false); return; }
+    if(e.target.closest('#fcTgHideAllBtn')){ fcTgBulkAll(true); return; }
+    if(e.target.closest('#fcTgRenameBtn')){ fcTagRename(_fcTagFilter); return; }
+    if(e.target.closest('#fcTgDeleteBtn')){ fcTagDeleteTag(_fcTagFilter); return; }
+  };
+
+  if(!list.length){
+    container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:22px;">Is tag me koi question nahi.</div>';
+  } else {
+    container.innerHTML = list.map(fcTgCardHtml).join('');
+  }
+  container.onclick = function(e){
+    var eye = e.target.closest('.fc-tg-eye');
+    if(eye){ fcTgToggle(eye.getAttribute('data-sid'), eye.getAttribute('data-part')); return; }
+    var rm = e.target.closest('.fc-tg-rm');
+    if(rm){
+      var ent = _fcTagged.find(function(x){ return x.id===rm.getAttribute('data-sid'); });
+      if(ent){
+        var t = rm.getAttribute('data-tag');
+        var next = (ent.tags||[]).filter(function(x){ return String(x).toLowerCase()!==t.toLowerCase(); });
+        fcTagSetFor(fcTgBase(ent), next);
+      }
+      return;
+    }
+    var ed = e.target.closest('.fc-tg-edit');
+    if(ed){ fcTagOpenSheet(ed.getAttribute('data-sid')); return; }
+    var del = e.target.closest('.fc-tg-del');
+    if(del){
+      var sid = del.getAttribute('data-sid');
+      var en = _fcTagged.find(function(x){ return x.id===sid; });
+      if(!en) return;
+      appConfirm('Is question ke saare tags hata kar Tagged folder se hata dein?\n\n"'+(en.front||'').slice(0,80)+'"', function(){
+        fcTagSetFor(fcTgBase(en), []);
+        showToast('Tagged folder se hata diya','success');
+      });
+    }
+  };
+}
+function fcTgCardHtml(c){
+  var id = escHtml(c.id);
+  var qH = fcTgHidden(c.id,'q'), oH = fcTgHidden(c.id,'o'), aH = fcTgHidden(c.id,'a'), eH = fcTgHidden(c.id,'e');
+  function eye(part, hid, label){
+    return '<button class="btn btn-xs fc-saved-eye-btn fc-tg-eye" data-sid="'+id+'" data-part="'+part+'" title="'+(hid?'Show ':'Hide ')+label+'">'+(hid?'&#128065;':'&#128064;')+'</button>';
+  }
+  var isMcq = Array.isArray(c.options) && c.options.length>0;
+  var html = '<div class="fc-saved-card fc-tg-card">';
+  html += '<div class="fc-saved-row"><div class="fc-saved-q">'+(qH?'<span class="fc-saved-blur">Question hidden</span>':escHtml(c.front))+'</div>'+eye('q',qH,'question')+'</div>';
+  if(isMcq){
+    html += '<div class="fc-saved-row"><div class="fc-tg-opts">'+
+      (oH ? '<div class="fc-tg-opt"><span class="fc-saved-blur">Options hidden</span></div>'
+          : c.options.map(function(op,i){
+              var ok = !aH && i===Number(c.correct);
+              return '<div class="fc-tg-opt'+(ok?' correct':'')+'"><b>'+String.fromCharCode(65+i)+'.</b> '+escHtml(op)+(ok?' &#10003;':'')+'</div>';
+            }).join(''))+
+      '</div>'+eye('o',oH,'options')+'</div>';
+  }
+  html += '<div class="fc-saved-row"><div class="fc-saved-a">'+(aH?'<span class="fc-saved-blur">Answer hidden</span>':escHtml(c.back))+'</div>'+eye('a',aH,'answer')+'</div>';
+  if(c.explanation){
+    html += '<div class="fc-saved-row"><div class="fc-saved-e">'+(eH?'<span class="fc-saved-blur">Explanation hidden</span>':escHtml(c.explanation))+'</div>'+eye('e',eH,'explanation')+'</div>';
+  }
+  html += '<div class="fc-tg-tags">'+
+    (c.tags||[]).map(function(t){
+      return '<span class="fc-tag-chip mini">&#127991; '+escHtml(t)+'<span class="fc-tg-rm" data-sid="'+id+'" data-tag="'+escHtml(t)+'" title="Yeh tag hatao">&#10005;</span></span>';
+    }).join('')+
+  '</div>';
+  html += '<div class="fc-tg-deck">&#128214; '+escHtml(c.deckName||'')+(c.topic?' — '+escHtml(c.topic):'')+'</div>';
+  html += '<div style="display:flex;gap:6px;margin-top:8px;">'+
+    '<button class="btn btn-xs btn-outline fc-tg-edit" data-sid="'+id+'" style="color:var(--purple);border-color:rgba(106,27,154,0.35);">&#127991; Tags Edit / Add</button>'+
+    '<button class="btn btn-xs btn-danger fc-tg-del" data-sid="'+id+'">&#128465; Untag</button>'+
+  '</div></div>';
+  return html;
+}
+// Bottom-sheet tag editor for a card on the Tagged page
+function fcTagOpenSheet(docId){
+  var entry = _fcTagged.find(function(e){ return e.id===docId; });
+  if(!entry) return;
+  var base = fcTgBase(entry);
+  var old = document.getElementById('fcTagSheetOverlay'); if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'fcTagSheetOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML =
+    '<div style="background:var(--surface,#fff);border-radius:18px 18px 0 0;padding:16px 16px 20px;max-width:480px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
+        '<div style="font-weight:900;font-size:1rem;color:var(--text);">&#127991; Tags Edit Karo</div>'+
+        '<button id="fcTagSheetClose" style="background:none;border:none;font-size:1.3rem;color:var(--text2);cursor:pointer;line-height:1;">&#10005;</button>'+
+      '</div>'+
+      '<div class="fc-tag-add"><input type="text" class="inp" id="fcTagSheetInp" maxlength="60" placeholder="Naya tag likho (comma se kai tags)" autocomplete="off">'+
+      '<button type="button" class="btn btn-orange btn-sm" id="fcTagSheetAdd">+ Add</button></div>'+
+      '<div class="fc-tag-list" id="fcTagSheetList" style="max-height:45vh;"></div>'+
+      '<button class="btn btn-primary" id="fcTagSheetDone" style="margin-top:12px;">&#10003; Done</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+  function refresh(){
+    var cur = fcTagsOf(base.deckId, base.cardId);
+    var low = cur.map(function(t){ return t.toLowerCase(); });
+    var all = fcTagAllNames();
+    cur.forEach(function(t){ if(!all.some(function(a){ return a.name.toLowerCase()===t.toLowerCase(); })) all.push({name:t,count:0}); });
+    var box = document.getElementById('fcTagSheetList'); if(!box) return;
+    box.innerHTML = all.map(function(t){
+      var on = low.indexOf(t.name.toLowerCase())!==-1;
+      return '<button type="button" class="fc-tag-chip'+(on?' on':'')+'" data-tag="'+escHtml(t.name)+'">'+(on?'&#10003; ':'')+escHtml(t.name)+' <small>'+t.count+'</small></button>';
+    }).join('');
+  }
+  function close(){ _fcTagSheetRefresh = null; ov.remove(); }
+  _fcTagSheetRefresh = refresh;
+  refresh();
+  document.getElementById('fcTagSheetList').onclick = function(e){
+    var b = e.target.closest('.fc-tag-chip'); if(!b) return;
+    fcTagToggleForBase(base, b.getAttribute('data-tag'));
+  };
+  function addNow(){
+    var inp = document.getElementById('fcTagSheetInp');
+    if(fcTagAddForBase(base, inp.value)){ inp.value=''; } else showToast('Tag ka naam likho','error');
+  }
+  document.getElementById('fcTagSheetAdd').onclick = addNow;
+  document.getElementById('fcTagSheetInp').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addNow(); } });
+  document.getElementById('fcTagSheetClose').onclick = close;
+  document.getElementById('fcTagSheetDone').onclick = close;
+  ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+}
+function fcTagRename(oldName){
+  var nn = prompt('Tag ka naya naam:', oldName);
+  if(nn===null) return;
+  nn = fcTagNormalize(nn);
+  if(!nn){ showToast('Naam khaali nahi ho sakta!','error'); return; }
+  var oldLow = oldName.toLowerCase();
+  var target = fcTagCanon(nn);
+  _fcTagged.forEach(function(e){
+    var has = (e.tags||[]).some(function(t){ return String(t).toLowerCase()===oldLow; });
+    if(!has) return;
+    var next = [];
+    (e.tags||[]).forEach(function(t){
+      var v = String(t).toLowerCase()===oldLow ? target : t;
+      if(!next.some(function(x){ return x.toLowerCase()===v.toLowerCase(); })) next.push(v);
+    });
+    e.tags = next; e.updatedAt = Date.now();
+    fcTagPersist(e, false);
+  });
+  _fcTagFilter = target;
+  showToast('Tag rename ho gaya','success');
+  fcTagAfterChange();
+}
+function fcTagDeleteTag(name){
+  var low = name.toLowerCase();
+  appConfirm('Tag "'+name+'" sabhi questions se hata dein?\n(Questions delete nahi honge — jinke paas sirf yahi tag hai woh Tagged folder se hat jayenge.)', function(){
+    _fcTagged.slice().forEach(function(e){
+      var has = (e.tags||[]).some(function(t){ return String(t).toLowerCase()===low; });
+      if(!has) return;
+      var next = (e.tags||[]).filter(function(t){ return String(t).toLowerCase()!==low; });
+      if(!next.length){
+        _fcTagged = _fcTagged.filter(function(x){ return x.id!==e.id; });
+        fcTagPersist(e, true);
+      } else {
+        e.tags = next; e.updatedAt = Date.now();
+        fcTagPersist(e, false);
+      }
+    });
+    _fcTagFilter = '';
+    showToast('Tag delete ho gaya','success');
+    fcTagAfterChange();
+  });
+}
+
 // ---- Deck List ----
 function renderFcDeckList(){
   var container = document.getElementById('fcDeckList'); if(!container) return;
@@ -8834,9 +9382,11 @@ function fcRenderCurrentCard(){
       '<button class="fc-nav-btn fc-del-btn" onclick="fcDeleteCurrentCard()" title="Is card ko delete karo">&#128465;</button>'+
       '<button class="fc-nav-btn" id="fcNextBtn" onclick="fcNextCard()"'+(st.pos>=st.queue.length-1?' disabled':'')+'>Next &#8594;</button>'+
     '</div>'+
+    fcTagBarHtml()+
     '</div>';
   fcUpdateSaveBtnUI();
   fcUpdateExplainBox();
+  fcTagBarInit();
 }
 
 // ---- Manual Prev / Next navigation (does not affect ratings/stats) ----
@@ -9184,6 +9734,7 @@ function fcApplyCardEdit(cardId, front, back, expl){
     var tc = (_fcTempPlayDeck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
     if(tc){ tc.front=front; tc.back=back; if(expl) tc.explanation=expl; else delete tc.explanation; }
   }
+  try{ fcTagSyncEdit(st.deckId, cardId, front, back, expl); }catch(e){}
   fcRenderCurrentCard();
 }
 // Add a brand new card to the deck and drop it into the live queue a few
