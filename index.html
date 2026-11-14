@@ -1258,6 +1258,67 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
   width:16px;height:16px;line-height:16px;text-align:center;border-radius:5px;
   margin-right:7px;vertical-align:2px;
 }
+
+/* ================================================================
+   FLASHCARD TAGS — in-quiz tag dropdown + Tagged folder page
+   ================================================================ */
+.fc-tag-wrap{width:100%;max-width:560px;margin:12px auto 4px;flex-shrink:0;}
+.fc-focus-on .fc-tag-wrap{max-width:640px;}
+.fc-tag-head{display:flex;align-items:center;gap:8px;min-width:0;}
+.fc-tag-btn{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:11px;
+  border:1.5px solid rgba(106,27,154,0.35);background:rgba(106,27,154,0.08);color:var(--purple);
+  font-weight:800;font-size:0.78rem;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s;
+}
+.fc-tag-btn:active{transform:scale(0.95);}
+.fc-tag-btn.has{background:var(--purple);color:#fff;border-color:var(--purple);}
+.fc-tag-caret{font-size:0.7rem;transition:transform .15s;}
+.fc-tag-btn.open .fc-tag-caret{transform:rotate(180deg);}
+.fc-tag-cur{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
+.fc-tag-cur::-webkit-scrollbar{display:none;}
+.fc-tag-none{font-size:0.7rem;color:var(--text2);opacity:.8;}
+.fc-tag-drop{
+  margin-top:8px;padding:10px;border-radius:13px;background:var(--surface);border:1.5px solid var(--border);
+  box-shadow:0 6px 20px rgba(20,30,45,0.12);animation:fcExplIn .2s ease;
+}
+.fc-tag-add{display:flex;gap:7px;align-items:center;margin-bottom:9px;}
+.fc-tag-add .inp{flex:1;min-width:0;margin:0;padding:8px 10px;font-size:0.82rem;}
+.fc-tag-list{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow-y:auto;}
+.fc-tag-chip{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:0.74rem;font-weight:800;
+  border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:all .12s;max-width:100%;
+}
+.fc-tag-chip small{font-size:0.62rem;opacity:.7;font-weight:700;}
+.fc-tag-chip.on{background:var(--purple);color:#fff;border-color:var(--purple);}
+.fc-tag-chip.mini{padding:3px 9px;font-size:0.66rem;cursor:default;background:rgba(106,27,154,0.12);color:var(--purple);border-color:rgba(106,27,154,0.3);flex:0 0 auto;}
+.fc-tag-chip .fc-tg-rm{margin-left:2px;font-weight:900;cursor:pointer;padding:0 2px;}
+
+/* Tagged page */
+#fcTaggedChips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;}
+.fc-tg-bulk{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:10px;border-radius:13px;background:var(--surface);border:1.5px solid var(--border);}
+.fc-tg-bulk-title{width:100%;font-size:0.64rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--text2);}
+.fc-tg-bulk .btn{flex:1 1 44%;min-width:120px;}
+.fc-tg-bulk .btn.off{background:rgba(198,40,40,0.08);color:var(--red);border-color:rgba(198,40,40,0.3);}
+.fc-tg-bulk .btn.on{background:rgba(46,125,50,0.08);color:var(--green);border-color:rgba(46,125,50,0.3);}
+.fc-tg-tagactions{display:flex;gap:7px;margin-bottom:10px;}
+.fc-tg-opts{display:flex;flex-direction:column;gap:5px;}
+.fc-tg-opt{font-size:0.82rem;line-height:1.5;padding:6px 9px;border-radius:9px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);}
+.fc-tg-opt b{display:inline-block;min-width:18px;color:var(--accent);}
+.fc-tg-opt.correct{background:rgba(46,125,50,0.1);border-color:rgba(46,125,50,0.45);color:#1b5e20;font-weight:700;}
+body.dark .fc-tg-opt.correct{color:#8fd99a;}
+.fc-saved-card.fc-tg-card{border-left-color:var(--purple);}
+.fc-tg-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border);}
+.fc-tg-deck{font-size:0.62rem;color:var(--text2);margin-top:6px;}
+
+#syncBanner{position:fixed;left:8px;right:8px;top:8px;z-index:9998;display:none;padding:10px 12px;border-radius:12px;
+  background:#c62828;color:#fff;font-size:0.78rem;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;line-height:1.4;}
+#syncBanner small{display:block;font-weight:600;opacity:.9;margin-top:2px;}
+.sync-row{display:flex;justify-content:space-between;gap:10px;font-size:0.78rem;padding:6px 0;border-bottom:1px dashed var(--border);}
+.sync-row b{color:var(--text);} .sync-row span{color:var(--text2);text-align:right;word-break:break-all;}
+.sync-box{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:0.8rem;line-height:1.6;white-space:pre-line;}
+.sync-box.ok{background:rgba(46,125,50,0.1);border:1.5px solid rgba(46,125,50,0.35);color:var(--text);}
+.sync-box.bad{background:rgba(198,40,40,0.08);border:1.5px solid rgba(198,40,40,0.35);color:var(--text);}
 </style>
 
 <!-- Firebase SDK loaded at body end -->
@@ -1312,6 +1373,8 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
   <div class="up-menu">
     <button onclick="fcCloseUserPanel();navTo('progress',{title:'📊 Progress'});renderProgressPage();"><span class="up-menu-icon">📊</span> My Progress</button>
     <button onclick="fcCloseUserPanel();navTo('settings',{title:'⚙️ Settings'});renderSettingsPage();"><span class="up-menu-icon">⚙️</span> Settings</button>
+    <button onclick="fcCloseUserPanel();stgOpen();"><span class="up-menu-icon">🗄</span> Storage Manager</button>
+    <button onclick="fcCloseUserPanel();syncOpenDialog();"><span class="up-menu-icon">🔍</span> Sync Check</button>
     <div class="up-menu-divider"></div>
     <button class="up-signout" onclick="fcCloseUserPanel();doSignOut();"><span class="up-menu-icon">🚪</span> Sign Out</button>
   </div>
@@ -1398,6 +1461,19 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
         <div class="home-nav-arrow">›</div>
       </div>
     </div>
+  </div>
+
+  <!-- ===== STORAGE MANAGER PAGE ===== -->
+  <div id="page-storagemgr" class="page">
+    <div class="page-header" style="margin-bottom:10px;">
+      <div>
+        <div class="page-title">&#128452; Storage Manager</div>
+        <div class="page-subtitle">Kaun si quiz kitni badi hai dekho aur bekar quizzes delete karo</div>
+      </div>
+    </div>
+    <div id="stgSummary"></div>
+    <div id="stgQuizSection"></div>
+    <div id="stgDeckSection"></div>
   </div>
 
   <!-- ===== SETTINGS PAGE ===== -->
@@ -2002,6 +2078,7 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
           <button class="fc-deck-menu-btn" id="fcListMenuBtn" onclick="fcToggleListMenu(event)" aria-label="Manage" title="Manage">&#8942;</button>
           <div class="fc-deck-menu" id="fcListMenu">
             <button onclick="fcCloseListMenu();navTo('fc-saved',{title:'🔖 Saved Cards'});renderFcSavedPage();">&#128278; Saved Cards</button>
+            <button onclick="fcCloseListMenu();fcOpenTagged();">&#127991; Tagged Questions</button>
             <button onclick="fcCloseListMenu();openFcNewDeckForm();">&#10133; New Deck</button>
             <button onclick="fcCloseListMenu();fcExportAllDecks();">&#11015; Export All Decks</button>
             <button onclick="fcCloseListMenu();renderFcDeckList();showToast('List refresh ho gayi','success');">&#8635; Refresh List</button>
@@ -2009,6 +2086,7 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
         </div>
       </div>
     </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:10px;color:var(--purple);border-color:rgba(106,27,154,0.35);padding:9px;" onclick="fcOpenTagged()">&#127991; Tagged Questions &mdash; tag-wise folder</button>
     <div class="card" id="fcNewDeckForm" style="display:none;margin-bottom:10px;">
       <div class="card-title">&#10133; Naya Flashcard Deck</div>
       <div class="field-group">
@@ -2122,6 +2200,17 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
         <div class="center-loader"><div class="loader"></div><div style="margin-top:10px;color:var(--text2);">Session load ho rahi hai...</div></div>
       </div>
     </div>
+  </div>
+
+  <!-- ===== FLASHCARD TAGGED QUESTIONS PAGE ===== -->
+  <div id="page-fc-tagged" class="page">
+    <div style="margin-bottom:10px;">
+      <div id="fcTaggedTitle" style="font-size:1.13rem;font-weight:800;color:var(--text);">&#127991; Tagged Questions</div>
+      <div id="fcTaggedSubtitle" style="font-size:0.7rem;color:var(--text2);margin-top:1px;"></div>
+    </div>
+    <div id="fcTaggedChips"></div>
+    <div id="fcTaggedCtrl"></div>
+    <div id="fcTaggedList"></div>
   </div>
 
   <!-- ===== FLASHCARD SAVED CARDS PAGE ===== -->
@@ -2515,6 +2604,12 @@ function _doNavigateTo(pageName, pushBrowser){
   } else if(pageName === 'fc-saved'){
     document.getElementById('topbarTitle').textContent = '🔖 Saved Cards';
     renderFcSavedPage();
+  } else if(pageName === 'storagemgr'){
+    document.getElementById('topbarTitle').textContent = '🗄 Storage Manager';
+    renderStoragePage();
+  } else if(pageName === 'fc-tagged'){
+    document.getElementById('topbarTitle').textContent = '🏷 Tagged Questions';
+    renderFcTaggedPage();
   } else if(pageName === 'settings'){
     document.getElementById('topbarTitle').textContent = '⚙️ Settings';
     renderSettingsPage();
@@ -2622,6 +2717,324 @@ function _navToAttemptDetail(){
 // ================================================================
 // FIREBASE INIT
 // ================================================================
+// ================================================================
+// STORAGE MANAGER — sizes + bulk delete (quizzes & flashcard decks)
+// ================================================================
+var _stgSel = {};      // quiz id -> true
+var _stgDeckSel = {};  // deck id -> true
+function stgOpen(){ navTo('storagemgr', { title:'🗄 Storage Manager', render: renderStoragePage }); }
+function stgQuizRows(){
+  return (STATE.quizzes||[]).map(function(q){
+    var att = (STATE.attempts||[]).filter(function(a){ return String(a.quizId)===String(q.id); }).length;
+    return { q:q, size:dataSize(q), attempts:att };
+  }).sort(function(a,b){ return b.size-a.size; });
+}
+function renderStoragePage(){
+  var sumBox = document.getElementById('stgSummary');
+  var qBox = document.getElementById('stgQuizSection');
+  var dBox = document.getElementById('stgDeckSection');
+  if(!sumBox||!qBox||!dBox) return;
+  var rows = stgQuizRows();
+  var total = rows.reduce(function(a,r){ return a+r.size; },0);
+  var big = rows.filter(function(r){ return r.size>FS_SAFE_BYTES; }).length;
+  sumBox.innerHTML =
+    '<div class="card" style="margin-bottom:10px;">'+
+      '<div class="sync-row"><b>Quizzes</b><span>'+rows.length+' &middot; '+fmtBytes(total)+'</span></div>'+
+      '<div class="sync-row"><b>Flashcard decks</b><span>'+(_fcDecks||[]).length+'</span></div>'+
+      (big ? '<div class="sync-box bad">&#9888; '+big+' quiz 1 MB se badi hai. Cloud limit 1 MB per document hai; app ab inhe compress karke save karta hai, par bahut badi ho to save nahi hoti. Bekar badi quizzes delete kar do ya todkar chhoti banao.</div>' : '')+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'+
+        '<button class="btn btn-outline btn-sm" style="flex:1;" onclick="syncOpenDialog()">&#128269; Sync Check</button>'+
+      '</div>'+
+    '</div>';
+
+  if(!rows.length){
+    qBox.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:22px;">Koi quiz nahi.</div>';
+  } else {
+    var nsel = rows.filter(function(r){ return _stgSel[r.q.id]; }).length;
+    qBox.innerHTML =
+      '<div class="card-title" style="margin:6px 0;">&#128203; Quizzes (badi pehle)</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'+
+        '<button class="btn btn-xs btn-outline" onclick="stgSelectQuizzes(\'all\')">Sab select</button>'+
+        '<button class="btn btn-xs btn-outline" onclick="stgSelectQuizzes(\'big\')">500 KB+ select</button>'+
+        '<button class="btn btn-xs btn-outline" onclick="stgSelectQuizzes(\'noatt\')">Bina attempt wali</button>'+
+        '<button class="btn btn-xs btn-outline" onclick="stgSelectQuizzes(\'none\')">Clear</button>'+
+      '</div>'+
+      '<button class="btn btn-danger btn-sm" style="width:100%;margin-bottom:10px;'+(nsel?'':'opacity:.5;')+'" onclick="stgDeleteSelectedQuizzes()">&#128465; Selected delete karo ('+nsel+')</button>'+
+      rows.map(function(r){
+        var q = r.q, over = r.size>FS_SAFE_BYTES;
+        return '<label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;padding:10px 12px;cursor:pointer;'+(over?'border-color:var(--red);':'')+'">'+
+          '<input type="checkbox" style="margin-top:4px;width:18px;height:18px;" '+(_stgSel[q.id]?'checked':'')+' onchange="stgToggleQuiz(\''+q.id+'\',this.checked)">'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-weight:800;font-size:0.86rem;word-break:break-word;">'+escHtml(q.name||'(no name)')+'</div>'+
+            '<div style="font-size:0.7rem;color:var(--text2);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;">'+
+              '<span style="font-weight:800;color:'+(over?'var(--red)':'var(--text)')+';">&#128190; '+fmtBytes(r.size)+'</span>'+
+              '<span>&#10067; '+(q.questions||[]).length+'</span>'+
+              '<span>&#128221; '+r.attempts+' attempts</span>'+
+              '<span>&#128197; '+escHtml(q.createdAt||'')+'</span>'+
+            '</div>'+
+          '</div>'+
+        '</label>';
+      }).join('');
+  }
+
+  var decks = (_fcDecks||[]).map(function(d){ return { d:d, size:dataSize(d) }; }).sort(function(a,b){ return b.size-a.size; });
+  if(!decks.length){ dBox.innerHTML = ''; }
+  else {
+    var nd = decks.filter(function(x){ return _stgDeckSel[x.d.id]; }).length;
+    dBox.innerHTML =
+      '<div class="card-title" style="margin:14px 0 6px;">&#127183; Flashcard Decks</div>'+
+      '<button class="btn btn-danger btn-sm" style="width:100%;margin-bottom:10px;'+(nd?'':'opacity:.5;')+'" onclick="stgDeleteSelectedDecks()">&#128465; Selected decks delete karo ('+nd+')</button>'+
+      decks.map(function(x){
+        var d = x.d;
+        return '<label class="card" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;padding:10px 12px;cursor:pointer;">'+
+          '<input type="checkbox" style="margin-top:4px;width:18px;height:18px;" '+(_stgDeckSel[d.id]?'checked':'')+' onchange="stgToggleDeck(\''+d.id+'\',this.checked)">'+
+          '<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:0.86rem;">'+escHtml(d.name||'')+'</div>'+
+          '<div style="font-size:0.7rem;color:var(--text2);margin-top:3px;">&#128190; '+fmtBytes(x.size)+' &middot; '+(d.cards||[]).length+' cards</div></div>'+
+        '</label>';
+      }).join('');
+  }
+}
+function stgToggleQuiz(id,on){ if(on) _stgSel[id]=true; else delete _stgSel[id]; renderStoragePage(); }
+function stgToggleDeck(id,on){ if(on) _stgDeckSel[id]=true; else delete _stgDeckSel[id]; renderStoragePage(); }
+function stgSelectQuizzes(mode){
+  var rows = stgQuizRows();
+  _stgSel = {};
+  rows.forEach(function(r){
+    if(mode==='all' || (mode==='big' && r.size>=500*1024) || (mode==='noatt' && r.attempts===0)) _stgSel[r.q.id] = true;
+  });
+  renderStoragePage();
+}
+function stgDeleteSelectedQuizzes(){
+  var ids = Object.keys(_stgSel);
+  if(!ids.length){ showToast('Pehle quizzes select karo','info'); return; }
+  appConfirm(ids.length+' quiz(zes) delete karoge?\n\nInke saare questions, attempts aur saved progress bhi hat jayenge. Yeh undo nahi hoga.', function(){
+    ids.forEach(function(id){
+      var q = (STATE.quizzes||[]).find(function(x){ return String(x.id)===String(id); });
+      var qid = q ? q.id : id;
+      cloudDeleteQuiz(qid);
+      try{ attClearPauseState(qid,'practice'); attClearPauseState(qid,'exam'); }catch(e){}
+    });
+    _stgSel = {};
+    showToast(ids.length+' quiz delete ho gayi','success');
+    setTimeout(renderStoragePage, 300);
+  });
+}
+function stgDeleteSelectedDecks(){
+  var ids = Object.keys(_stgDeckSel);
+  if(!ids.length){ showToast('Pehle decks select karo','info'); return; }
+  appConfirm(ids.length+' deck(s) delete karoge? Yeh undo nahi hoga.', function(){
+    ids.forEach(function(id){ fcDeleteDeck(id); });
+    _stgDeckSel = {};
+    showToast(ids.length+' deck delete ho gayi','success');
+    setTimeout(renderStoragePage, 400);
+  });
+}
+
+// ---- Local cache reset: atke hue (stuck) writes hatane ke liye ----
+function syncResetLocalCache(){
+  appConfirm('Local cache reset karein?\n\nIs device par jo changes abhi cloud tak nahi pahunche (atke hue writes) woh hat jayenge. Cloud me jo already saved hai woh safe rehta hai. App reload hoga.', function(){
+    try{ detachListeners(); }catch(e){}
+    var db = _db;
+    var pid = (typeof firebaseConfig!=='undefined' && firebaseConfig.projectId) || '';
+    function wipeIdb(){
+      try{ if(window.indexedDB && pid) indexedDB.deleteDatabase('firestore/[DEFAULT]/'+pid+'/main'); }catch(e){}
+    }
+    db.terminate()
+      .then(function(){ return db.clearPersistence(); })
+      .catch(function(e){ wipeIdb(); dbg('clearPersistence: '+(e&&e.message),'warn'); })
+      .then(function(){ setTimeout(function(){ location.reload(); }, 400); });
+  });
+}
+
+// ================================================================
+// SYNC CHECK — server se real connection / permission / quota test
+// ================================================================
+var _syncLast = null;
+function syncExplain(code){
+  switch(code){
+    case 'permission-denied':
+      return 'Firestore RULES is account ko read/write karne se rok rahe hain.\n'+
+        'Sabse common wajah: Firebase "test mode" rules ki 30 din ki date nikal jaati hai.\n'+
+        'Fix: Firebase Console → Firestore Database → Rules me yeh daalo aur Publish karo:\n'+
+        'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{document=**} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n    match /{path=**}/responses/{d} { allow read, write: if request.auth != null; }\n    match /public_quizzes/{d} { allow read: if true; allow write: if request.auth != null; }\n    match /public_flashcard_decks/{d} { allow read: if true; allow write: if request.auth != null; }\n    match /ts_shared_attempts/{d} { allow read, write: if request.auth != null; }\n  }\n}\n'+
+        '(Apne purane rules ko dhyan se dekhkar hi badlein — public_quizzes / responses wale hisse aapke app ke hisaab se alag ho sakte hain.)';
+    case 'resource-exhausted':
+      return 'Firebase FREE plan ka daily QUOTA khatam ho gaya hai (roz lagbhag 50,000 reads / 20,000 writes).\n'+
+        'Jab tak quota khatam hai, har device sirf apna local data dekhta hai — isiliye dusre device par kuch nahi pahunchta.\n'+
+        'Fix: quota roz raat 12 baje (US Pacific) reset hota hai — India me lagbhag dopahar 1:30 PM. Ya Firebase me Blaze plan lagao.\n'+
+        'Firebase Console → Usage and billing me bhi dekh sakte ho.';
+    case 'unauthenticated':
+      return 'Login session expire ho gaya. Sign Out karke dobara Google se login karo.';
+    case 'unavailable':
+    case 'timeout':
+    case 'deadline-exceeded':
+      return 'Server tak write pahunch nahi raha. Teen wajah ho sakti hain:\n'+
+        '1) Is device ki write queue me koi bahut badi quiz/progress ka write ATAK gaya hai (1 MB se badi document) — iske peeche ke saare writes ruk jaate hain. Neeche "Local Cache Reset" dabao.\n'+
+        '2) Internet / VPN / firewall / ad-blocker.\n'+
+        '3) Free quota khatam (resource-exhausted jaisa).\n'+
+        'Pehle "Local Cache Reset" try karo, phir dobara Sync Check.';
+    case 'invalid-argument':
+      return 'Koi document 1 MB limit se badi thi aur server ne mana kar diya. Storage Manager me badi quizzes delete karo ya chhoti banao.';
+    default:
+      return 'Unexpected error: '+code;
+  }
+}
+function syncRunCheck(){
+  return new Promise(function(resolve){
+    if(!_db || !_uid){ resolve({ok:false, code:'no-login', msg:'Login nahi hai'}); return; }
+    var finished = false;
+    var timer = setTimeout(function(){
+      if(finished) return; finished = true;
+      resolve({ok:false, code:'timeout', msg:'Server ne 12 second me jawab nahi diya'});
+    }, 12000);
+    var ref = _db.collection('users').doc(_uid).collection('ts_meta').doc('_synccheck');
+    var t0 = Date.now();
+    ref.set({ at: Date.now(), ua: String(navigator.userAgent||'').slice(0,90) })
+      .then(function(){ return ref.get({source:'server'}); })
+      .then(function(){
+        if(finished) return; finished = true; clearTimeout(timer);
+        resolve({ok:true, code:'ok', ms: Date.now()-t0});
+      })
+      .catch(function(e){
+        if(finished) return; finished = true; clearTimeout(timer);
+        resolve({ok:false, code:(e&&e.code)||'error', msg:(e&&e.message)||String(e)});
+      });
+  });
+}
+function syncShowBanner(res){
+  var b = document.getElementById('syncBanner');
+  if(!b){
+    b = document.createElement('div'); b.id = 'syncBanner';
+    b.onclick = function(){ syncOpenDialog(); };
+    document.body.appendChild(b);
+  }
+  if(!res || res.ok){ b.style.display = 'none'; return; }
+  b.innerHTML = '⚠️ Cloud sync band hai — dusre device par data nahi pahunch raha<small>Error: '+escHtml(res.code)+' · tap karke wajah dekho</small>';
+  b.style.display = 'block';
+}
+function syncNoteWriteError(e){
+  var code = e && e.code;
+  if(code==='permission-denied' || code==='resource-exhausted' || code==='unauthenticated'){
+    _syncLast = { ok:false, code:code, msg:(e&&e.message)||'' };
+    syncShowBanner(_syncLast);
+  }
+}
+function syncAutoCheckSoon(){
+  setTimeout(function(){
+    syncRunCheck().then(function(r){ _syncLast = r; syncShowBanner(r); });
+  }, 4000);
+}
+function syncOpenDialog(){
+  var old = document.getElementById('syncDlgOverlay'); if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'syncDlgOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+  var u = _user || {};
+  var acct = u.isAnonymous ? 'GUEST (sirf is device par!)' : (u.email || 'Signed in');
+  ov.innerHTML =
+    '<div style="background:var(--surface,#fff);border-radius:16px;padding:16px;max-width:420px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.35);">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+
+        '<div style="font-weight:900;font-size:1rem;color:var(--text);">🔍 Sync Check</div>'+
+        '<button id="syncDlgClose" style="background:none;border:none;font-size:1.3rem;color:var(--text2);cursor:pointer;">✕</button>'+
+      '</div>'+
+      '<div class="sync-row"><b>Account</b><span>'+escHtml(acct)+'</span></div>'+
+      '<div class="sync-row"><b>User ID</b><span>'+escHtml(_uid ? _uid.slice(0,10)+'…'+_uid.slice(-4) : '—')+'</span></div>'+
+      '<div class="sync-row"><b>Internet</b><span>'+(navigator.onLine?'Online':'Offline')+'</span></div>'+
+      '<div id="syncDlgResult" class="sync-box">⏳ Server se check ho raha hai...</div>'+
+      '<div style="font-size:0.7rem;color:var(--text2);margin-top:8px;">Dono devices par "User ID" same dikhni chahiye. Alag ho to dono par alag account se login hai.</div>'+
+      '<div id="syncPendRow" class="sync-row"><b>Pending writes</b><span>check ho raha hai...</span></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"><button class="btn btn-primary" id="syncDlgAgain" style="flex:1;">🔄 Dobara Check</button>'+
+      '<button class="btn btn-outline" id="syncDlgReset" style="flex:1;color:var(--red);border-color:var(--red);">🧹 Local Cache Reset</button></div>'+
+      '<button class="btn btn-outline btn-sm" id="syncDlgStorage" style="width:100%;margin-top:8px;">🗄 Storage Manager (badi quiz delete)</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('syncDlgClose').onclick = function(){ ov.remove(); };
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  function run(){
+    var box = document.getElementById('syncDlgResult'); if(!box) return;
+    box.className = 'sync-box'; box.textContent = '⏳ Server se check ho raha hai...';
+    syncRunCheck().then(function(r){
+      _syncLast = r; syncShowBanner(r);
+      var b2 = document.getElementById('syncDlgResult'); if(!b2) return;
+      if(r.ok){
+        b2.className = 'sync-box ok';
+        b2.textContent = '✅ Server connection theek hai ('+r.ms+' ms). Write aur read dono server se confirm hue.\nAgar phir bhi dusre device par data nahi aa raha, to dono devices par User ID match karo aur dusre device par app ko band karke dobara kholo / page refresh karo.';
+      } else {
+        b2.className = 'sync-box bad';
+        b2.textContent = '❌ Error: '+r.code+'\n\n'+syncExplain(r.code)+(r.msg?'\n\nTechnical: '+r.msg:'');
+      }
+    });
+  }
+  document.getElementById('syncDlgAgain').onclick = run;
+  document.getElementById('syncDlgReset').onclick = function(){ ov.remove(); syncResetLocalCache(); };
+  document.getElementById('syncDlgStorage').onclick = function(){ ov.remove(); stgOpen(); };
+  // pending-writes probe
+  (function(){
+    var row = document.getElementById('syncPendRow');
+    if(!_db || !row) return;
+    var done = false;
+    var t = setTimeout(function(){ if(done) return; done = true; var sp = row.querySelector('span'); if(sp){ sp.textContent = '⚠️ ATKE HUE HAIN'; sp.style.color = 'var(--red)'; } }, 5000);
+    _db.waitForPendingWrites().then(function(){ if(done) return; done = true; clearTimeout(t); var sp = row.querySelector('span'); if(sp) sp.textContent = '✅ Koi nahi'; }).catch(function(){});
+  })();
+  run();
+}
+
+// ================================================================
+// DOC SIZE GUARD + COMPRESSION  (Firestore: 1 document <= 1 MiB)
+// Badi quiz / live-progress ko gzip karke save karte hain; phir bhi badi ho
+// to write bheje hi nahi (warna write queue atak kar sync band ho jata hai).
+// ================================================================
+var FS_SAFE_BYTES = 900000;
+var _zSeq = 0;
+var _zWarnAt = 0;
+function dataSize(obj){
+  try{
+    var s = JSON.stringify(obj);
+    return (typeof TextEncoder!=='undefined') ? new TextEncoder().encode(s).length : s.length*2;
+  }catch(e){ return 0; }
+}
+function fmtBytes(n){
+  if(n >= 1048576) return (n/1048576).toFixed(2)+' MB';
+  return Math.max(1,Math.round(n/1024))+' KB';
+}
+function zPack(obj){
+  if(typeof CompressionStream==='undefined' || typeof Response==='undefined') return Promise.reject(new Error('no-compress'));
+  var bytes = new TextEncoder().encode(JSON.stringify(obj));
+  var cs = new CompressionStream('gzip');
+  var w = cs.writable.getWriter(); w.write(bytes); w.close();
+  return new Response(cs.readable).arrayBuffer().then(function(buf){
+    var u8 = new Uint8Array(buf), bin = '';
+    for(var i=0;i<u8.length;i+=0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i,i+0x8000));
+    return btoa(bin);
+  });
+}
+function zUnpack(b64){
+  if(typeof DecompressionStream==='undefined') return Promise.reject(new Error('no-decompress'));
+  var bin = atob(b64), u8 = new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+  var ds = new DecompressionStream('gzip');
+  var w = ds.writable.getWriter(); w.write(u8); w.close();
+  return new Response(ds.readable).text().then(function(t){ return JSON.parse(t); });
+}
+function zWarnTooBig(what, size){
+  var now = Date.now();
+  if(now - _zWarnAt < 15000) return;
+  _zWarnAt = now;
+  showToast('⚠️ '+what+' bahut badi hai ('+fmtBytes(size)+') — cloud me save nahi ho sakti. Isse 2-3 chhoti quizzes me todo.','error');
+}
+// docs ko (jin me compressed _z ho unhe kholkar) list me badalta hai. Koi compressed nahi to turant (sync).
+function zResolveDocs(docs, cb){
+  if(!docs.some(function(d){ return d && d._z; })){ cb(docs); return; }
+  var seq = ++_zSeq;
+  Promise.all(docs.map(function(d){
+    if(d && d._z) return zUnpack(d._z).catch(function(e){ dbg('Unpack fail: '+(e&&e.message),'error'); return null; });
+    return Promise.resolve(d);
+  })).then(function(list){
+    if(seq !== _zSeq) return;
+    cb(list.filter(Boolean));
+  });
+}
+
 function initFirebase(){
   // Agar Firebase SDK abhi load nahi hua to retry karo (bade app jaisa)
   if(typeof firebase === 'undefined'){
@@ -2634,6 +3047,8 @@ function initFirebase(){
     if(firebase.apps && firebase.apps.length){ firebase.app(); }
     else{ firebase.initializeApp(firebaseConfig); }
     _db = firebase.firestore();
+    // Kuch networks/devices par realtime stream (WebChannel) block ho jaati hai — auto long-polling fallback
+    try{ _db.settings({ experimentalAutoDetectLongPolling:true, merge:true }); }catch(e){ dbg('Firestore settings: '+e.message,'warn'); }
     dbg('Firestore connected ✓','success');
     // Offline persistence — tab sync ke saath (dusri device/tab me bhi live update)
     _db.enablePersistence({synchronizeTabs:true}).catch(function(err){
@@ -2668,6 +3083,7 @@ function onAuth(user){
     var nl=document.getElementById('userNameLg'); if(nl) nl.textContent = displayName;
     var el=document.getElementById('userEmailLg'); if(el) el.textContent = user.isAnonymous ? 'Guest session (this device only)' : (user.email || 'Signed in');
     attachListeners();
+    try{ syncAutoCheckSoon(); }catch(e){}
     // Check if there's a pending shared quiz from URL
     if(_pendingShareId){
       handlePendingShare();
@@ -2762,16 +3178,21 @@ function attachListeners(){
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
     .onSnapshot(function(snap){
-      STATE.quizzes = [];
-      snap.forEach(function(d){ if(d.exists) STATE.quizzes.push(d.data()); });
-      STATE.quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
-      dbg('Quizzes loaded: '+STATE.quizzes.length+' quizzes | fromCache:'+snap.metadata.fromCache,'success');
-      var ap = getActivePage();
-      if(ap==='home') renderHome();
-      if(ap==='create') renderCreateList();
-      if(ap==='practice') renderPracticeList();
-      if(ap==='questions') renderQuestionsPage();
-    }, function(err){ dbg('Quiz listener ERROR: '+err.message,'error'); showToast('Cloud read fail: '+err.message,'error'); });
+      var qDocs = [];
+      snap.forEach(function(d){ if(d.exists) qDocs.push(d.data()); });
+      var qFromCache = snap.metadata.fromCache;
+      zResolveDocs(qDocs, function(list){
+        STATE.quizzes = list;
+        STATE.quizzes.sort(function(a,b){ return (b.createdAtMs||0)-(a.createdAtMs||0); });
+        dbg('Quizzes loaded: '+STATE.quizzes.length+' quizzes | fromCache:'+qFromCache,'success');
+        var ap = getActivePage();
+        if(ap==='home') renderHome();
+        if(ap==='create') renderCreateList();
+        if(ap==='practice') renderPracticeList();
+        if(ap==='questions') renderQuestionsPage();
+        if(ap==='storagemgr') renderStoragePage();
+      });
+    }, function(err){ dbg('Quiz listener ERROR: '+err.message,'error'); showToast('Cloud read fail: '+err.message,'error'); try{syncNoteWriteError(err);}catch(_){} });
 
   // Attempts listener
   _attemptListener = _db.collection('users').doc(_uid).collection('ts_attempts')
@@ -2787,6 +3208,9 @@ function attachListeners(){
       if(ap==='history'){ initHistoryFilters(); renderHistory(); }
       if(ap==='vault'){ initVaultFilters(); renderVaultPage(); }
     }, function(err){ dbg('Attempts listener ERROR: '+err.message,'error'); console.warn('Attempts listener error:',err); });
+
+  // Tagged-questions listener — attached LAST and isolated, so it can never block quiz sync
+  try{ fcAttachTaggedListener(); }catch(e){ dbg('Tag listener attach fail: '+e.message,'error'); }
 }
 function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
@@ -2795,6 +3219,7 @@ function detachListeners(){
   _hlDetachFirebaseListeners();
   fcDetachListener();
   fcDetachSavedListener();
+  try{ fcDetachTaggedListener(); }catch(e){}
   STATE.quizzes=[]; STATE.attempts=[]; STATE.sharedAttempts=[];
   // savedQuestions ko preserve karo — reload on next auth
 }
@@ -2802,10 +3227,23 @@ function detachListeners(){
 // ================================================================
 // CLOUD WRITES
 // ================================================================
+function cloudSaveQuizAsync(q){
+  var ref = _db.collection('users').doc(_uid).collection('ts_quizzes').doc(String(q.id));
+  var size = dataSize(q);
+  if(size <= FS_SAFE_BYTES) return ref.set(q);
+  return zPack(q).then(function(b64){
+    var wrap = { id:q.id, name:q.name||'', createdAtMs:q.createdAtMs||0, createdAt:q.createdAt||'', _z:b64, _zv:1 };
+    var ws = dataSize(wrap);
+    if(ws > FS_SAFE_BYTES){ var err = new Error('too-big'); err.tooBig = size; throw err; }
+    return ref.set(wrap);
+  }, function(){ var err = new Error('too-big'); err.tooBig = size; throw err; });
+}
 function cloudSaveQuiz(q){
   if(!_db||!_uid) return;
-  _db.collection('users').doc(_uid).collection('ts_quizzes').doc(String(q.id)).set(q)
-    .catch(function(e){ console.warn('saveQuiz err:',e); });
+  cloudSaveQuizAsync(q).catch(function(e){
+    if(e && e.tooBig){ zWarnTooBig('Quiz "'+(q.name||'')+'"', e.tooBig); return; }
+    console.warn('saveQuiz err:',e); try{syncNoteWriteError(e);}catch(_){}
+  });
 }
 function cloudDeleteQuiz(id){
   if(!_db||!_uid) return;
@@ -2867,16 +3305,30 @@ function attSessionDocId(quizId, attemptMode){
 }
 function cloudSaveQuizSession(state){
   if(!_db||!_uid||!state||state.isShared) return Promise.resolve(false);
-  return _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
-    .doc(attSessionDocId(state.quizId,state.attemptMode)).set(state, {merge:true})
-    .then(function(){ return true; })
-    .catch(function(e){ console.warn('quiz session save err:',e); return false; });
+  var ref = _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
+    .doc(attSessionDocId(state.quizId,state.attemptMode));
+  function onErr(e){ console.warn('quiz session save err:',e); try{syncNoteWriteError(e);}catch(_){} return false; }
+  var size = dataSize(state);
+  if(size <= FS_SAFE_BYTES) return ref.set(state).then(function(){ return true; }).catch(onErr);
+  return zPack(state).then(function(b64){
+    var wrap = { quizId:state.quizId, attemptMode:state.attemptMode, savedAt:state.savedAt||Date.now(), isShared:false, _z:b64, _zv:1 };
+    if(dataSize(wrap) > FS_SAFE_BYTES){ var err = new Error('too-big'); err.tooBig = size; throw err; }
+    return ref.set(wrap).then(function(){ return true; });
+  }).catch(function(e){
+    if(e && (e.tooBig || e.message==='no-compress')){ zWarnTooBig('Is quiz ka live progress', size); return false; }
+    return onErr(e);
+  });
 }
 function cloudLoadQuizSession(quizId, attemptMode){
   if(!_db||!_uid) return Promise.resolve(null);
   return _db.collection('users').doc(_uid).collection('ts_quiz_sessions')
     .doc(attSessionDocId(quizId,attemptMode)).get()
-    .then(function(d){ return d.exists ? d.data() : null; })
+    .then(function(d){
+      if(!d.exists) return null;
+      var data = d.data();
+      if(data && data._z) return zUnpack(data._z).catch(function(e){ console.warn('session unpack err:',e); return null; });
+      return data;
+    })
     .catch(function(e){ console.warn('quiz session load err:',e); return null; });
 }
 function cloudDeleteQuizSession(quizId, attemptMode){
@@ -3669,6 +4121,7 @@ function _backupDataSnapshot(){
     subjectEntries:_backupDeepCopy(_smGetEntries()),
     flashcardDecks:_backupDeepCopy(typeof _fcDecks!=='undefined'?_fcDecks:[]),
     flashcardSavedCards:_backupDeepCopy(typeof _fcSavedCards!=='undefined'?_fcSavedCards:[]),
+    flashcardTaggedCards:_backupDeepCopy(typeof _fcTagged!=='undefined'?_fcTagged:[]),
     localSettings:_backupReadLocalData(),
     quizSessions:quizSessions
   };
@@ -3797,7 +4250,7 @@ function restoreUserDataBackup(data){
   }
   var writes=[];
   incomingQuizzes.forEach(function(q){
-    if(q&&q.id!=null) writes.push(_db.collection('users').doc(_uid).collection('ts_quizzes').doc(String(q.id)).set(q));
+    if(q&&q.id!=null) writes.push(cloudSaveQuizAsync(q).catch(function(e){ if(e&&e.tooBig) zWarnTooBig('Quiz "'+(q.name||'')+'"', e.tooBig); }));
   });
   incomingAttempts.forEach(function(a){
     if(a&&a.id!=null) writes.push(_db.collection('users').doc(_uid).collection('ts_attempts').doc(String(a.id)).set(a));
@@ -3814,6 +4267,13 @@ function restoreUserDataBackup(data){
     _fcSavedCards=_backupMergeById(_fcSavedCards,data.flashcardSavedCards);
     data.flashcardSavedCards.forEach(function(card){
       if(card&&card.id!=null) writes.push(_db.collection('users').doc(_uid).collection('fc_saved').doc(String(card.id)).set(card));
+    });
+  }
+  if(typeof _fcTagged!=='undefined'&&Array.isArray(data.flashcardTaggedCards)){
+    _fcTagged=_backupMergeById(_fcTagged,data.flashcardTaggedCards);
+    fcTagSaveCache();
+    data.flashcardTaggedCards.forEach(function(card){
+      if(card&&card.id!=null) writes.push(_db.collection('users').doc(_uid).collection('fc_tagged').doc(String(card.id)).set(card));
     });
   }
   if(data.quizSessions&&typeof data.quizSessions==='object'){
@@ -7898,6 +8358,476 @@ function fcRenderSavedCardHtml(c){
   '</div>';
 }
 
+// ================================================================
+// FLASHCARD TAGS
+// Quiz ke dauran kisi bhi card par ek ya kai tags lagao (dropdown se),
+// baad me "Tagged Questions" folder me tag-wise dekho.
+// Data: users/{uid}/fc_tagged/{deckId__cardId}  (+ localStorage cache)
+// ================================================================
+var _fcTagged = [];
+var _fcTaggedListener = null;
+var _fcTagDropOpen = false;
+var _fcTagFilter = '';
+var _fcTgHid = {};                                   // docId -> {q,o,a,e} per-card override (true = hidden)
+var _fcTgBulk = { q:false, o:false, a:false, e:false }; // bulk state (true = hidden)
+var _fcTagSheetRefresh = null;
+
+function fcTagCacheKey(){ return 'fcTaggedCache_' + (_uid||'anon'); }
+function fcTagLoadCache(){
+  try{ var r = localStorage.getItem(fcTagCacheKey()); if(r){ var a = JSON.parse(r); if(Array.isArray(a)) return a; } }catch(e){}
+  return [];
+}
+function fcTagSaveCache(){ try{ localStorage.setItem(fcTagCacheKey(), JSON.stringify(_fcTagged)); }catch(e){} }
+function fcAttachTaggedListener(){
+  fcDetachTaggedListener();
+  if(!_db||!_uid) return;
+  _fcTagged = fcTagLoadCache();
+  _fcTaggedListener = _db.collection('users').doc(_uid).collection('fc_tagged')
+    .onSnapshot(function(snap){
+      var arr = [];
+      snap.forEach(function(d){ if(d.exists) arr.push(d.data()); });
+      arr.sort(function(a,b){ return (b.taggedAt||0)-(a.taggedAt||0); });
+      _fcTagged = arr;
+      fcTagSaveCache();
+      fcTagAfterChange();
+    }, function(err){ dbg('FC tagged listener err: '+err.message,'error'); });
+}
+function fcDetachTaggedListener(){
+  if(_fcTaggedListener){ try{_fcTaggedListener();}catch(e){} _fcTaggedListener = null; }
+}
+function fcTagAfterChange(){
+  var ap = getActivePage();
+  if(ap==='fc-tagged') renderFcTaggedPage();
+  if(ap==='fc-play') fcTagBarUpdate();
+  if(typeof _fcTagSheetRefresh === 'function'){ try{ _fcTagSheetRefresh(); }catch(e){} }
+}
+function fcTagNormalize(raw){ return String(raw||'').replace(/\s+/g,' ').trim().slice(0,30); }
+function fcTagAllNames(){
+  var map = {};
+  _fcTagged.forEach(function(e){
+    (e.tags||[]).forEach(function(t){
+      var k = String(t).toLowerCase();
+      if(!map[k]) map[k] = { name:t, count:0 };
+      map[k].count++;
+    });
+  });
+  return Object.keys(map).map(function(k){ return map[k]; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+}
+function fcTagCanon(name){
+  var low = name.toLowerCase();
+  var all = fcTagAllNames();
+  for(var i=0;i<all.length;i++){ if(all[i].name.toLowerCase()===low) return all[i].name; }
+  return name;
+}
+function fcTagFindEntry(deckId, cardId){
+  var id = fcSavedDocId(deckId, cardId);
+  return _fcTagged.find(function(e){ return e.id===id; }) || null;
+}
+function fcTagsOf(deckId, cardId){
+  var e = fcTagFindEntry(deckId, cardId);
+  return e ? (e.tags||[]).slice() : [];
+}
+function fcTagPersist(entry, remove){
+  fcTagSaveCache();
+  if(!_db||!_uid) return;
+  var ref = _db.collection('users').doc(_uid).collection('fc_tagged').doc(entry.id);
+  var p = remove ? ref.delete() : ref.set(entry);
+  p.catch(function(e){ showToast('Tag save error: '+(e&&e.message?e.message:e),'error'); });
+}
+// base = { deckId, cardId, front, back, options?, correct?, explanation? }
+function fcTagSetFor(base, tags){
+  var id = fcSavedDocId(base.deckId, base.cardId);
+  var idx = -1;
+  for(var i=0;i<_fcTagged.length;i++){ if(_fcTagged[i].id===id){ idx = i; break; } }
+  var existing = idx>=0 ? _fcTagged[idx] : null;
+  if(!tags.length){
+    if(existing){ _fcTagged.splice(idx,1); fcTagPersist(existing, true); }
+    fcTagAfterChange();
+    return;
+  }
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(base.deckId); }) ||
+             (typeof _fcTempPlayDeck!=='undefined' && _fcTempPlayDeck && String(_fcTempPlayDeck.id)===String(base.deckId) ? _fcTempPlayDeck : null);
+  var entry = {
+    id: id, deckId: String(base.deckId), cardId: String(base.cardId),
+    front: base.front || '', back: base.back || '',
+    explanation: base.explanation || (existing && existing.explanation) || '',
+    deckName: deck ? deck.name : (existing ? existing.deckName : '(Unknown Deck)'),
+    topic: deck ? (deck.topic||'') : (existing ? (existing.topic||'') : ''),
+    tags: tags.slice(),
+    taggedAt: existing ? existing.taggedAt : Date.now(),
+    updatedAt: Date.now()
+  };
+  var opts = Array.isArray(base.options) ? base.options : (existing && Array.isArray(existing.options) ? existing.options : null);
+  if(opts){ entry.options = opts.slice(0,4); entry.correct = Number(base.correct!=null ? base.correct : (existing?existing.correct:0)) || 0; }
+  if(idx>=0) _fcTagged[idx] = entry; else _fcTagged.unshift(entry);
+  fcTagPersist(entry, false);
+  fcTagAfterChange();
+}
+function fcTagToggleForBase(base, tag){
+  if(!base) return;
+  var cur = fcTagsOf(base.deckId, base.cardId);
+  var low = tag.toLowerCase();
+  var i = -1;
+  cur.forEach(function(t,k){ if(t.toLowerCase()===low) i = k; });
+  if(i>=0) cur.splice(i,1); else cur.push(tag);
+  fcTagSetFor(base, cur);
+}
+function fcTagAddForBase(base, raw){
+  if(!base) return false;
+  var parts = String(raw||'').split(',').map(fcTagNormalize).filter(Boolean);
+  if(!parts.length) return false;
+  var cur = fcTagsOf(base.deckId, base.cardId);
+  var changed = false;
+  parts.forEach(function(p){
+    var name = fcTagCanon(p);
+    if(!cur.some(function(t){ return t.toLowerCase()===name.toLowerCase(); })){ cur.push(name); changed = true; }
+  });
+  if(changed) fcTagSetFor(base, cur);
+  return true;
+}
+
+// ---- In-quiz tag bar (inline dropdown — never re-renders the card) ----
+function fcTagCurrentBase(){
+  var st = _fcSession;
+  if(!st || !st.queue || st.pos>=st.queue.length) return null;
+  var c = st.queue[st.pos];
+  return { deckId: st.deckId, cardId: c.cardId, front: c.front, back: c.back,
+           options: c.options, correct: c.correct, explanation: fcGetExplanation(c, st.deckId, c.cardId) };
+}
+function fcTagBarHtml(){
+  return '<div class="fc-tag-wrap" id="fcTagWrap">'+
+    '<div class="fc-tag-head">'+
+      '<button type="button" class="fc-tag-btn" id="fcTagBtn" onclick="fcTagToggleDrop()">&#127991; Tag <span id="fcTagBtnCnt"></span><span class="fc-tag-caret">&#9662;</span></button>'+
+      '<div class="fc-tag-cur" id="fcTagCur"></div>'+
+    '</div>'+
+    '<div class="fc-tag-drop" id="fcTagDrop" style="display:none;">'+
+      '<div class="fc-tag-add">'+
+        '<input type="text" class="inp" id="fcTagInp" maxlength="60" placeholder="Naya tag likho (comma se kai tags)" autocomplete="off">'+
+        '<button type="button" class="btn btn-orange btn-sm" id="fcTagAddBtn">+ Add</button>'+
+      '</div>'+
+      '<div class="fc-tag-list" id="fcTagList"></div>'+
+    '</div>'+
+  '</div>';
+}
+function fcTagToggleDrop(){
+  _fcTagDropOpen = !_fcTagDropOpen;
+  fcTagApplyDrop(true);
+}
+function fcTagApplyDrop(scroll){
+  var d = document.getElementById('fcTagDrop');
+  var b = document.getElementById('fcTagBtn');
+  if(!d || !b) return;
+  d.style.display = _fcTagDropOpen ? '' : 'none';
+  b.classList.toggle('open', _fcTagDropOpen);
+  if(_fcTagDropOpen && scroll){
+    var w = document.getElementById('fcTagWrap');
+    if(w && w.scrollIntoView) setTimeout(function(){ try{ w.scrollIntoView({block:'nearest',behavior:'smooth'}); }catch(e){} }, 30);
+  }
+}
+function fcTagAddFromInput(){
+  var inp = document.getElementById('fcTagInp'); if(!inp) return;
+  var ok = fcTagAddForBase(fcTagCurrentBase(), inp.value);
+  if(ok){ inp.value = ''; showToast('🏷 Tag lag gaya','success'); }
+  else showToast('Tag ka naam likho','error');
+}
+function fcTagBarUpdate(){
+  var wrap = document.getElementById('fcTagWrap'); if(!wrap) return;
+  var base = fcTagCurrentBase(); if(!base) return;
+  var cur = fcTagsOf(base.deckId, base.cardId);
+  var curLow = cur.map(function(t){ return t.toLowerCase(); });
+  var cnt = document.getElementById('fcTagBtnCnt');
+  var btn = document.getElementById('fcTagBtn');
+  var curBox = document.getElementById('fcTagCur');
+  var list = document.getElementById('fcTagList');
+  if(cnt) cnt.textContent = cur.length ? '('+cur.length+') ' : '';
+  if(btn) btn.classList.toggle('has', cur.length>0);
+  if(curBox) curBox.innerHTML = cur.length
+    ? cur.map(function(t){ return '<span class="fc-tag-chip mini">'+escHtml(t)+'</span>'; }).join('')
+    : '<span class="fc-tag-none">Koi tag nahi</span>';
+  if(list){
+    var all = fcTagAllNames();
+    list.innerHTML = all.length
+      ? all.map(function(t){
+          var on = curLow.indexOf(t.name.toLowerCase())!==-1;
+          return '<button type="button" class="fc-tag-chip'+(on?' on':'')+'" data-tag="'+escHtml(t.name)+'">'+(on?'&#10003; ':'')+escHtml(t.name)+' <small>'+t.count+'</small></button>';
+        }).join('')
+      : '<div class="fc-tag-none">Abhi koi tag nahi — upar naya tag banao.</div>';
+    list.onclick = function(e){
+      var b = e.target.closest('.fc-tag-chip'); if(!b) return;
+      fcTagToggleForBase(fcTagCurrentBase(), b.getAttribute('data-tag'));
+    };
+  }
+}
+function fcTagBarInit(){
+  var inp = document.getElementById('fcTagInp');
+  var add = document.getElementById('fcTagAddBtn');
+  if(inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); fcTagAddFromInput(); } });
+  if(add) add.addEventListener('click', fcTagAddFromInput);
+  fcTagApplyDrop(false);
+  fcTagBarUpdate();
+}
+// Keep tagged snapshot in sync when a card is edited mid-quiz.
+function fcTagSyncEdit(deckId, cardId, front, back, expl){
+  var e = fcTagFindEntry(deckId, cardId);
+  if(!e) return;
+  e.front = front; e.back = back; e.explanation = expl || '';
+  e.updatedAt = Date.now();
+  fcTagPersist(e, false);
+}
+
+// ---- Tagged Questions page ----
+function fcOpenTagged(){
+  navTo('fc-tagged', { title:'🏷 Tagged Questions', render: renderFcTaggedPage });
+}
+function fcTgHidden(docId, part){
+  var o = _fcTgHid[docId];
+  if(o && typeof o[part]==='boolean') return o[part];
+  return !!_fcTgBulk[part];
+}
+function fcTgToggle(docId, part){
+  var cur = fcTgHidden(docId, part);
+  if(!_fcTgHid[docId]) _fcTgHid[docId] = {};
+  _fcTgHid[docId][part] = !cur;
+  renderFcTaggedPage();
+}
+function fcTgBulkSet(part, hide){
+  _fcTgBulk[part] = !!hide;
+  Object.keys(_fcTgHid).forEach(function(k){ if(_fcTgHid[k]) delete _fcTgHid[k][part]; });
+  renderFcTaggedPage();
+}
+function fcTgBulkAll(hide){
+  ['q','o','a','e'].forEach(function(p){ _fcTgBulk[p] = !!hide; });
+  _fcTgHid = {};
+  renderFcTaggedPage();
+}
+function fcTgSelectTag(tag){
+  _fcTagFilter = tag || '';
+  renderFcTaggedPage();
+}
+function fcTgListForFilter(){
+  if(!_fcTagFilter) return _fcTagged.slice();
+  var low = _fcTagFilter.toLowerCase();
+  return _fcTagged.filter(function(e){
+    return (e.tags||[]).some(function(t){ return String(t).toLowerCase()===low; });
+  });
+}
+function fcTgBase(e){
+  return { deckId:e.deckId, cardId:e.cardId, front:e.front, back:e.back, options:e.options, correct:e.correct, explanation:e.explanation };
+}
+function renderFcTaggedPage(){
+  var chipsBox = document.getElementById('fcTaggedChips');
+  var ctrl = document.getElementById('fcTaggedCtrl');
+  var container = document.getElementById('fcTaggedList');
+  var sub = document.getElementById('fcTaggedSubtitle');
+  if(!container || !chipsBox || !ctrl) return;
+  var names = fcTagAllNames();
+  if(_fcTagFilter && !names.some(function(n){ return n.name.toLowerCase()===_fcTagFilter.toLowerCase(); })) _fcTagFilter = '';
+  if(sub) sub.textContent = _fcTagged.length+' tagged questions · '+names.length+' tags';
+
+  if(!_fcTagged.length){
+    chipsBox.innerHTML = ''; ctrl.innerHTML = '';
+    container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:26px;">'+
+      '<div style="font-size:2rem;margin-bottom:6px;">&#127991;</div>'+
+      '<div>Abhi koi tagged question nahi hai.</div>'+
+      '<div style="font-size:0.74rem;margin-top:4px;">Flashcard quiz ke dauran card ke neeche <b>Tag</b> button se tag lagao.</div></div>';
+    return;
+  }
+
+  chipsBox.innerHTML =
+    '<button type="button" class="fc-tag-chip'+(!_fcTagFilter?' on':'')+'" data-tag="">Sab <small>'+_fcTagged.length+'</small></button>'+
+    names.map(function(n){
+      var on = _fcTagFilter && n.name.toLowerCase()===_fcTagFilter.toLowerCase();
+      return '<button type="button" class="fc-tag-chip'+(on?' on':'')+'" data-tag="'+escHtml(n.name)+'">&#127991; '+escHtml(n.name)+' <small>'+n.count+'</small></button>';
+    }).join('');
+  chipsBox.onclick = function(e){
+    var b = e.target.closest('.fc-tag-chip'); if(!b) return;
+    fcTgSelectTag(b.getAttribute('data-tag'));
+  };
+
+  var list = fcTgListForFilter();
+  function bulkBtn(part, label){
+    var hid = !!_fcTgBulk[part];
+    return '<button type="button" class="btn btn-xs btn-outline fc-tg-bulkbtn '+(hid?'off':'on')+'" data-part="'+part+'">'+(hid?'&#128584; ':'&#128065; ')+label+': '+(hid?'Hidden':'Shown')+'</button>';
+  }
+  ctrl.innerHTML =
+    (_fcTagFilter ? '<div class="fc-tg-tagactions">'+
+        '<button type="button" class="btn btn-xs btn-outline" id="fcTgRenameBtn" style="flex:1;">&#9998; Tag Rename</button>'+
+        '<button type="button" class="btn btn-xs btn-danger" id="fcTgDeleteBtn" style="flex:1;">&#128465; Tag Delete</button>'+
+      '</div>' : '')+
+    '<div class="fc-tg-bulk">'+
+      '<div class="fc-tg-bulk-title">Sab cards ke liye hide / show ('+list.length+')</div>'+
+      bulkBtn('q','Question')+bulkBtn('o','Options')+bulkBtn('a','Answer')+bulkBtn('e','Explanation')+
+      '<button type="button" class="btn btn-xs btn-outline" id="fcTgShowAllBtn" style="flex:1 1 44%;min-width:120px;">&#128065; Sab Dikhao</button>'+
+      '<button type="button" class="btn btn-xs btn-outline" id="fcTgHideAllBtn" style="flex:1 1 44%;min-width:120px;">&#128584; Sab Chhupao</button>'+
+    '</div>';
+  ctrl.onclick = function(e){
+    var bb = e.target.closest('.fc-tg-bulkbtn');
+    if(bb){ var p = bb.getAttribute('data-part'); fcTgBulkSet(p, !_fcTgBulk[p]); return; }
+    if(e.target.closest('#fcTgShowAllBtn')){ fcTgBulkAll(false); return; }
+    if(e.target.closest('#fcTgHideAllBtn')){ fcTgBulkAll(true); return; }
+    if(e.target.closest('#fcTgRenameBtn')){ fcTagRename(_fcTagFilter); return; }
+    if(e.target.closest('#fcTgDeleteBtn')){ fcTagDeleteTag(_fcTagFilter); return; }
+  };
+
+  if(!list.length){
+    container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:22px;">Is tag me koi question nahi.</div>';
+  } else {
+    container.innerHTML = list.map(fcTgCardHtml).join('');
+  }
+  container.onclick = function(e){
+    var eye = e.target.closest('.fc-tg-eye');
+    if(eye){ fcTgToggle(eye.getAttribute('data-sid'), eye.getAttribute('data-part')); return; }
+    var rm = e.target.closest('.fc-tg-rm');
+    if(rm){
+      var ent = _fcTagged.find(function(x){ return x.id===rm.getAttribute('data-sid'); });
+      if(ent){
+        var t = rm.getAttribute('data-tag');
+        var next = (ent.tags||[]).filter(function(x){ return String(x).toLowerCase()!==t.toLowerCase(); });
+        fcTagSetFor(fcTgBase(ent), next);
+      }
+      return;
+    }
+    var ed = e.target.closest('.fc-tg-edit');
+    if(ed){ fcTagOpenSheet(ed.getAttribute('data-sid')); return; }
+    var del = e.target.closest('.fc-tg-del');
+    if(del){
+      var sid = del.getAttribute('data-sid');
+      var en = _fcTagged.find(function(x){ return x.id===sid; });
+      if(!en) return;
+      appConfirm('Is question ke saare tags hata kar Tagged folder se hata dein?\n\n"'+(en.front||'').slice(0,80)+'"', function(){
+        fcTagSetFor(fcTgBase(en), []);
+        showToast('Tagged folder se hata diya','success');
+      });
+    }
+  };
+}
+function fcTgCardHtml(c){
+  var id = escHtml(c.id);
+  var qH = fcTgHidden(c.id,'q'), oH = fcTgHidden(c.id,'o'), aH = fcTgHidden(c.id,'a'), eH = fcTgHidden(c.id,'e');
+  function eye(part, hid, label){
+    return '<button class="btn btn-xs fc-saved-eye-btn fc-tg-eye" data-sid="'+id+'" data-part="'+part+'" title="'+(hid?'Show ':'Hide ')+label+'">'+(hid?'&#128065;':'&#128064;')+'</button>';
+  }
+  var isMcq = Array.isArray(c.options) && c.options.length>0;
+  var html = '<div class="fc-saved-card fc-tg-card">';
+  html += '<div class="fc-saved-row"><div class="fc-saved-q">'+(qH?'<span class="fc-saved-blur">Question hidden</span>':escHtml(c.front))+'</div>'+eye('q',qH,'question')+'</div>';
+  if(isMcq){
+    html += '<div class="fc-saved-row"><div class="fc-tg-opts">'+
+      (oH ? '<div class="fc-tg-opt"><span class="fc-saved-blur">Options hidden</span></div>'
+          : c.options.map(function(op,i){
+              var ok = !aH && i===Number(c.correct);
+              return '<div class="fc-tg-opt'+(ok?' correct':'')+'"><b>'+String.fromCharCode(65+i)+'.</b> '+escHtml(op)+(ok?' &#10003;':'')+'</div>';
+            }).join(''))+
+      '</div>'+eye('o',oH,'options')+'</div>';
+  }
+  html += '<div class="fc-saved-row"><div class="fc-saved-a">'+(aH?'<span class="fc-saved-blur">Answer hidden</span>':escHtml(c.back))+'</div>'+eye('a',aH,'answer')+'</div>';
+  if(c.explanation){
+    html += '<div class="fc-saved-row"><div class="fc-saved-e">'+(eH?'<span class="fc-saved-blur">Explanation hidden</span>':escHtml(c.explanation))+'</div>'+eye('e',eH,'explanation')+'</div>';
+  }
+  html += '<div class="fc-tg-tags">'+
+    (c.tags||[]).map(function(t){
+      return '<span class="fc-tag-chip mini">&#127991; '+escHtml(t)+'<span class="fc-tg-rm" data-sid="'+id+'" data-tag="'+escHtml(t)+'" title="Yeh tag hatao">&#10005;</span></span>';
+    }).join('')+
+  '</div>';
+  html += '<div class="fc-tg-deck">&#128214; '+escHtml(c.deckName||'')+(c.topic?' — '+escHtml(c.topic):'')+'</div>';
+  html += '<div style="display:flex;gap:6px;margin-top:8px;">'+
+    '<button class="btn btn-xs btn-outline fc-tg-edit" data-sid="'+id+'" style="color:var(--purple);border-color:rgba(106,27,154,0.35);">&#127991; Tags Edit / Add</button>'+
+    '<button class="btn btn-xs btn-danger fc-tg-del" data-sid="'+id+'">&#128465; Untag</button>'+
+  '</div></div>';
+  return html;
+}
+// Bottom-sheet tag editor for a card on the Tagged page
+function fcTagOpenSheet(docId){
+  var entry = _fcTagged.find(function(e){ return e.id===docId; });
+  if(!entry) return;
+  var base = fcTgBase(entry);
+  var old = document.getElementById('fcTagSheetOverlay'); if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'fcTagSheetOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML =
+    '<div style="background:var(--surface,#fff);border-radius:18px 18px 0 0;padding:16px 16px 20px;max-width:480px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,0.3);">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
+        '<div style="font-weight:900;font-size:1rem;color:var(--text);">&#127991; Tags Edit Karo</div>'+
+        '<button id="fcTagSheetClose" style="background:none;border:none;font-size:1.3rem;color:var(--text2);cursor:pointer;line-height:1;">&#10005;</button>'+
+      '</div>'+
+      '<div class="fc-tag-add"><input type="text" class="inp" id="fcTagSheetInp" maxlength="60" placeholder="Naya tag likho (comma se kai tags)" autocomplete="off">'+
+      '<button type="button" class="btn btn-orange btn-sm" id="fcTagSheetAdd">+ Add</button></div>'+
+      '<div class="fc-tag-list" id="fcTagSheetList" style="max-height:45vh;"></div>'+
+      '<button class="btn btn-primary" id="fcTagSheetDone" style="margin-top:12px;">&#10003; Done</button>'+
+    '</div>';
+  document.body.appendChild(ov);
+  function refresh(){
+    var cur = fcTagsOf(base.deckId, base.cardId);
+    var low = cur.map(function(t){ return t.toLowerCase(); });
+    var all = fcTagAllNames();
+    cur.forEach(function(t){ if(!all.some(function(a){ return a.name.toLowerCase()===t.toLowerCase(); })) all.push({name:t,count:0}); });
+    var box = document.getElementById('fcTagSheetList'); if(!box) return;
+    box.innerHTML = all.map(function(t){
+      var on = low.indexOf(t.name.toLowerCase())!==-1;
+      return '<button type="button" class="fc-tag-chip'+(on?' on':'')+'" data-tag="'+escHtml(t.name)+'">'+(on?'&#10003; ':'')+escHtml(t.name)+' <small>'+t.count+'</small></button>';
+    }).join('');
+  }
+  function close(){ _fcTagSheetRefresh = null; ov.remove(); }
+  _fcTagSheetRefresh = refresh;
+  refresh();
+  document.getElementById('fcTagSheetList').onclick = function(e){
+    var b = e.target.closest('.fc-tag-chip'); if(!b) return;
+    fcTagToggleForBase(base, b.getAttribute('data-tag'));
+  };
+  function addNow(){
+    var inp = document.getElementById('fcTagSheetInp');
+    if(fcTagAddForBase(base, inp.value)){ inp.value=''; } else showToast('Tag ka naam likho','error');
+  }
+  document.getElementById('fcTagSheetAdd').onclick = addNow;
+  document.getElementById('fcTagSheetInp').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addNow(); } });
+  document.getElementById('fcTagSheetClose').onclick = close;
+  document.getElementById('fcTagSheetDone').onclick = close;
+  ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+}
+function fcTagRename(oldName){
+  var nn = prompt('Tag ka naya naam:', oldName);
+  if(nn===null) return;
+  nn = fcTagNormalize(nn);
+  if(!nn){ showToast('Naam khaali nahi ho sakta!','error'); return; }
+  var oldLow = oldName.toLowerCase();
+  var target = fcTagCanon(nn);
+  _fcTagged.forEach(function(e){
+    var has = (e.tags||[]).some(function(t){ return String(t).toLowerCase()===oldLow; });
+    if(!has) return;
+    var next = [];
+    (e.tags||[]).forEach(function(t){
+      var v = String(t).toLowerCase()===oldLow ? target : t;
+      if(!next.some(function(x){ return x.toLowerCase()===v.toLowerCase(); })) next.push(v);
+    });
+    e.tags = next; e.updatedAt = Date.now();
+    fcTagPersist(e, false);
+  });
+  _fcTagFilter = target;
+  showToast('Tag rename ho gaya','success');
+  fcTagAfterChange();
+}
+function fcTagDeleteTag(name){
+  var low = name.toLowerCase();
+  appConfirm('Tag "'+name+'" sabhi questions se hata dein?\n(Questions delete nahi honge — jinke paas sirf yahi tag hai woh Tagged folder se hat jayenge.)', function(){
+    _fcTagged.slice().forEach(function(e){
+      var has = (e.tags||[]).some(function(t){ return String(t).toLowerCase()===low; });
+      if(!has) return;
+      var next = (e.tags||[]).filter(function(t){ return String(t).toLowerCase()!==low; });
+      if(!next.length){
+        _fcTagged = _fcTagged.filter(function(x){ return x.id!==e.id; });
+        fcTagPersist(e, true);
+      } else {
+        e.tags = next; e.updatedAt = Date.now();
+        fcTagPersist(e, false);
+      }
+    });
+    _fcTagFilter = '';
+    showToast('Tag delete ho gaya','success');
+    fcTagAfterChange();
+  });
+}
+
 // ---- Deck List ----
 function renderFcDeckList(){
   var container = document.getElementById('fcDeckList'); if(!container) return;
@@ -8834,9 +9764,11 @@ function fcRenderCurrentCard(){
       '<button class="fc-nav-btn fc-del-btn" onclick="fcDeleteCurrentCard()" title="Is card ko delete karo">&#128465;</button>'+
       '<button class="fc-nav-btn" id="fcNextBtn" onclick="fcNextCard()"'+(st.pos>=st.queue.length-1?' disabled':'')+'>Next &#8594;</button>'+
     '</div>'+
+    fcTagBarHtml()+
     '</div>';
   fcUpdateSaveBtnUI();
   fcUpdateExplainBox();
+  fcTagBarInit();
 }
 
 // ---- Manual Prev / Next navigation (does not affect ratings/stats) ----
@@ -9184,6 +10116,7 @@ function fcApplyCardEdit(cardId, front, back, expl){
     var tc = (_fcTempPlayDeck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
     if(tc){ tc.front=front; tc.back=back; if(expl) tc.explanation=expl; else delete tc.explanation; }
   }
+  try{ fcTagSyncEdit(st.deckId, cardId, front, back, expl); }catch(e){}
   fcRenderCurrentCard();
 }
 // Add a brand new card to the deck and drop it into the live queue a few
