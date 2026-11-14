@@ -2826,7 +2826,6 @@ function attachListeners(){
   attachSharedAttemptListener();
   fcAttachListener();
   fcAttachSavedListener();
-  fcAttachTaggedListener();
 
   // Quiz listener
   _quizListener = _db.collection('users').doc(_uid).collection('ts_quizzes')
@@ -2856,6 +2855,9 @@ function attachListeners(){
       if(ap==='history'){ initHistoryFilters(); renderHistory(); }
       if(ap==='vault'){ initVaultFilters(); renderVaultPage(); }
     }, function(err){ dbg('Attempts listener ERROR: '+err.message,'error'); console.warn('Attempts listener error:',err); });
+
+  // Tagged-questions listener — attached LAST and isolated, so it can never block quiz sync
+  try{ fcAttachTaggedListener(); }catch(e){ dbg('Tag listener attach fail: '+e.message,'error'); }
 }
 function detachListeners(){
   if(_quizListener){ try{_quizListener();}catch(e){} _quizListener=null; }
@@ -2864,7 +2866,7 @@ function detachListeners(){
   _hlDetachFirebaseListeners();
   fcDetachListener();
   fcDetachSavedListener();
-  fcDetachTaggedListener();
+  try{ fcDetachTaggedListener(); }catch(e){}
   STATE.quizzes=[]; STATE.attempts=[]; STATE.sharedAttempts=[];
   // savedQuestions ko preserve karo — reload on next auth
 }
