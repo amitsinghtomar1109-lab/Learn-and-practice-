@@ -2831,7 +2831,7 @@ function stgDeleteSelectedDecks(){
 
 // ---- Local cache reset: atke hue (stuck) writes hatane ke liye ----
 function syncResetLocalCache(){
-  appConfirm('Local cache reset karein?\n\nIs device par jo changes abhi cloud tak nahi pahunche (atke hue writes) woh hat jayenge. Cloud me jo already saved hai woh safe rehta hai. App reload hoga.', function(){
+  appConfirm('Local cache reset karein?\n\nPehle is app ke baaki saare tabs / PWA windows band kar do (warna reset adhoora rehta hai).\n\nIs device par jo changes abhi cloud tak nahi pahunche (atke hue writes) woh hat jayenge. Cloud me jo already saved hai woh safe rehta hai. App reload hoga.', function(){
     try{ detachListeners(); }catch(e){}
     var db = _db;
     var pid = (typeof firebaseConfig!=='undefined' && firebaseConfig.projectId) || '';
@@ -2941,6 +2941,7 @@ function syncOpenDialog(){
       '<div class="sync-row"><b>Internet</b><span>'+(navigator.onLine?'Online':'Offline')+'</span></div>'+
       '<div id="syncDlgResult" class="sync-box">⏳ Server se check ho raha hai...</div>'+
       '<div style="font-size:0.7rem;color:var(--text2);margin-top:8px;">Dono devices par "User ID" same dikhni chahiye. Alag ho to dono par alag account se login hai.</div>'+
+      '<div id="syncBigRow"></div>'+
       '<div id="syncPendRow" class="sync-row"><b>Pending writes</b><span>check ho raha hai...</span></div>'+
       '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"><button class="btn btn-primary" id="syncDlgAgain" style="flex:1;">🔄 Dobara Check</button>'+
       '<button class="btn btn-outline" id="syncDlgReset" style="flex:1;color:var(--red);border-color:var(--red);">🧹 Local Cache Reset</button></div>'+
@@ -2967,6 +2968,19 @@ function syncOpenDialog(){
   document.getElementById('syncDlgAgain').onclick = run;
   document.getElementById('syncDlgReset').onclick = function(){ ov.remove(); syncResetLocalCache(); };
   document.getElementById('syncDlgStorage').onclick = function(){ ov.remove(); stgOpen(); };
+  // badi documents ki list
+  (function(){
+    var big = [];
+    (STATE.quizzes||[]).forEach(function(q){ var z = dataSize(q); if(z>600000) big.push({n:'Quiz: '+(q.name||''), z:z}); });
+    (_fcDecks||[]).forEach(function(d){ var z = dataSize(d); if(z>600000) big.push({n:'Deck: '+(d.name||''), z:z}); });
+    big.sort(function(a,b){ return b.z-a.z; });
+    var box = document.getElementById('syncBigRow');
+    if(box && big.length){
+      box.innerHTML = '<div class="sync-box bad">⚠️ Badi documents (cloud limit 1 MB):\n'+
+        big.slice(0,5).map(function(b){ return '• '+escHtml(b.n)+' — '+fmtBytes(b.z); }).join('\n')+
+        '\nInhe Split Deck / Storage Manager se chhota karo.</div>';
+    }
+  })();
   // pending-writes probe
   (function(){
     var row = document.getElementById('syncPendRow');
@@ -3022,14 +3036,16 @@ function zWarnTooBig(what, size){
   showToast('⚠️ '+what+' bahut badi hai ('+fmtBytes(size)+') — cloud me save nahi ho sakti. Isse 2-3 chhoti quizzes me todo.','error');
 }
 // docs ko (jin me compressed _z ho unhe kholkar) list me badalta hai. Koi compressed nahi to turant (sync).
-function zResolveDocs(docs, cb){
+var _zSeqs = {};
+function zResolveDocs(docs, cb, key){
   if(!docs.some(function(d){ return d && d._z; })){ cb(docs); return; }
-  var seq = ++_zSeq;
+  key = key || 'q';
+  var seq = _zSeqs[key] = (_zSeqs[key]||0) + 1;
   Promise.all(docs.map(function(d){
     if(d && d._z) return zUnpack(d._z).catch(function(e){ dbg('Unpack fail: '+(e&&e.message),'error'); return null; });
     return Promise.resolve(d);
   })).then(function(list){
-    if(seq !== _zSeq) return;
+    if(seq !== _zSeqs[key]) return;
     cb(list.filter(Boolean));
   });
 }
@@ -8004,12 +8020,16 @@ function fcAttachListener(){
   if(!_db||!_uid) return;
   _fcDeckListener = _db.collection('users').doc(_uid).collection('fc_decks')
     .onSnapshot(function(snap){
-      _fcDecks = [];
-      snap.forEach(function(d){ if(d.exists) _fcDecks.push(d.data()); });
-      _fcDecks.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
-      var ap = getActivePage();
-      if(ap==='flashcards') renderFcDeckList();
-      if(ap==='fc-cards') renderFcCardsList();
+      var dDocs = [];
+      snap.forEach(function(d){ if(d.exists) dDocs.push(d.data()); });
+      zResolveDocs(dDocs, function(list){
+        _fcDecks = list;
+        _fcDecks.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+        var ap = getActivePage();
+        if(ap==='flashcards') renderFcDeckList();
+        if(ap==='fc-cards') renderFcCardsList();
+        if(ap==='storagemgr') renderStoragePage();
+      }, 'd');
     }, function(err){ dbg('FC listener err: '+err.message,'error'); });
 }
 function fcDetachListener(){
@@ -8017,7 +8037,21 @@ function fcDetachListener(){
 }
 function fcSaveDeck(deck){
   if(!_db||!_uid) return Promise.reject('not logged in');
-  return _db.collection('users').doc(_uid).collection('fc_decks').doc(String(deck.id)).set(deck);
+  var ref = _db.collection('users').doc(_uid).collection('fc_decks').doc(String(deck.id));
+  var size = dataSize(deck);
+  if(size <= FS_SAFE_BYTES) return ref.set(deck);
+  function tooBig(){ var er = new Error('too-big'); er.tooBig = size; throw er; }
+  return zPack(deck).then(function(b64){
+    var wrap = { id:deck.id, name:deck.name||'', topic:deck.topic||'', createdAt:deck.createdAt||0, _z:b64, _zv:1 };
+    if(dataSize(wrap) > FS_SAFE_BYTES) tooBig();
+    return ref.set(wrap);
+  }, tooBig).catch(function(e){
+    if(e && e.tooBig){
+      zWarnTooBig('Deck "'+(deck.name||'')+'"', e.tooBig);
+      throw new Error('Deck bahut badi hai ('+fmtBytes(e.tooBig)+') — Split Deck se todo');
+    }
+    throw e;
+  });
 }
 function fcDeleteDeck(id){
   if(!_db||!_uid) return;
@@ -8026,13 +8060,29 @@ function fcDeleteDeck(id){
 }
 function fcSaveSession(session){
   if(!_db||!_uid||!session.deckId) return;
-  _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(session.deckId)).set(session)
-    .catch(function(e){ console.warn('FC session save:', e); });
+  var ref = _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(session.deckId));
+  var size = dataSize(session);
+  function onErr(e){ console.warn('FC session save:', e); try{syncNoteWriteError(e);}catch(_){} }
+  if(size <= FS_SAFE_BYTES){ ref.set(session).catch(onErr); return; }
+  function tooBig(){ var er = new Error('too-big'); er.tooBig = size; throw er; }
+  zPack(session).then(function(b64){
+    var wrap = { deckId:String(session.deckId), savedAt:Date.now(), _z:b64, _zv:1 };
+    if(dataSize(wrap) > FS_SAFE_BYTES) tooBig();
+    return ref.set(wrap);
+  }, tooBig).catch(function(e){
+    if(e && e.tooBig) zWarnTooBig('Is deck ka live progress', e.tooBig);
+    else onErr(e);
+  });
 }
 function fcLoadSession(deckId){
   if(!_db||!_uid) return Promise.resolve(null);
   var fetchPromise = _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).get()
-    .then(function(d){ return d.exists ? d.data() : null; })
+    .then(function(d){
+      if(!d.exists) return null;
+      var data = d.data();
+      if(data && data._z) return zUnpack(data._z).catch(function(){ return null; });
+      return data;
+    })
     .catch(function(){ return null; });
   var timeoutPromise = new Promise(function(resolve){
     setTimeout(function(){ resolve(null); }, 5000); // 5s max wait — never hang the UI
@@ -9058,12 +9108,34 @@ function fcSplitFetchSession(deckId){
     var finished = false;
     var t = setTimeout(function(){ if(!finished){ finished = true; reject(new Error('Session check me bahut der lag gayi')); } }, 12000);
     _db.collection('users').doc(_uid).collection('fc_sessions').doc(String(deckId)).get()
-      .then(function(d){ if(finished) return; finished = true; clearTimeout(t); resolve(d.exists ? d.data() : null); })
+      .then(function(d){
+        if(!d.exists) return null;
+        var data = d.data();
+        return (data && data._z) ? zUnpack(data._z) : data;
+      })
+      .then(function(v){ if(finished) return; finished = true; clearTimeout(t); resolve(v); })
       .catch(function(e){ if(finished) return; finished = true; clearTimeout(t); reject(e); });
   });
 }
 
+function fcSplitPrepOps(ops){
+  return Promise.all(ops.map(function(o){
+    if(o.type==='delete' || !o.data) return o;
+    var size = dataSize(o.data);
+    if(size <= FS_SAFE_BYTES) return o;
+    return zPack(o.data).then(function(b64){
+      var wrap = (o.col==='fc_decks')
+        ? { id:o.data.id, name:o.data.name||'', topic:o.data.topic||'', createdAt:o.data.createdAt||0, _z:b64, _zv:1 }
+        : { deckId:String(o.data.deckId||o.id), savedAt:Date.now(), _z:b64, _zv:1 };
+      if(dataSize(wrap) > FS_SAFE_BYTES) throw new Error('Ek part bahut bada hai ('+fmtBytes(size)+') — zyada parts me split karo');
+      return { type:o.type, col:o.col, id:o.id, data:wrap };
+    }, function(){ throw new Error('Ek part bahut bada hai ('+fmtBytes(size)+') — zyada parts me split karo'); });
+  }));
+}
 function fcSplitCommit(ops){
+  return fcSplitPrepOps(ops).then(fcSplitCommitRaw);
+}
+function fcSplitCommitRaw(ops){
   var chunks = [];
   for(var i=0;i<ops.length;i+=400) chunks.push(ops.slice(i,i+400));
   var p = Promise.resolve();
