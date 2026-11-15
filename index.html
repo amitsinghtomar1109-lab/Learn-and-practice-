@@ -2116,7 +2116,9 @@ body.dark .fc-tg-opt.correct{color:#8fd99a;}
         <div class="page-subtitle" id="fcCardsSubtitle">Deck</div>
       </div>
       <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="fcRenameDeck(_fcCurrentDeckId);setTimeout(renderFcCardsList,400)">&#9998; Rename</button>
         <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareFcDeck(_fcCurrentDeckId)">&#128279; Share</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(198,40,40,0.35);" onclick="fcDeleteCurrentDeckFromManager()">&#128465; Delete</button>
         <button class="btn btn-orange btn-sm" onclick="fcStartPlay(_fcCurrentDeckId)">&#9654; Practice</button>
       </div>
     </div>
@@ -5105,7 +5107,7 @@ function renderPracticeQuizCards(quizzes){
           '<button class="btn btn-outline btn-xs" onclick="openShuffleChooser('+q.id+')" '+(!(q.questions||[]).length?'disabled':'')+'style="font-size:0.7rem;">🔀 Shuffled</button>'+
           (attempts.length?'<button class="btn btn-outline btn-xs" onclick="viewLastResult('+q.id+')">📊 Results</button>':'')+
           '<button class="btn btn-outline btn-xs" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareQuiz('+q.id+')">🔗 Share</button>'+
-          (isFocusedRevisionQuiz(q)?'<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>':'')+
+          '<button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="deleteQuiz('+q.id+')">🗑 Delete</button>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -8703,6 +8705,120 @@ function fcTgMakeDeck(){
     showToast('\uD83C\uDF89 Deck ban gayi ('+deck.cards.length+' cards) — Flashcards list me dekho','success');
   }).catch(function(err){ showToast('Deck error: '+(err&&err.message?err.message:err),'error'); });
 }
+
+// ================================================================
+// WORD (.docx) DOWNLOAD — tag-wise questions + answers + explanation
+// (no external library: tiny ZIP writer + hand-built docx)
+// ================================================================
+var _crcTable = null;
+function _crc32(bytes){
+  if(!_crcTable){
+    _crcTable = [];
+    for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); _crcTable[n]=c>>>0; }
+  }
+  var crc = 0xFFFFFFFF;
+  for(var i=0;i<bytes.length;i++) crc = _crcTable[(crc^bytes[i])&0xFF] ^ (crc>>>8);
+  return (crc ^ 0xFFFFFFFF)>>>0;
+}
+function _zipStore(files){ // files: [{name, data:string}]
+  var enc = new TextEncoder(), parts = [], central = [], offset = 0;
+  function u16(v){ return [v&255,(v>>>8)&255]; }
+  function u32(v){ return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]; }
+  files.forEach(function(f){
+    var nameB = enc.encode(f.name), dataB = enc.encode(f.data), crc = _crc32(dataB);
+    var local = [0x50,0x4B,0x03,0x04].concat(u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(crc),u32(dataB.length),u32(dataB.length),u16(nameB.length),u16(0));
+    parts.push(new Uint8Array(local), nameB, dataB);
+    var cen = [0x50,0x4B,0x01,0x02].concat(u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(crc),u32(dataB.length),u32(dataB.length),u16(nameB.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset));
+    central.push(new Uint8Array(cen), nameB);
+    offset += local.length + nameB.length + dataB.length;
+  });
+  var cenSize = 0; central.forEach(function(c){ cenSize += c.length; });
+  var end = [0x50,0x4B,0x05,0x06].concat(u16(0),u16(0),u16(files.length),u16(files.length),u32(cenSize),u32(offset),u16(0));
+  return new Blob(parts.concat(central, [new Uint8Array(end)]), {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+function _wx(t){
+  return String(t==null?'':t).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function _wRun(text, o){
+  o = o||{};
+  var rpr = '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Mangal"/>'+
+    (o.b?'<w:b/><w:bCs/>':'')+
+    (o.color?'<w:color w:val="'+o.color+'"/>':'')+
+    '<w:sz w:val="'+(o.sz||22)+'"/><w:szCs w:val="'+(o.sz||22)+'"/>';
+  var lines = String(text==null?'':text).split(/\r?\n/), out = '';
+  lines.forEach(function(ln,i){
+    out += '<w:r><w:rPr>'+rpr+'</w:rPr>'+(i?'<w:br/>':'')+'<w:t xml:space="preserve">'+_wx(ln)+'</w:t></w:r>';
+  });
+  return out;
+}
+function _wPara(runs, o){
+  o = o||{};
+  return '<w:p><w:pPr>'+(o.keep?'<w:keepNext/>':'')+
+    '<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after==null?60:o.after)+'"/>'+
+    (o.ind?'<w:ind w:left="'+o.ind+'"/>':'')+
+    (o.center?'<w:jc w:val="center"/>':'')+
+    (o.border?'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="BBBBBB"/></w:pBdr>':'')+
+    '</w:pPr>'+runs+'</w:p>';
+}
+function fcTgBuildDocx(list, title){
+  var body = '';
+  body += _wPara(_wRun(title,{b:1,sz:34,color:'1565C0'}),{center:1,after:80});
+  body += _wPara(_wRun('Total Questions: '+list.length+'   |   '+new Date().toLocaleDateString('en-GB'),{sz:20,color:'666666'}),{center:1,after:200,border:1});
+  list.forEach(function(c,i){
+    body += _wPara(_wRun('Q'+(i+1)+'. ',{b:1,sz:24,color:'1565C0'})+_wRun(c.front||'',{b:1,sz:24}),{before:220,after:80,keep:1});
+    var isMcq = Array.isArray(c.options) && c.options.length>0;
+    if(isMcq){
+      c.options.forEach(function(op,oi){
+        var ok = oi===Number(c.correct);
+        body += _wPara(_wRun(String.fromCharCode(65+oi)+'. '+op, ok?{b:1,color:'2E7D32'}:{})+(ok?_wRun('  \u2713',{b:1,color:'2E7D32'}):''),{ind:360,after:30});
+      });
+      var corr = c.options[Number(c.correct)];
+      body += _wPara(_wRun('Answer: ',{b:1,color:'2E7D32'})+_wRun(String.fromCharCode(65+(Number(c.correct)||0))+'. '+(corr!=null?corr:(c.back||''))),{before:80,after:60});
+    } else {
+      body += _wPara(_wRun('Answer: ',{b:1,color:'2E7D32'})+_wRun(c.back||''),{before:60,after:60});
+    }
+    if(c.explanation){
+      body += _wPara(_wRun('Explanation: ',{b:1,color:'E65100'})+_wRun(c.explanation),{after:60});
+    }
+    if((c.tags||[]).length){
+      body += _wPara(_wRun('Tags: '+c.tags.join(', '),{sz:18,color:'6A1B9A'}),{after:60,border:1});
+    }
+  });
+  var NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document '+NS+'><w:body>'+body+
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
+  var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+  return _zipStore([
+    {name:'[Content_Types].xml', data:ct},
+    {name:'_rels/.rels', data:rels},
+    {name:'word/document.xml', data:doc}
+  ]);
+}
+function fcTgDownloadWord(){
+  var list = fcTgListForFilter();
+  if(!list.length){ showToast('Is tag me koi question nahi hai','error'); return; }
+  try{
+    var title = _fcTagFilter ? ('Tag: '+_fcTagFilter) : 'All Tagged Questions';
+    var blob = fcTgBuildDocx(list, title);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (_fcTagFilter ? 'Tag_'+_fcTagFilter : 'All_Tagged_Questions').replace(/[\\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_')+'.docx';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500);
+    showToast('\uD83D\uDCC4 Word file download ho gayi ('+list.length+' questions)','success');
+  }catch(err){ showToast('Word download error: '+err.message,'error'); }
+}
+// Delete deck from Cards Manager page
+function fcDeleteCurrentDeckFromManager(){
+  var id = _fcCurrentDeckId; if(!id) return;
+  if(!confirm('Yeh deck aur saare cards permanently delete ho jaayenge. Sure ho?')) return;
+  fcDeleteDeck(isNaN(Number(id))?id:Number(id));
+  showToast('Deck delete ho gayi.','success');
+  try{ showSection('flashcards'); }catch(e){}
+}
+
 function fcTgBase(e){
   return { deckId:e.deckId, cardId:e.cardId, front:e.front, back:e.back, options:e.options, correct:e.correct, explanation:e.explanation };
 }
@@ -8752,6 +8868,9 @@ function renderFcTaggedPage(){
         '<button type="button" class="btn btn-primary btn-sm" id="fcTgQuizBtn">&#9654; Quiz Start</button>'+
         '<button type="button" class="btn btn-orange btn-sm" id="fcTgDeckBtn">&#128190; Deck Banao</button>'+
       '</div>'+
+      '<div class="fc-tg-quizrow">'+
+        '<button type="button" class="btn btn-outline btn-sm" id="fcTgWordBtn" style="flex:1;color:#1565c0;border-color:rgba(21,101,192,0.4);">&#128196; Word Download (Q + Ans + Explanation)</button>'+
+      '</div>'+
       '<div class="fc-tg-quizhint">Cards is tag me bhi bane rahenge. Quiz alag se chalegi; Deck Banao se Flashcards list me alag deck ban jayegi.</div>'+
     '</div>'+
     '<div class="fc-tg-bulk">'+
@@ -8767,6 +8886,7 @@ function renderFcTaggedPage(){
     if(e.target.closest('#fcTgHideAllBtn')){ fcTgBulkAll(true); return; }
     if(e.target.closest('#fcTgQuizBtn')){ fcTgStartQuiz(); return; }
     if(e.target.closest('#fcTgDeckBtn')){ fcTgMakeDeck(); return; }
+    if(e.target.closest('#fcTgWordBtn')){ fcTgDownloadWord(); return; }
     if(e.target.closest('#fcTgRenameBtn')){ fcTagRename(_fcTagFilter); return; }
     if(e.target.closest('#fcTgDeleteBtn')){ fcTagDeleteTag(_fcTagFilter); return; }
   };
