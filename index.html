@@ -1308,6 +1308,10 @@ body.dark .fc-explain-box{background:rgba(100,170,255,0.10);border-color:rgba(10
 body.dark .fc-tg-opt.correct{color:#8fd99a;}
 .fc-saved-card.fc-tg-card{border-left-color:var(--purple);}
 .fc-tg-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border);}
+.fc-tg-quizbox{margin-bottom:12px;padding:10px;border-radius:13px;background:var(--surface);border:1.5px solid rgba(106,27,154,0.35);}
+.fc-tg-quizrow{display:flex;gap:8px;margin-top:7px;}
+.fc-tg-quizrow .btn{flex:1;}
+.fc-tg-quizhint{font-size:0.62rem;color:var(--text2);margin-top:7px;line-height:1.4;}
 .fc-tg-deck{font-size:0.62rem;color:var(--text2);margin-top:6px;}
 
 #syncBanner{position:fixed;left:8px;right:8px;top:8px;z-index:9998;display:none;padding:10px 12px;border-radius:12px;
@@ -8541,7 +8545,9 @@ function fcTagCurrentBase(){
   var st = _fcSession;
   if(!st || !st.queue || st.pos>=st.queue.length) return null;
   var c = st.queue[st.pos];
-  return { deckId: st.deckId, cardId: c.cardId, front: c.front, back: c.back,
+  var bd = c.srcDeckId!=null ? c.srcDeckId : st.deckId;
+  var bc = c.srcCardId!=null ? c.srcCardId : c.cardId;
+  return { deckId: bd, cardId: bc, front: c.front, back: c.back,
            options: c.options, correct: c.correct, explanation: fcGetExplanation(c, st.deckId, c.cardId) };
 }
 function fcTagBarHtml(){
@@ -8652,6 +8658,51 @@ function fcTgListForFilter(){
     return (e.tags||[]).some(function(t){ return String(t).toLowerCase()===low; });
   });
 }
+// ---- Tag-wise Quiz / Deck generation ----
+// Cards tag me bane rehte hain (copy banti hai) — tag folder se kuch hat'ta nahi.
+function fcTgDeckName(){
+  return _fcTagFilter ? ('\uD83C\uDFF7 Tag: '+_fcTagFilter) : '\uD83C\uDFF7 All Tagged Questions';
+}
+function fcTgBuildCards(list, fresh){
+  return list.map(function(e, i){
+    var c = fresh
+      ? { id: Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+i, front:e.front, back:e.back }
+      : { id: String(e.deckId)+'__'+String(e.cardId), srcDeckId:String(e.deckId), srcCardId:String(e.cardId), front:e.front, back:e.back };
+    if(e.explanation) c.explanation = e.explanation;
+    if(Array.isArray(e.options) && e.options.length){ c.options = e.options.slice(0,4); c.correct = Number(e.correct)||0; }
+    return c;
+  });
+}
+function fcTgStartQuiz(){
+  var list = fcTgListForFilter();
+  if(!list.length){ showToast('Is tag me koi question nahi hai','error'); return; }
+  var deck = {
+    id: 'tagquiz_'+Date.now(),
+    name: fcTgDeckName(),
+    topic: _fcTagFilter || '',
+    tagQuiz: true,
+    cards: fcTgBuildCards(list, false)
+  };
+  fcStartTempPlay(deck);
+}
+function fcTgMakeDeck(){
+  var list = fcTgListForFilter();
+  if(!list.length){ showToast('Is tag me koi question nahi hai','error'); return; }
+  var name = prompt('Naye deck ka naam:', fcTgDeckName());
+  if(name===null) return;
+  name = String(name).trim();
+  if(!name){ showToast('Naam khaali nahi ho sakta!','error'); return; }
+  var deck = {
+    id: Date.now(),
+    name: name,
+    topic: _fcTagFilter || '',
+    cards: fcTgBuildCards(list, true),
+    createdAt: Date.now()
+  };
+  fcSaveDeck(deck).then(function(){
+    showToast('\uD83C\uDF89 Deck ban gayi ('+deck.cards.length+' cards) — Flashcards list me dekho','success');
+  }).catch(function(err){ showToast('Deck error: '+(err&&err.message?err.message:err),'error'); });
+}
 function fcTgBase(e){
   return { deckId:e.deckId, cardId:e.cardId, front:e.front, back:e.back, options:e.options, correct:e.correct, explanation:e.explanation };
 }
@@ -8695,6 +8746,14 @@ function renderFcTaggedPage(){
         '<button type="button" class="btn btn-xs btn-outline" id="fcTgRenameBtn" style="flex:1;">&#9998; Tag Rename</button>'+
         '<button type="button" class="btn btn-xs btn-danger" id="fcTgDeleteBtn" style="flex:1;">&#128465; Tag Delete</button>'+
       '</div>' : '')+
+    '<div class="fc-tg-quizbox">'+
+      '<div class="fc-tg-bulk-title">'+(_fcTagFilter ? 'Tag "'+escHtml(_fcTagFilter)+'" se quiz' : 'Sab tagged cards se quiz')+' ('+list.length+' cards)</div>'+
+      '<div class="fc-tg-quizrow">'+
+        '<button type="button" class="btn btn-primary btn-sm" id="fcTgQuizBtn">&#9654; Quiz Start</button>'+
+        '<button type="button" class="btn btn-orange btn-sm" id="fcTgDeckBtn">&#128190; Deck Banao</button>'+
+      '</div>'+
+      '<div class="fc-tg-quizhint">Cards is tag me bhi bane rahenge. Quiz alag se chalegi; Deck Banao se Flashcards list me alag deck ban jayegi.</div>'+
+    '</div>'+
     '<div class="fc-tg-bulk">'+
       '<div class="fc-tg-bulk-title">Sab cards ke liye hide / show ('+list.length+')</div>'+
       bulkBtn('q','Question')+bulkBtn('o','Options')+bulkBtn('a','Answer')+bulkBtn('e','Explanation')+
@@ -8706,6 +8765,8 @@ function renderFcTaggedPage(){
     if(bb){ var p = bb.getAttribute('data-part'); fcTgBulkSet(p, !_fcTgBulk[p]); return; }
     if(e.target.closest('#fcTgShowAllBtn')){ fcTgBulkAll(false); return; }
     if(e.target.closest('#fcTgHideAllBtn')){ fcTgBulkAll(true); return; }
+    if(e.target.closest('#fcTgQuizBtn')){ fcTgStartQuiz(); return; }
+    if(e.target.closest('#fcTgDeckBtn')){ fcTgMakeDeck(); return; }
     if(e.target.closest('#fcTgRenameBtn')){ fcTagRename(_fcTagFilter); return; }
     if(e.target.closest('#fcTgDeleteBtn')){ fcTagDeleteTag(_fcTagFilter); return; }
   };
@@ -9928,6 +9989,7 @@ window.fcImportCards = function(deckId, cardsArr){
 function fcBuildInitialQueue(cards){
   return cards.map(function(c){
     var item={ cardId:c.id, front:c.front, back:c.back };
+    if(c.srcDeckId!=null){ item.srcDeckId=String(c.srcDeckId); item.srcCardId=String(c.srcCardId); }
     if(c.explanation) item.explanation=c.explanation;
     if(Array.isArray(c.options)){ item.options=c.options.slice(0,4); item.correct=Number(c.correct)||0; }
     return item;
@@ -9986,7 +10048,7 @@ function startFcSession(){
 
   fcApplyFocusModeUI();
   var titleEl = document.getElementById('fcPlayTitle');
-  if(titleEl) titleEl.textContent = deck.name + (isTemp ? ' (Shared)' : '');
+  if(titleEl) titleEl.textContent = deck.name + (isTemp && !deck.tagQuiz ? ' (Shared)' : '');
   var areaEl = document.getElementById('fcPlayArea');
   if(areaEl) areaEl.innerHTML =
     '<div class="center-loader"><div class="loader"></div>'+
@@ -10524,7 +10586,11 @@ function fcApplyCardEdit(cardId, front, back, expl){
     var tc = (_fcTempPlayDeck.cards||[]).find(function(c){ return String(c.id)===String(cardId); });
     if(tc){ tc.front=front; tc.back=back; if(expl) tc.explanation=expl; else delete tc.explanation; }
   }
-  try{ fcTagSyncEdit(st.deckId, cardId, front, back, expl); }catch(e){}
+  try{
+    var _ec = st.queue.find(function(c){ return c.cardId===cardId; });
+    if(_ec && _ec.srcDeckId!=null) fcTagSyncEdit(_ec.srcDeckId, _ec.srcCardId, front, back, expl);
+    else fcTagSyncEdit(st.deckId, cardId, front, back, expl);
+  }catch(e){}
   fcRenderCurrentCard();
 }
 // Add a brand new card to the deck and drop it into the live queue a few
@@ -10562,7 +10628,7 @@ function fcEndSession(){
   }
   var isTemp = _fcSession.temp;
   if(isTemp){
-    appConfirm('Shared deck ka session band karoge? (Progress save nahi hoti shared decks ke liye)', function(){
+    appConfirm((_fcTempPlayDeck&&_fcTempPlayDeck.tagQuiz ? 'Tag quiz band karoge? (Tag quiz ka progress save nahi hota — cards tag me safe rahenge)' : 'Shared deck ka session band karoge? (Progress save nahi hoti shared decks ke liye)'), function(){
       fcHardExitPlay();
     });
     return;
