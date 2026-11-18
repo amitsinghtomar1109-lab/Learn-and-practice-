@@ -2084,6 +2084,7 @@ body.dark .fc-tg-opt.correct{color:#8fd99a;}
             <button onclick="fcCloseListMenu();fcOpenTagged();">&#127991; Tagged Questions</button>
             <button onclick="fcCloseListMenu();openFcNewDeckForm();">&#10133; New Deck</button>
             <button onclick="fcCloseListMenu();fcExportAllDecks();">&#11015; Export All Decks</button>
+            <button onclick="fcCloseListMenu();fcAllDecksDownloadWord();">&#128196; Word Download (All Decks)</button>
             <button onclick="fcCloseListMenu();renderFcDeckList();showToast('List refresh ho gayi','success');">&#8635; Refresh List</button>
           </div>
         </div>
@@ -2118,6 +2119,7 @@ body.dark .fc-tg-opt.correct{color:#8fd99a;}
       <div style="display:flex;gap:6px;">
         <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="fcRenameDeck(_fcCurrentDeckId);setTimeout(renderFcCardsList,400)">&#9998; Rename</button>
         <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="shareFcDeck(_fcCurrentDeckId)">&#128279; Share</button>
+        <button class="btn btn-outline btn-sm" style="color:#1565c0;border-color:rgba(21,101,192,0.4);" onclick="fcDeckDownloadWord(_fcCurrentDeckId)">&#128196; Word</button>
         <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(198,40,40,0.35);" onclick="fcDeleteCurrentDeckFromManager()">&#128465; Delete</button>
         <button class="btn btn-orange btn-sm" onclick="fcStartPlay(_fcCurrentDeckId)">&#9654; Practice</button>
       </div>
@@ -8761,30 +8763,31 @@ function _wPara(runs, o){
     (o.border?'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="BBBBBB"/></w:pBdr>':'')+
     '</w:pPr>'+runs+'</w:p>';
 }
-function fcTgBuildDocx(list, title){
+function _fcDocxCardParas(c, i){
   var body = '';
-  body += _wPara(_wRun(title,{b:1,sz:34,color:'1565C0'}),{center:1,after:80});
-  body += _wPara(_wRun('Total Questions: '+list.length+'   |   '+new Date().toLocaleDateString('en-GB'),{sz:20,color:'666666'}),{center:1,after:200,border:1});
-  list.forEach(function(c,i){
-    body += _wPara(_wRun('Q'+(i+1)+'. ',{b:1,sz:24,color:'1565C0'})+_wRun(c.front||'',{b:1,sz:24}),{before:220,after:80,keep:1});
-    var isMcq = Array.isArray(c.options) && c.options.length>0;
-    if(isMcq){
-      c.options.forEach(function(op,oi){
-        var ok = oi===Number(c.correct);
-        body += _wPara(_wRun(String.fromCharCode(65+oi)+'. '+op, ok?{b:1,color:'2E7D32'}:{})+(ok?_wRun('  \u2713',{b:1,color:'2E7D32'}):''),{ind:360,after:30});
-      });
-      var corr = c.options[Number(c.correct)];
-      body += _wPara(_wRun('Answer: ',{b:1,color:'2E7D32'})+_wRun(String.fromCharCode(65+(Number(c.correct)||0))+'. '+(corr!=null?corr:(c.back||''))),{before:80,after:60});
-    } else {
-      body += _wPara(_wRun('Answer: ',{b:1,color:'2E7D32'})+_wRun(c.back||''),{before:60,after:60});
-    }
-    if(c.explanation){
-      body += _wPara(_wRun('Explanation: ',{b:1,color:'E65100'})+_wRun(c.explanation),{after:60});
-    }
-    if((c.tags||[]).length){
-      body += _wPara(_wRun('Tags: '+c.tags.join(', '),{sz:18,color:'6A1B9A'}),{after:60,border:1});
-    }
-  });
+  body += _wPara(_wRun('Q'+(i+1)+'. ',{b:1,sz:24,color:'1565C0'})+_wRun(c.front||'',{b:1,sz:24}),{before:220,after:80,keep:1});
+  var isMcq = Array.isArray(c.options) && c.options.length>0;
+  if(isMcq){
+    c.options.forEach(function(op,oi){
+      var ok = oi===Number(c.correct);
+      body += _wPara(_wRun(String.fromCharCode(65+oi)+'. '+op, ok?{b:1,color:'2E7D32'}:{})+(ok?_wRun('  \u2713',{b:1,color:'2E7D32'}):''),{ind:360,after:30});
+    });
+    var corr = c.options[Number(c.correct)];
+    body += _wPara(_wRun('Answer: ',{b:1,color:'2E7D32'})+_wRun(String.fromCharCode(65+(Number(c.correct)||0))+'. '+(corr!=null?corr:(c.back||''))),{before:80,after:60});
+  } else {
+    body += _wPara(_wRun('Answer: ',{b:1,color:'2E7D32'})+_wRun(c.back||''),{before:60,after:60});
+  }
+  if(c.explanation){
+    body += _wPara(_wRun('Explanation: ',{b:1,color:'E65100'})+_wRun(c.explanation),{after:60});
+  }
+  if((c.tags||[]).length){
+    body += _wPara(_wRun('Tags: '+c.tags.join(', '),{sz:18,color:'6A1B9A'}),{after:60,border:1});
+  } else {
+    body += _wPara('',{after:40,border:1});
+  }
+  return body;
+}
+function _fcDocxPackage(body){
   var NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
   var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document '+NS+'><w:body>'+body+
     '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>';
@@ -8795,6 +8798,56 @@ function fcTgBuildDocx(list, title){
     {name:'_rels/.rels', data:rels},
     {name:'word/document.xml', data:doc}
   ]);
+}
+function fcTgBuildDocx(list, title){
+  var body = '';
+  body += _wPara(_wRun(title,{b:1,sz:34,color:'1565C0'}),{center:1,after:80});
+  body += _wPara(_wRun('Total Questions: '+list.length+'   |   '+new Date().toLocaleDateString('en-GB'),{sz:20,color:'666666'}),{center:1,after:200,border:1});
+  list.forEach(function(c,i){ body += _fcDocxCardParas(c,i); });
+  return _fcDocxPackage(body);
+}
+// sections: [{name, cards:[...]}] — deck-wise Word file (same layout as tag-wise file)
+function fcDeckBuildDocx(sections, title){
+  var total = 0; sections.forEach(function(sc){ total += (sc.cards||[]).length; });
+  var body = '';
+  body += _wPara(_wRun(title,{b:1,sz:34,color:'1565C0'}),{center:1,after:80});
+  body += _wPara(_wRun((sections.length>1 ? 'Decks: '+sections.length+'   |   ' : '')+'Total Questions: '+total+'   |   '+new Date().toLocaleDateString('en-GB'),{sz:20,color:'666666'}),{center:1,after:200,border:1});
+  sections.forEach(function(sc){
+    if(sections.length>1){
+      body += _wPara(_wRun('\uD83D\uDCDA '+sc.name+'  ('+(sc.cards||[]).length+' questions)',{b:1,sz:28,color:'E65100'}),{before:360,after:120,keep:1,border:1});
+    }
+    (sc.cards||[]).forEach(function(c,i){ body += _fcDocxCardParas(c,i); });
+  });
+  return _fcDocxPackage(body);
+}
+function _fcDocxSave(blob, baseName){
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = String(baseName||'Deck').replace(/[\\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_')+'.docx';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500);
+}
+function fcDeckDownloadWord(did){
+  var deck = _fcDecks.find(function(d){ return String(d.id)===String(did); });
+  if(!deck){ showToast('Deck nahi mili','error'); return; }
+  var cards = deck.cards||[];
+  if(!cards.length){ showToast('Is deck me koi question nahi hai','error'); return; }
+  try{
+    var blob = fcDeckBuildDocx([{name:deck.name||'Deck', cards:cards}], 'Deck: '+(deck.name||'Deck'));
+    _fcDocxSave(blob, 'Deck_'+(deck.name||'Deck'));
+    showToast('\uD83D\uDCC4 Word file download ho gayi ('+cards.length+' questions)','success');
+  }catch(err){ showToast('Word download error: '+err.message,'error'); }
+}
+function fcAllDecksDownloadWord(){
+  var secs = (_fcDecks||[]).filter(function(d){ return (d.cards||[]).length; })
+    .map(function(d){ return {name:d.name||'Deck', cards:d.cards}; });
+  if(!secs.length){ showToast('Koi deck / question nahi hai download karne ke liye','error'); return; }
+  try{
+    var n = 0; secs.forEach(function(sc){ n += sc.cards.length; });
+    var blob = fcDeckBuildDocx(secs, 'All Flashcard Decks');
+    _fcDocxSave(blob, 'All_Flashcard_Decks');
+    showToast('\uD83D\uDCC4 Word file download ho gayi ('+secs.length+' decks, '+n+' questions)','success');
+  }catch(err){ showToast('Word download error: '+err.message,'error'); }
 }
 function fcTgDownloadWord(){
   var list = fcTgListForFilter();
@@ -9080,12 +9133,14 @@ function renderFcDeckList(){
             '<button onclick="fcCloseDeckMenus();fcOpenSplitDeck('+did+')">&#9986; Split Deck</button>'+
             '<button onclick="fcCloseDeckMenus();shareFcDeck('+did+')">&#128279; Share Deck</button>'+
             '<button onclick="fcCloseDeckMenus();fcExportDeck('+did+')">&#11015; Export Deck</button>'+
+            '<button onclick="fcCloseDeckMenus();fcDeckDownloadWord('+did+')">&#128196; Word Download (Q + Ans + Exp)</button>'+
             '<button class="fc-menu-danger" onclick="fcCloseDeckMenus();fcConfirmDeleteDeck('+did+')">&#128465; Delete Deck</button>'+
           '</div>'+
         '</div>'+
       '</div>'+
       '<div class="fc-deck-actions">'+
         '<button class="btn btn-outline" style="color:var(--accent);border-color:rgba(21,101,192,0.3);" onclick="openFcCards('+did+')">&#9998; Edit</button>'+
+        '<button class="btn btn-outline" style="color:#1565c0;border-color:rgba(21,101,192,0.4);" onclick="fcDeckDownloadWord('+did+')">&#128196; Word</button>'+
         '<button class="btn btn-orange" onclick="fcStartPlay('+did+')">&#9654; Play</button>'+
       '</div>'+
     '</div>';
